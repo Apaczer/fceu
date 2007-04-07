@@ -44,6 +44,7 @@ uint32 soundtsi;
 
 uint32 Wave[2048];
 int32 WaveFinal[2048];
+int16 WaveFinalMono[2048];
 
 EXPSOUND GameExpSound={0,0,0};
 
@@ -62,6 +63,8 @@ uint8 sqnon=0;
 uint16 nreg;
  
 int32 lengthcount[4]; 
+
+extern int soundvol;
 
 static const uint8 Slengthtable[0x20]=
 {
@@ -861,11 +864,14 @@ int64 highp;                   // 0 through 65536, 0 = no high pass, 65536 = max
 
 int64 lowp;                    // 0 through 65536, 65536 = max low pass(total attenuation)
 				// 65536 = no low pass
-static void FilterSound(uint32 *in, int32 *out, int count)
+static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
 {
  static int64 acc=0, acc2=0;
-
- for(;count;count--,in++,out++)
+ //int index=0;
+ //int16* tmp;
+ //int16* outorig=out;
+ //int32 prev=-99999;
+ for(;count;count--,in++,out++)//,index++)
  {
   int64 diff;
 
@@ -874,21 +880,50 @@ static void FilterSound(uint32 *in, int32 *out, int count)
   acc+=(diff*highp)>>16;
   acc2+=((diff-acc2)*lowp)>>16;
   *in=0;
-  *out=(acc2*(int64)FSettings.SoundVolume)>>(24+16);
+  
+  // don't change the sound here
+//  *out=(acc2*(int64)FSettings.SoundVolume)>>(24+16);
+  // volume, 4 times louder by default??
+//  *out = acc2 >> 24;
+ // just a bit louder.  Hope it's okay
+ /*
+  *out = acc2 >> 22;
   if(*out<-32767) *out=-32767;
   if(*out>32767) *out=32767;
-  //*out=((int64)(acc2>>24)*(int64)FSettings.SoundVolume)>>16; //acc2>>24;
+  // go one back
+  
+  // do MONO
+  tmp=(int16 *)(out-1); 
+  // don't do this the first time
+  if (prev == -99999) continue;
+  // the middle one should be interpolated
+  tmp[1]=(int16)((*out + prev) >> 1); 
+  prev = *out; 
+  */
+  //outMono[index] = (int16)*out;
+  *outMono = (int16)(acc2 >> 24);
+  //if(*outMono<-16384) *outMono=-16384;
+  //if(*outMono>16384) *outMono=16384;
+  outMono++;
+   
+  // out=((int64)(acc2>>24)*(int64)FSettings.SoundVolume)>>16; //acc2>>24;
+   
  }
+ // do one more
 }
+
+
+
 
 int FlushEmulateSound(void)
 {
   uint32 end;
   int x;
 
+
   if(!timestamp) return(0);
 
-  if(!FSettings.SndRate)
+  if(!FSettings.SndRate || (soundvol == 0))
   {
    end=0;
    goto nosoundo;
@@ -904,10 +939,12 @@ int FlushEmulateSound(void)
   if(GameExpSound.Fill)
    GameExpSound.Fill(end&0xF);
 
-  FilterSound(Wave,WaveFinal,end>>4);
-
+//  FilterSound(Wave,WaveFinal,end>>4);
+  FilterSound(Wave,WaveFinal,WaveFinalMono,end>>4);
+//  printf("count %d, num ints %d\n", end, (end >> 4));
   if(FCEUGameInfo.type==GIT_NSF)
   {
+   printf("IS NSF");
    int x,s=0,si=end/1024;       // Only want 1/4 of the output buffer to be displayed
    for(x=0;x<256;x++)
    {

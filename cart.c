@@ -90,13 +90,13 @@ void ResetCartMapping(void)
 
  for(x=0;x<32;x++)
  {
-  Page[x]=nothing-x*2048;
+  Page[x]=(uint8 *)(nothing-x*2048);
   PRGptr[x]=CHRptr[x]=0;
   PRGsize[x]=CHRsize[x]=0;
  }
  for(x=0;x<8;x++)
  {
-  MMC5SPRVPage[x]=MMC5BGVPage[x]=VPageR[x]=nothing-0x400*x;
+  MMC5SPRVPage[x]=MMC5BGVPage[x]=VPageR[x]=(uint8 *)(nothing-0x400*x);
  }
 
 }
@@ -291,7 +291,7 @@ void FASTAPASS(2) setchr4(unsigned int A, unsigned int V)
  setchr4r(0,A,V);
 }
 
-void FASTAPASS(1) setchr8(unsigned int V)
+void FASTAPASS(2) setchr8(unsigned int V)
 {
  setchr8r(0,V);
 }

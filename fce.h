@@ -30,8 +30,11 @@ extern uint8 MMC5HackSPMode;
 extern uint8 MMC5HackSPScroll;
 extern uint8 MMC5HackSPPage;
 
-extern uint8 RAM[0x800],SPRAM[0x100],NTARAM[0x800],PALRAM[0x20],SPRAM[0x100],SPRBUF[0x100];
 extern uint8 GameMemBlock[131072];
+extern uint8 NTARAM[0x800],PALRAM[0x20];
+
+extern uint8 RAM[0x800];
+
 
 extern uint32 RefreshAddr,TempAddr;
 extern uint8 vtoggle,XOffset,VRAMBuffer,PPUGenLatch;

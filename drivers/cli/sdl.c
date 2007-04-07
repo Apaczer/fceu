@@ -1,12 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "sdl.h"
 #include "sdl-video.h"
 #ifdef NETWORK
 #include "unix-netplay.h"
 #endif
+#include "minimal.h"
+//extern int soundvol;
+int CLImain(int argc, char *argv[]);
+extern int gp2x_in_sound_thread;
+extern void pthread_yield(void);
+extern void SetVideoScaling(int, int, int);
+ 
+//#define SOUND_RATE 44100
+#define SOUND_RATE 22050
 
 DSETTINGS Settings;
 CFGSTRUCT DriverConfig[]={
@@ -63,7 +73,9 @@ char *DriverUsage=
 -server         Be a host/server for TCP/IP network play.\n\
 -netport x      Use TCP/IP port x for network play.";
 
+#ifdef NETWORK
 static int docheckie[2]={0,0};
+#endif
 ARGPSTRUCT DriverArgs[]={
          {"-joy1",0,&joy[0],0},{"-joy2",0,&joy[1],0},
          {"-joy3",0,&joy[2],0},{"-joy4",0,&joy[3],0},
@@ -92,12 +104,38 @@ ARGPSTRUCT DriverArgs[]={
          {0,0,0,0}
 };
 
+
+
+
+
+void GetBaseDirectory(char *BaseDirectory)
+{
+ char *ol;
+
+#ifdef GP2X
+ ol="/mnt/sd/roms/nes";
+#else
+ ol=getenv("HOME");
+#endif
+ BaseDirectory[0]=0;
+ if(ol)
+ {
+  strncpy(BaseDirectory,ol,2047);
+  BaseDirectory[2047]=0;
+#ifdef GP2X
+  strcat(BaseDirectory,"/fceultra");
+#else
+  strcat(BaseDirectory,"/.fceultra");
+#endif
+ }
+}
+
 static void SetDefaults(void)
 {
  _xres=320;
  _yres=240;
  _fullscreen=0;
- _sound=48000;
+ _sound=SOUND_RATE; // 48000 wrong
  #ifdef DSPSOUND
  _f8bit=0;
  #else
@@ -150,6 +188,7 @@ int InitMouse(void)
 void KillMouse(void){}
 void GetMouseData(uint32 *d)
 {
+#ifndef GP2X
  int x,y;
  uint32 t;
 
@@ -162,6 +201,7 @@ void GetMouseData(uint32 *d)
  t=PtoV(x,y); 
  d[0]=t&0xFFFF;
  d[1]=(t>>16)&0xFFFF;
+#endif
 }
 
 int InitKeyboard(void)
@@ -181,14 +221,63 @@ void KillKeyboard(void)
 
 char *GetKeyboard(void)
 {
+#ifndef GP2X
  SDL_PumpEvents();
- return(SDL_GetKeyState(0));
+ return (char *)(SDL_GetKeyState(0));
+#else
+ return NULL;
+#endif
 }
 #include "unix-basedir.h"
+extern int showfps;
+extern int swapbuttons;
 
 int main(int argc, char *argv[])
 {
-        puts("\nStarting FCE Ultra "VERSION_STRING"...\n");
+
+        puts("Starting GPFCE - Port version 0.2 05-29-2006");           
+        puts("Based on FCE Ultra "VERSION_STRING"...");
+        puts("Ported by Zheng Zhu\n");
+#ifdef GP2X
+         //  stereo
+    	 //gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
+    	 
+    	 // mono 44khz
+    	//gp2x_init (1000, 8, SOUND_RATE<<1, 16, 0, 60);
+    	 // mono 22khz
+    	gp2x_init (1000, 8, SOUND_RATE, 16, 0, 60);
+       
+        SetDefaults();
+        int ret=CLImain(argc,argv);
+
+        // unscale the screen, in case this is bad.
+        SetVideoScaling(320, 320, 240);
+
+        gp2x_deinit();
+        // make sure sound thread has exited cleanly
+        while (gp2x_in_sound_thread) pthread_yield();
+        printf("Sound thread exited\n");
+        printf("Exiting main().  terminated");
+        if (showfps && swapbuttons)
+        {
+          execl("./selector","./selector","./gpfce_showfps_swapbuttons_config",NULL);
+        }
+        else if (showfps)
+        {
+          execl("./selector","./selector","./gpfce_showfps_config",NULL);
+        }
+        else if (swapbuttons)
+        {
+          execl("./selector","./selector","./gpfce_swapbuttons_config",NULL);
+        }
+        else
+        {
+          execl("./selector","./selector","./gpfce_config",NULL);
+        }
+        return(ret?0:-1);
+#else
+	gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
+        
 	if(SDL_Init(0))
 	{
 	 printf("Could not initialize SDL: %s.\n", SDL_GetError());
@@ -209,7 +298,12 @@ int main(int argc, char *argv[])
 	{
 	 int ret=CLImain(argc,argv);
 	 SDL_Quit();
+         // make sure sound thread has exited cleanly
+         while (gp2x_in_sound_thread) pthread_yield();
+         printf("Sound thread exited\n");
+         printf("Exiting main().  terminated");
 	 return(ret);
 	}
+#endif
 }
 

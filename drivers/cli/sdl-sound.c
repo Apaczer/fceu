@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,130 +19,124 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/ioctl.h> 
+#include <linux/soundcard.h>
+
 #include "sdl.h"
+#include "minimal.h"
 
-#ifndef DSPSOUND
+#define GP2X_SOUND 1
 
-//#define BSIZE (32768-1024)
+extern INLINE SpeedThrottle(void);
+extern void pthread_yield(void);
+extern void FCEUI_FrameSkip(int x);
 
-static int32 BSIZE;
-static volatile int16 AudioBuf[32768];
-static volatile uint32 readoffs,writeoffs;
-void fillaudio(void *udata, uint8 *stream, int len)
-{
- int16 *dest=(int16 *)stream;
+//extern int dosound;
+extern int soundvol;
 
- len>>=1;
- while(len)
+// always have this call
+INLINE void gp2x_sound_frame(void *blah, void *buff, int samples)
  {
-  *dest=AudioBuf[readoffs];
-  dest++;
-  readoffs=(readoffs+1)&32767;
-  len--;
- }
 }
 
-void WriteSound(int32 *Buffer, int Count, int NoWaiting)
-{
- while(Count)
- {
-  while(writeoffs==((readoffs-BSIZE)&32767)) 
-   if(NoWaiting)
-    return;
-  AudioBuf[writeoffs]=*Buffer;
-  writeoffs=(writeoffs+1)&32767;
-  Buffer++;
-  Count--;
+
+
+
+
+//static int sexy_in_function=0;
+#define NumSexyBufferBuffers 2
+struct timespec gp2x_sleep_ts;
+int firstentry=1;
+//int firstprint=1;
+struct timeval sleeptimer;
+
+
+
+pthread_t       gp2x_sexy_sound_thread=0;
+int**  SexyBufferBuffers=NULL;
+int    SexyBufferBufferCounts[NumSexyBufferBuffers];
+int  gp2x_sound_inited=0;
+int gp2x_in_sound_thread=0;
+extern unsigned long   gp2x_dev[8];
+
+pthread_cond_t gp2x_sound_cond=PTHREAD_COND_INITIALIZER;
+pthread_mutex_t gp2x_sound_mutex = PTHREAD_MUTEX_INITIALIZER;
+int zzdebug01_entry=0;
+int zzdebug01_wait=0;
+int hasSound=0; 
+extern unsigned long fps;
+extern unsigned long avg_fps;
+extern unsigned long framesRendered;
+extern unsigned long ticks;
+
+int throttlecount=0;
+
+void WriteSound(int32 *Buffer, int Count)
+  {
+  write(gp2x_dev[3], Buffer, Count<<1);
+  pthread_yield();
+  SpeedThrottle();
+  }
+
+void* gp2x_write_sound(void* blah)
+  {
+  gp2x_in_sound_thread=1;  
+  {
+    if (hasSound)
+  {
+      hasSound=0;
+  }
+    else
+  {
+  }
+
  }
-}
-
-int InitSound(void)
-{
- if(_sound)
- {
-  SDL_AudioSpec spec;
-
-  if(_lbufsize<_ebufsize) 
-  {
-   puts("Ack, lbufsize must not be smaller than ebufsize!");
-   return(0);
-  }
-  if(_lbufsize<6 || _lbufsize>13)
-  {
-   puts("lbufsize out of range");
-   return(0);
-  }
-  if(_ebufsize<5)
-  {
-   puts("ebufsize out of range");
-   return(0);
-  }
-  memset(&spec,0,sizeof(spec));
-  if(SDL_InitSubSystem(SDL_INIT_AUDIO)<0)
-  {
-   puts(SDL_GetError());
-   return(0);
-  }
-  if(_sound==1) _sound=44100;
-  spec.freq=_sound;
-  spec.format=AUDIO_S16;
-  spec.channels=1;
-  spec.samples=1<<_ebufsize;
-  spec.callback=fillaudio;
-  spec.userdata=0;
-
-  if(SDL_OpenAudio(&spec,0)<0)
-  {
-   puts(SDL_GetError());
-   SDL_QuitSubSystem(SDL_INIT_AUDIO);
-   return(0);
-  }
-  FCEUI_Sound(_sound);
-  BSIZE=32768-(1<<_lbufsize);
-  SDL_PauseAudio(0);
-  return(1);
- }
- return(0);
+  gp2x_in_sound_thread=0;
+  return NULL;
 }
 
 void SilenceSound(int n)
 {
- SDL_PauseAudio(n);
-
+  soundvol=0;
 }
 
-void KillSound(void)
+int InitSound(FCEUGI *gi)
 {
- SDL_CloseAudio();
- SDL_QuitSubSystem(SDL_INIT_AUDIO);
+  Settings.sound=22050;
+  FCEUI_Sound(Settings.sound);
+  gp2x_sound_volume(soundvol, soundvol);
+  printf("InitSound() sound_rate: %d\n", Settings.sound);
+  if(firstentry) 
+  {   
+      firstentry=0; 
+      gp2x_sound_inited=1;
+  }
+  return 1 ;
 }
 
-#else
-#include "../common/unixdsp.h"
-
-void WriteSound(int32 *Buffer, int Count, int NoWaiting)
+uint32 GetMaxSound(void)
 {
-  WriteUNIXDSPSound(Buffer, Count, NoWaiting);
+ return(4096);
 }
 
-int InitSound(void)
-{
-        if(_sound)
+uint32 GetWriteSound(void)
         {
-         int rate;
-         if(_sound==1)
-          _sound=48000;
-         rate=_sound;
-         if(InitUNIXDSPSound(&rate,_f8bit?0:1,8,8))
-         {
-          FCEUI_Sound(rate);
-          return(1);
-         }
-        }
-        return(0);
+ return 1024;
 }
-void KillSound(void)
+
+int KillSound(void)
 {
-        KillUNIXDSPSound();
+  FCEUI_Sound(0);
+  gp2x_sound_inited=0;
+
+  return 1;
 }
-#endif
+
+
+
+

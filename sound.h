@@ -66,6 +66,7 @@ void GetSoundBuffer(int32 **W);
 int FlushEmulateSound(void);
 extern uint32 Wave[2048];
 extern int32 WaveFinal[2048];
+extern int16 WaveFinalMono[2048];
 extern uint32 soundtsinc;
 
 void SetNESSoundMap(void);

@@ -15,7 +15,7 @@
 #include "lnx-joystick.h"
 #include "unix-netplay.h"
 
-static int soundo=48000;
+//static int soundo=0;
 static int f8bit=0;
 static int sfragsize=7,snfrags=8;
 
@@ -90,9 +90,10 @@ void DoDriverArgs(void)
         for(x=0;x<4;x++)
          if(!joy[x]) memset(joyBMap[x],0,4*sizeof(int));
 }
-
+/*
 int InitSound(void)
 {
+	printf("Called InitSound svgalib.c\n"); 
         if(soundo)
         {
          int rate;
@@ -106,7 +107,7 @@ int InitSound(void)
 	 }
         }
 	return(0);
-}
+}*/
 
 void WriteSound(int32 *Buffer, int Count, int NoWaiting)
 {

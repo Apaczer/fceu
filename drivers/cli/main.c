@@ -46,11 +46,15 @@
 #include "dface.h"
 
 static int ntsccol=0,ntschue=-1,ntsctint=-1;
-static int soundvol=100;
-static int inited=0;
+int soundvol=70;
+int inited=0; 
+int swapbuttons=0;
+int showfps=0;
 
-int srendlinev[2]={8,0};
+int srendlinev[2]={0,0};
+//int srendlinev[2]={0,0};
 int erendlinev[2]={239,239};
+//int erendlinev[2]={231,239};
 int srendline,erendline;
 
 
@@ -98,7 +102,7 @@ static void LoadCPalette(void)
   return;
  }
  fread(tmpp,1,192,fp);
- FCEUI_SetPaletteArray(tmpp);
+ FCEUI_SetPaletteArray((uint8 *)tmpp);
  fclose(fp);
 }
 
@@ -217,6 +221,8 @@ static void DoArgs(int argc, char *argv[])
 	 {"-nothrottle",0,&eoptions,0x8000|EO_NOTHROTTLE},
          {"-slstart",0,&srendlinev[0],0},{"-slend",0,&erendlinev[0],0},
          {"-slstartp",0,&srendlinev[1],0},{"-slendp",0,&erendlinev[1],0},
+	     {"-swapbuttons",&swapbuttons, 0, 0},
+	     {"-showfps",&showfps, 0, 0},
 	 {0,(void *)DriverArgs,0,0},
 	 {0,0,0,0}
         };
@@ -236,8 +242,7 @@ static void DoArgs(int argc, char *argv[])
 	 FCEUI_SetVidSystem(1);
 	if(docheckie[1])
 	 FCEUI_SetGameGenie(1);
-
-        FCEUI_DisableSpriteLimitation(eoptions&1);
+        FCEUI_DisableSpriteLimitation(1);
         FCEUI_SaveExtraDataUnderBase(eoptions&2);
 	FCEUI_SetSnapName(eoptions&EO_SNAPNAME);
 
@@ -247,7 +252,11 @@ static void DoArgs(int argc, char *argv[])
          if(erendlinev[x]<srendlinev[x] || erendlinev[x]>239) erendlinev[x]=239;
 	}
 
+	printf("main() setrendered lines: %d, %d, %d, %d\n",srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
+        printf("main() clip sides %d\n", eoptions&EO_CLIPSIDES);
+        srendlinev[0]=0;
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
+        FCEUI_SetRenderedLines(0,erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetSoundVolume(soundvol);
 	DriverInterface(DES_NTSCCOL,&ntsccol);
 	DoDriverArgs();

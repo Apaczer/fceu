@@ -53,7 +53,7 @@ int InitVirtualVideo(void)
  {
   m=(uint32) XBuf;
   m+=8;m&=0xFFFFFFF8;
-  (uint32)XBuf=m;
+  XBuf=(uint8 *)m;
  } 
 
  memset(XBuf,128,272*240);
@@ -145,7 +145,7 @@ static int WritePNGChunk(FILE *fp, uint32 size, char *type, uint8 *data)
   if(fwrite(data,1,size,fp)!=size)
    return 0;
 
- crc=CalcCRC32(0,type,4);
+ crc=CalcCRC32(0,(uint8 *)type,4);
  if(size)
   crc=CalcCRC32(crc,data,size);
 
@@ -207,9 +207,12 @@ int SaveSnapshot(void)
 
  {
   char pdata[256*3];
+  
+  //void FCEUD_GetPalette(uint8 i,uint8 *r, unsigned char *g, unsigned char *b);
   for(x=0;x<256;x++)
-   FCEUD_GetPalette(x,pdata+x*3,pdata+x*3+1,pdata+x*3+2);
-  if(!WritePNGChunk(pp,256*3,"PLTE",pdata))
+   FCEUD_GetPalette(x,(uint8*)(pdata+x*3),(unsigned char*)(pdata+x*3+1),(unsigned char*)(pdata+x*3+2));
+   // static int WritePNGChunk(FILE *fp, uint32 size, char *type, uint8 *data)
+  if(!WritePNGChunk(pp,256*3,"PLTE",(uint8 *)pdata))
    goto PNGerr;
  }
 

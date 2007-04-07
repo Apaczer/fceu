@@ -18,7 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+#include <string.h>
 #include "mapinc.h"
 
 static uint8 latche;
@@ -57,6 +57,7 @@ DECLFW(Mapper7_write)
 void Mapper7_init(void)
 {
         onemir(0);
+        ROM_BANK32(0);
         SetWriteHandler(0x8000,0xFFFF,Mapper7_write);
 	AddExState(&latche, 1, 0, "LATC");
 }
@@ -229,7 +230,7 @@ static DECLFW(Mapper96_write)
 
 static void FP_FASTAPASS(1) M96Hook(uint32 A)
 {
- if(A<0x2000)
+ if((A&0x3000)!=0x2000)
   return;
  M96LA=(A>>8)&3;
  setchr4r(0x10,0x0000,(latche&4)|M96LA);

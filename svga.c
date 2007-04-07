@@ -339,6 +339,8 @@ void SetNESDeemph(uint8 d, int force)
    if(n>0xff) n=0xff;
    if(o>0xff) o=0xff;
    FCEUD_SetPalette(x|0x40,m,n,o);
+
+
   }
  }
  if(!d) return;	/* No deemphasis, so return. */
@@ -362,6 +364,7 @@ void SetNESDeemph(uint8 d, int force)
      if(o>0xff) o=0xff;
 
      FCEUD_SetPalette(x|0xC0,m,n,o);
+
     }
  
  lastd=d;

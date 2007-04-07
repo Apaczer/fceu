@@ -27,8 +27,8 @@
 #include <errno.h>
 
 #include "sdl.h"
+#ifndef GP2X
 static SDL_Joystick *jo[4] = {NULL, NULL, NULL, NULL};
-
 static void ConfigJoystick (int z);
 
 #define JOY_A		0x01
@@ -39,10 +39,12 @@ static void ConfigJoystick (int z);
 #define JOY_DOWN	0x20
 #define JOY_LEFT	0x40
 #define JOY_RIGHT	0x80
+#endif
 
 /* Gets the current joystick position information. */
 uint32 GetJSOr (void)
 {
+#ifndef GP2X
 	int n;			/* joystick index */
 	int b;			/* button index */
 	int *joym;		/* pointer to a joystick's button map */
@@ -76,11 +78,15 @@ uint32 GetJSOr (void)
 	}
 
 	return ret;
+#else
+	return 0;
+#endif
 }
 
 /* Cleanup opened joysticks. */
 void KillJoysticks (void)
 {
+#ifndef GP2X
 	int n;			/* joystick index */
 
 	for (n = 0; n < 4; n++)
@@ -90,11 +96,13 @@ void KillJoysticks (void)
 	}
 	SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	return;
+#endif
 }
 
 /* Initialize joysticks. */
 int InitJoysticks (void)
 {
+#ifndef GP2X
 	int n;			/* joystick index */
 	if(!(joy[0]|joy[1]|joy[2]|joy[3]))
 	 return(0);
@@ -123,6 +131,7 @@ int InitJoysticks (void)
 	}
 
 	return (1);
+#endif
 }
 
 #define WNOINPUT(); for(;;){uint8 t; if(read(fileno(stdin),&t,1)==-1) \
@@ -131,6 +140,7 @@ int InitJoysticks (void)
 /* Configure a joystick button. */
 static void BConfig (int n, int b)
 {
+#ifndef GP2X
 	SDL_Event event;		/* SDL event structure */
 	WNOINPUT();
 	while (1)
@@ -155,11 +165,13 @@ static void BConfig (int n, int b)
 	WNOINPUT();
 
 	return;
+#endif
 }
 
 /* Joystick button and axis configuration. */
 void ConfigJoystick (int n)
 {
+#ifndef GP2X
 	int sa;			/* buffer value */
 	char buf[128];		/* input buffer */
 
@@ -197,4 +209,5 @@ void ConfigJoystick (int n)
 	BConfig(n, 0);
 	
 	fcntl(fileno(stdin), F_SETFL, sa);
+#endif
 }

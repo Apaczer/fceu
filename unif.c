@@ -373,9 +373,10 @@ static int InitializeBoard(void)
     if(strcmp(sboardname,bmap[x].name)) continue;
     if(!malloced[16] && (bmap[x].flags&BMCFLAG_CHRROK))
     {
-     if((malloced[16]=UNIFchrrama=FCEU_malloc(8192)))
+     UNIFchrrama=FCEU_malloc(8192);
+     if((malloced[16]=(uint8 *)UNIFchrrama))
      {
-      SetupCartCHRMapping(0,UNIFchrrama,8192,1);
+      SetupCartCHRMapping(0,(uint8 *)UNIFchrrama,8192,1);
       AddExState(UNIFchrrama, 8192, 0,"CHRR");
      }
      else

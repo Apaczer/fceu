@@ -7,7 +7,10 @@ static uint64 desiredfps;
 
 void RefreshThrottleFPS(void)
 {
- desiredfps=FCEUI_GetDesiredFPS()>>8;
+ uint64 f=FCEUI_GetDesiredFPS();
+ // great, a bit faster than before
+ //f = (f*65) >> 6;
+ desiredfps=f>>8;
  tfreq=1000000;
  tfreq<<=16;    /* Adjustment for fps returned from FCEUI_GetDesiredFPS(). */
 }
@@ -23,7 +26,7 @@ static uint64 GetCurTime(void)
  return(ret);
 }
 
-void SpeedThrottle(void)
+INLINE void SpeedThrottle(void)
 {
  static uint64 ttime,ltime;
 
@@ -32,7 +35,9 @@ void SpeedThrottle(void)
  ttime=GetCurTime();
 
  if( (ttime-ltime) < (tfreq/desiredfps) )
+ {
   goto waiter;
+ }
  if( (ttime-ltime) >= (tfreq*4/desiredfps))
   ltime=ttime;
  else

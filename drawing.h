@@ -40,7 +40,7 @@ static void DrawMessage(void)
    howlong--;
    t=XBuf+(FSettings.LastSLine-29)*272+32;
    if(t>=XBuf)
-    DrawTextTrans(t,272,errmsg,132);
+    DrawTextTrans(t,272,(uint8 *)errmsg,132);
   }
 }
 
@@ -109,7 +109,7 @@ static void DrawState(void)
 
 void DrawTextTrans(uint8 *dest, uint32 width, uint8 *textmsg, uint8 fgcolor)
 {
-	uint8 length=strlen(textmsg);
+	uint8 length=strlen((char *)textmsg);
 	uint8 x;
 	uint8 y;
 	uint8 z;
@@ -128,12 +128,12 @@ void DrawBars(void)
 
  if(controlselect==1)
  {
-  DrawTextTrans(XBuf+128-12+180*272, 272, "Hue", 0x85);
+  DrawTextTrans(XBuf+128-12+180*272, 272, (uint8 *)"Hue", 0x85);
   which=ntschue<<1;
  }
  else if(controlselect==2)
  {
-  DrawTextTrans(XBuf+128-16+180*272, 272, "Tint", 0x85);
+  DrawTextTrans(XBuf+128-16+180*272, 272, (uint8 *)"Tint", 0x85);
   which=ntsctint<<1;
  }
 

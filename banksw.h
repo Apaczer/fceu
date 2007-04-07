@@ -90,7 +90,7 @@ void FASTAPASS(2) ROM_BANK16(uint32 A, uint32 V)
  }
 }
 
-void FASTAPASS(1) ROM_BANK32(uint32 V)
+void FASTAPASS(2) ROM_BANK32(uint32 V)
 {
  setprg32(0x8000,V);
  PRGBankList[0]=V<<2;

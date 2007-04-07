@@ -1,4 +1,4 @@
-CFLAGS  = -Wall -Winline ${TFLAGS}
+CFLAGS  = -Wall  ${TFLAGS}
 OBJECTS = fce.o x6502.o video.o general.o endian.o svga.o sound.o nsf.o fds.o netplay.o ines.o state.o unif.o input.o file.o cart.o crc32.o memory.o cheat.o debug.o
 
 fceu: 		fceu2

@@ -30,8 +30,9 @@
 #ifndef socklen_t
 #define socklen_t int
 #endif
-
+#ifdef NETWORK
 static int Socket=-1;
+#endif
 #include "main.h"
 #include "unix-netplay.h"
 
@@ -41,6 +42,7 @@ int netplay=0;
 
 int FCEUD_NetworkConnect(void)
 {
+#ifdef NETWORK
  struct sockaddr_in sockn;
  int TSocket;
 
@@ -105,6 +107,7 @@ int FCEUD_NetworkConnect(void)
   }
   Socket=TSocket;
  }
+#endif
  return(1);  
 }
 
@@ -114,6 +117,7 @@ int FCEUD_NetworkConnect(void)
 
 int FCEUD_NetworkRecvData(uint8 *data, uint32 len, int block)
 {
+#ifdef NETWORK
   if(block)
   {
    int t;
@@ -140,19 +144,28 @@ int FCEUD_NetworkRecvData(uint8 *data, uint32 len, int block)
    }
    return(1);
   }
+#else  
+  return 1;
+#endif
 }
 
 /* 0 on failure, 1 on success.  This function should always block. */
 
 int FCEUD_NetworkSendData(uint8 *Value, uint32 len)
 {
+#ifdef NETWORK
  return(send(Socket,Value,len,0)==len);
+#else
+ return 0;
+#endif
 }
 
 void FCEUD_NetworkClose(void)
 {
+#ifdef NETWORK
  if(Socket>0)
   close(Socket);
  Socket=-1;
+#endif
 }
 

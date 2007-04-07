@@ -1,5 +1,4 @@
 #ifdef SVGALIB
-
 #include <vgakeyboard.h>
 #define SCANCODE_DELETE SCANCODE_REMOVE
 #define SCANCODE_KP_MINUS	SCANCODE_KEYPADMINUS
@@ -7,6 +6,7 @@
 #define MK(k) SCANCODE_##k
 #define MK_COUNT 256
 #elif SDL
+#ifndef GP2X
 #include <SDL.h>
 #define SDLK_A SDLK_a
 #define SDLK_B SDLK_b
@@ -160,7 +160,8 @@
 #define SCAN_F10                0x44
 #define SCAN_F11                0x57
 #define SCAN_F12                0x58
- 
 #define MK_COUNT 256
 #define MK(k) SCAN_##k
+#endif
+
 #endif

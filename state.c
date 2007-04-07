@@ -38,6 +38,7 @@
 #include "general.h"
 #include "state.h"
 #include "memory.h"
+#include "ppu.h"
 
 static SFORMAT SFMDATA[64];
 static int SFEXINDEX;
