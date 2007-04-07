@@ -8,7 +8,10 @@ include mbshare/Makefile
 include input/Makefile
 
 fceu2:	        ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER}
-		${CC} -s -o fceu ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER} ${LDRIVER}
+		${CC} -o fceu ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER} ${LDRIVER}
+ifndef DEBUG
+		$(STRIP) fceu
+endif
 
 clean:
 		${RM} fceu fceu.exe ${OBJECTS} ${INPOBJS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${OBJDRIVER}

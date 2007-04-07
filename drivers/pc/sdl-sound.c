@@ -24,7 +24,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <sys/ioctl.h> 
+#include <sys/ioctl.h>
 #include <linux/soundcard.h>
 
 #include "sdl.h"
@@ -32,7 +32,6 @@
 
 #define GP2X_SOUND 1
 
-extern INLINE SpeedThrottle(void);
 extern void pthread_yield(void);
 extern void FCEUI_FrameSkip(int x);
 
@@ -68,10 +67,9 @@ pthread_cond_t gp2x_sound_cond=PTHREAD_COND_INITIALIZER;
 pthread_mutex_t gp2x_sound_mutex = PTHREAD_MUTEX_INITIALIZER;
 int zzdebug01_entry=0;
 int zzdebug01_wait=0;
-int hasSound=0; 
+int hasSound=0;
 extern unsigned long fps;
 extern unsigned long avg_fps;
-extern unsigned long framesRendered;
 extern unsigned long ticks;
 
 int throttlecount=0;
@@ -85,7 +83,7 @@ void WriteSound(int32 *Buffer, int Count)
 
 void* gp2x_write_sound(void* blah)
   {
-  gp2x_in_sound_thread=1;  
+  gp2x_in_sound_thread=1;
   {
     if (hasSound)
   {
@@ -111,9 +109,9 @@ int InitSound(FCEUGI *gi)
   FCEUI_Sound(Settings.sound);
   gp2x_sound_volume(soundvol, soundvol);
   printf("InitSound() sound_rate: %d\n", Settings.sound);
-  if(firstentry) 
-  {   
-      firstentry=0; 
+  if(firstentry)
+  {
+      firstentry=0;
       gp2x_sound_inited=1;
   }
   return 1 ;

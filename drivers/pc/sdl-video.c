@@ -1,8 +1,5 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -20,56 +17,23 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include <sys/time.h>
-#include <pthread.h>
 
 #include "sdl.h"
-#include "../common/vidblit.h"
+//#include "../common/vidblit.h"
 
 
-#ifdef GP2X
 #include "minimal.h"
 
-char* fps_str=NULL;
-#endif
 extern int showfps;
 
+static char fps_str[32];
+static int framesEmulated, framesRendered;
+
 int stretch_offset=32;
-
-unsigned long framesRendered;
-unsigned long fps;
-unsigned long fps_samplecount=0;
-unsigned long total_fps=-1;
-unsigned long ticks;
-
-pthread_t       gp2x_video_thread=0;
-uint8 * XBufHelper=NULL;
-
-
-#define _sline srendline
-#define _eline erendline
-
-#ifndef GP2X
-SDL_Surface *screen;
-#endif
-
-static int tlines;
-static int inited=0;
-
-static int exs,eys,eefx;
-#define NWIDTH	(256-((eoptions&EO_CLIPSIDES)?16:0))
-#define NOFFSET	(eoptions&EO_CLIPSIDES?8:0)
-
-
-
 int paletterefresh;
-#ifdef GP2X
-static int screenSizeInBytes = 320 * 240;
-#endif
+
 #define FPS_COLOR 61
-
-
 
 
 static unsigned char fontdata8x8[] =
@@ -144,14 +108,14 @@ static void gp2x_text(unsigned char *screen, int x, int y, char *text, int color
 {
 	int i,l,slen;
         slen=strlen(text);
-	
+
 	screen=screen+x+y*320;
-	
-	for (i=0;i<slen;i++) 
+
+	for (i=0;i<slen;i++)
         {
-		for (l=0;l<8;l++) 
+		for (l=0;l<8;l++)
                 {
-		  
+
 			screen[l*320+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?color:screen[l*320+0];
 			screen[l*320+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?color:screen[l*320+1];
 			screen[l*320+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?color:screen[l*320+2];
@@ -163,433 +127,143 @@ static void gp2x_text(unsigned char *screen, int x, int y, char *text, int color
 
 		}
 		screen+=8;
-	} 
+	}
 }
-
-
 
 
 void CleanSurface(void)
 {
-#ifdef GP2X
-  int c=4; 
-  while (c--)
-{
-    memset (gp2x_screen8, 0x80, screenSizeInBytes);    
-    gp2x_video_flip();
-  }
-
-#else
- uint32 x;
-
- x=screen->pitch*screen->h;
-
- if(SDL_MUSTLOCK(screen))
-  SDL_LockSurface(screen);
-
- memset((uint8*)screen->pixels, 0x3F, x);
-
- if(SDL_MUSTLOCK(screen))
-  SDL_UnlockSurface(screen);
-
- SDL_UpdateRect(screen, 0, 0, 0, 0);
-#endif
+	int c=4;
+	while (c--)
+	{
+		memset (gp2x_screen8, 0x80, 320*240);
+		gp2x_video_flip();
+	}
 }
-
 
 
 void KillVideo(void)
 {
-#ifdef GP2X
-  if (fps_str) 
-    free(fps_str);
-  inited&=~1;
-
-  
-#else
- if(inited&1)
- {
-  SDL_QuitSubSystem(SDL_INIT_VIDEO);
- }
- inited=0;
-#endif
 }
+
 
 int InitVideo(void)
 {
-#ifdef GP2X
+	fps_str[0]=0;
 
+	CleanSurface();
 
-  fps_str=malloc(3);
-  fps_str[0]='5'; fps_str[1]='0'; fps_str[2]=0;
-  
-  CleanSurface();
+	puts("Initialized GP2X VIDEO via minimal");
 
-
-  inited|=1;
-
-  puts("Initialized GP2X VIDEO via minimal");
-
-  srendline=0;
-  erendline=239;
-  return 1;
-
-
-#else
- const SDL_VideoInfo *vinf;
- int flags=0;
-
- #ifdef BROKEN
- if(_fullscreen && _fshack)
-  setenv("SDL_VIDEODRIVER",_fshack,1);
- else
- {
-  if(!_fshacksave)
-   unsetenv("SDL_VIDEODRIVER");
-  else
-   setenv("SDL_VIDEODRIVER",_fshacksave,1);
- }
- #endif
- if(SDL_InitSubSystem(SDL_INIT_VIDEO)==-1)
- {
-  puts(SDL_GetError());
-  return(0);
- }
- inited|=1;
-
- SDL_ShowCursor(0);
- tlines=_eline-_sline+1;
-
- vinf=SDL_GetVideoInfo();
-
- if(vinf->hw_available)
-  flags|=SDL_HWSURFACE;
-
- if(_fullscreen)
-  flags|=SDL_FULLSCREEN;
- flags|=SDL_HWPALETTE;
-
- if(_fullscreen)
- {
-  exs=_xscalefs;
-  eys=_yscalefs;
-  eefx=_efxfs;
-  if(_xres<NWIDTH*exs || _yres<tlines*eys)
-  {
-   puts("xscale and/or yscale out of bounds.");
-   KillVideo();
-   return(0);
-  }
-  screen = SDL_SetVideoMode(_xres, _yres, 8, flags);
- }
- else
- {
-  exs=_xscale;
-  eys=_yscale;
-  eefx=_efx;
-  screen = SDL_SetVideoMode(NWIDTH*exs, tlines*eys, 8, flags);
- }
- if(!screen)
- {
-  puts(SDL_GetError());
-  KillVideo();
-  return(0);
- }
- inited=1;
- CleanSurface();
-
- SDL_WM_SetCaption("FCE Ultra","FCE Ultra");
- paletterefresh=1;
- printf("srendline %d, erendline %d\n", srendline, erendline);
- return 1;
-#endif
+	srendline=0;
+	erendline=239;
+	return 1;
 }
+
 
 void ToggleFS(void)
 {
-#ifndef GP2X
- KillVideo();
- _fullscreen=!_fullscreen;
-
- if(!InitVideo())
- {
-  _fullscreen=!_fullscreen;
-  if(!InitVideo())
-  {
-   puts("Gah, bailing out.");
-   exit(1);
-  }
- }
-#endif
 }
-
-
-#ifndef GP2X
-static SDL_Color psdl[256];
-
-void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
-{
-
- psdl[index].r=r;
- psdl[index].g=g;
- psdl[index].b=b;
-
- paletterefresh=1;
-}
-
-void FCEUD_GetPalette(uint8 index, uint8 *r, uint8 *g, uint8 *b)
-{
- *r=psdl[index].r;
- *g=psdl[index].g;
- *b=psdl[index].b;
-}
-
-static void RedoPalette(void)
-{
- SDL_SetPalette(screen,SDL_PHYSPAL,psdl,0,256);
-}
-#else
-
 
 
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {
-  gp2x_video_color8(index, r, g, b);
-  gp2x_video_setpalette();
+	gp2x_video_color8(index, r, g, b);
+	gp2x_video_setpalette();
 
-
-  paletterefresh = 1;
+	paletterefresh = 1;
 }
+
+
 void FCEUD_GetPalette(uint8 index, uint8 * r, uint8 * g, uint8 * b)
 {
-  *r = (uint8) gp2x_palette[(index << 1) + 1];
-  *g = (uint8) (gp2x_palette[(index << 1) + 0] >> 8);
-  *b = (uint8) gp2x_palette[(index << 1) + 0];
+	*r = (uint8) gp2x_palette[(index << 1) + 1];
+	*g = (uint8) (gp2x_palette[(index << 1) + 0] >> 8);
+	*b = (uint8) gp2x_palette[(index << 1) + 0];
 }
 
-static void RedoPalette(void)
+
+static INLINE void printFps(uint8 *screen)
 {
+	struct timeval tv_now;
+	static int prevsec, needfpsflip = 0;
+
+	gettimeofday(&tv_now, 0);
+	if (prevsec != tv_now.tv_sec)
+	{
+		sprintf(fps_str, "%i/%i", framesRendered, framesEmulated);
+		framesEmulated = framesRendered = 0;
+		needfpsflip = 4;
+		prevsec = tv_now.tv_sec;
+	}
+
+	if (stretch_offset > 0)
+	{
+		if (needfpsflip)
+		{
+			int y, *destt = (int *) screen;
+			for (y = 240; y; y--)
+			{
+				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				destt += 64;
+
+				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+			}
+			if (showfps)
+			{
+				fps_str[2] = 0;
+				gp2x_text(screen, 0,  0, fps_str,   FPS_COLOR, 0);
+				gp2x_text(screen, 0, 10, fps_str+3, FPS_COLOR, 0);
+			}
+			needfpsflip--;
+		}
+	}
+	else
+	{
+		if (showfps)
+		{
+			gp2x_text(screen, 0, 0, fps_str, FPS_COLOR, 0);
+		}
+	}
 }
 
-
-
-unsigned int gp2x_ticks_per_ms=7372800; 
-int needfpsflip=1;
-#ifdef FRAMESKIP
-int skipval=16;
-int framecount=0;
-int numrepeats=0;
-int doskipping=0;
-#endif
-
-
-INLINE void printFps(uint8 *screen)
-{ 
-     int y;  
-     int* destt;
-
-     if (needfpsflip)
-     { 
-        if (stretch_offset > 0)
-     	{
-          y=240;
-          while (y--)
-          {
-
-          int* dest=(int *) (screen+((y << 8) + (y << 6))+stretch_offset);
-
-          destt=dest - 8;
-          destt[0]=0x3F3F3F3F; destt[1]=0x3F3F3F3F; destt[2]=0x3F3F3F3F; destt[3]=0x3F3F3F3F;
-          destt[4]=0x3F3F3F3F; destt[5]=0x3F3F3F3F; destt[6]=0x3F3F3F3F; destt[7]=0x3F3F3F3F;
-
-          destt=dest + 64;
-          destt[0]=0x3F3F3F3F; destt[1]=0x3F3F3F3F; destt[2]=0x3F3F3F3F; destt[3]=0x3F3F3F3F;
-          destt[4]=0x3F3F3F3F; destt[5]=0x3F3F3F3F; destt[6]=0x3F3F3F3F; destt[7]=0x3F3F3F3F;
-          }
-          if (showfps)
-          {
-            gp2x_text(screen, 0, 0, fps_str, FPS_COLOR, 0);
-          }
-       }
-
-       if (needfpsflip <= 3)
-       {
-       	 if (showfps)
-       	 {
-           gp2x_text(screen, 0, 0, fps_str, FPS_COLOR, 0);
-       	 }
-         needfpsflip++;
-       }
-       else
-       {
-         needfpsflip=0;
-       }
-     }
-#ifdef FRAMESKIP
-     if ((fps < 59) && doskipping && ((framesRendered % skipval) == (skipval-1)))  
-     {
-       FCEUI_FrameSkip(1);
-     }
-#endif     
-     if ((framesRendered & 0x3F) != 0x3F)
-     { 
-       return;
-     }
-
-     unsigned long currTime=gp2x_timer_read_ms();
-     fps= (unsigned long)( framesRendered * 7372800 / (currTime - ticks));
-       if (fps > 90) 
-         fps=90;
-
-       if (fps > 30)
-       {
-         fps_samplecount++;
-         total_fps+=fps;
-       }
-       if (stretch_offset && showfps)
-       {
-         sprintf(fps_str, "%d", (int)fps);
-         needfpsflip=1;
-         fps_str[2]=0;
-         gp2x_text(screen, 0, 0, fps_str, stretch_offset, 0);
-       }
-       
-#ifdef FRAMESKIP
-  if (fps < 59)
-  {
-    numrepeats++;
-    if (numrepeats >= 4)
-    {
-       if (skipval > 4)
-       {
-         skipval-=2;
-       }
-       doskipping=1;
-       printf("skipping every %dth frame, currfps=%d\n", skipval, fps);
-       numrepeats=0;       
-    }
-  }
-  else
-  {
-  	numrepeats=0;
-  }
-#endif
-       ticks = currTime;
-       framesRendered = 0;
-}
-#endif
-
-
-
-
-
-
-
-
-
-
-
-void LockConsole(){}
-void UnlockConsole(){}
-
-
-#ifdef GP2X
 
 void BlitScreen(uint8 * XBuf)
-{ 
-  
-  int x, y, yinc;
-  if (!XBuf) return;
-  XBufHelper=XBuf;
-  framesRendered++;
-  XBuf = XBuf ;
-
-      y=240;
-      yinc=272*(y-1);
-      while (y--)
-      {
-        int* dest=(int *) (gp2x_screen8+((y << 8) + (y << 6))+stretch_offset);
-        
-        int* src=(int *) (XBuf+yinc);          
-        x=64;
-        while (x--)
-        {
-          dest[x]=src[x];
-        }
-        yinc-=272;
-      }
-
-  if (paletterefresh)
-  {
-      gp2x_video_setpalette();
-      paletterefresh = 0;
-  }
-
-  printFps(gp2x_screen8);
-  gp2x_video_flip();
-}
-
-
-
-
-#else
-extern void SpeedThrottle();
-void BlitScreen(uint8 *XBuf)
 {
- uint8 *dest;
- int xo=0,yo=0;
+	int x, y, yinc;
 
- SpeedThrottle();
+	framesEmulated++;
 
- if(paletterefresh)
- {
-  RedoPalette();
-  paletterefresh=0;
- }
+	if (!XBuf) return;
 
- XBuf+=_sline*272;
+	framesRendered++;
 
- if(SDL_MUSTLOCK(screen))
-  SDL_LockSurface(screen);
+#if 1 // 48->54
+	y=240;
+	yinc=272*(y-1);
+	while (y--)
+	{
+		int* dest=(int *) (gp2x_screen8+((y << 8) + (y << 6))+stretch_offset);
 
- dest=screen->pixels;
+		int* src=(int *) (XBuf+yinc);
+		x=64;
+		while (x--)
+		{
+			dest[x]=src[x];
+		}
+		yinc-=272;
+	}
 
- if(_fullscreen)
- {
-  xo=(((screen->w-NWIDTH*exs))>>1);
-  dest+=xo;
-  if(screen->h>(tlines*eys))
-  {
-   yo=((screen->h-tlines*eys)>>1);
-   dest+=yo*screen->pitch;
-  }
- }
-
- Blit8To8(XBuf+NOFFSET,dest, NWIDTH, tlines, screen->pitch,exs,eys,eefx);
-
- if(SDL_MUSTLOCK(screen))
-  SDL_UnlockSurface(screen);
-
- SDL_UpdateRect(screen, xo, yo, NWIDTH*exs, tlines*eys);
-
- if (0)
- {
-   gp2x_text(NULL, 0, 0, NULL, 0, 0);
- }
-}
-
-uint32 PtoV(uint16 x, uint16 y)
-{
- if(_fullscreen)
- {
-
- }
- else
- {
-  if(eoptions&EO_CLIPSIDES)
-   x+=8;
-  y+=srendline;
- }
- return(x|(y<<16));
-}
+	if (paletterefresh)
+	{
+		gp2x_video_setpalette();
+		paletterefresh = 0;
+	}
 #endif
+	printFps(gp2x_screen8);
+	gp2x_video_flip();
+}
+
+

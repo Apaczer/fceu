@@ -1,16 +1,24 @@
-CC	= arm-linux-gcc 
-TFLAGS  =  -mcpu=arm920t -O3 -Izlib  -DGP2X=1 -DLSB_FIRST -DSDL -DUNIX -DPSS_STYLE=1 -DZLIB  -D_REENTRANT 
+CC	= arm-linux-gcc
+STRIP	= arm-linux-strip
+TFLAGS  = -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DSDL -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
 RM	= rm -f
 B	= drivers/pc/
+ifdef DEBUG
+TFLAGS	+= -ggdb
+else
+TFLAGS	+= -O3
+endif
 
 all:		fceu
-	mv fceu gpfce
+
+gpfce: fceu
+	cp fceu gpfce
 
 include zlib/Makefile
 
 OBJDRIVER	= ${B}minimal.o ${B}sdl.o ${B}main.o ${B}throttle.o ${B}unix-netplay.o ${B}sdl-sound.o ${B}sdl-video.o ${B}sdl-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
-LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib  -lm  -lpthread -lz -static 
-#		     `arm-linux-sdl-config --libs` 
+LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib  -lm  -lpthread -lz -static
+#		     `arm-linux-sdl-config --libs`
 
 include Makefile.base
 
@@ -26,3 +34,7 @@ ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
 ppu.o:			ppu.c ppu.h
 
 include Makefile.common
+
+up: fceu
+	cp -v fceu /mnt/gp2x/mnt/sd/emus/Gpfce_v02/gpfce
+

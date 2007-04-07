@@ -19,7 +19,7 @@
  */
 
 /*  This file contains or coordinates all of the code necessary to compile
-    on a UNIX system that can use svgalib, such as FreeBSD and Linux.  
+    on a UNIX system that can use svgalib, such as FreeBSD and Linux.
     This code is not guaranteed to compile on FreeBSD, though.
 */
 
@@ -47,7 +47,7 @@
 
 static int ntsccol=0,ntschue=-1,ntsctint=-1;
 int soundvol=70;
-int inited=0; 
+int inited=0;
 int swapbuttons=0;
 int showfps=0;
 
@@ -124,7 +124,7 @@ static CFGSTRUCT fceuconfig[]={
 };
 
 static void SaveConfig(void)
-{	
+{
 	char tdir[2048];
 	sprintf(tdir,"%s"PSS"fceu.cfg",BaseDirectory);
         DriverInterface(DES_GETNTSCTINT,&ntsctint);
@@ -281,7 +281,7 @@ static void DoArgs(int argc, char *argv[])
          if(!inputa[x])
 	  continue;
 
-	 for(y=0;y<5;y++)	 
+	 for(y=0;y<5;y++)
 	 {
 	  if(!strncmp(cortab[y],inputa[x],8))
 	  {
@@ -294,7 +294,7 @@ static void DoArgs(int argc, char *argv[])
 	   free(inputa[x]);
 	  }
 	 }
-	}	
+	}
 }
 
 #include "usage.h"
@@ -310,7 +310,7 @@ int CLImain(int argc, char *argv[])
 	FCEUI_SetBaseDirectory(BaseDirectory);
 
 	CreateDirs();
-        if(argc<=1) 
+        if(argc<=1)
         {
          ShowUsage(argv[0]);
          return 1;
@@ -328,7 +328,7 @@ int CLImain(int argc, char *argv[])
          goto dk;
         }
 	ParseGI(tmp);
-	RefreshThrottleFPS();
+	//RefreshThrottleFPS();
         if(!DriverInitialize())
         {
          ret=0;

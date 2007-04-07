@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO 
+ *  Copyright (C) 1998 BERO
  *  Copyright (C) 2002 Ben Parnell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -63,7 +63,7 @@ int MMC5Hack;
 uint32 MMC5HackVROMMask;
 uint8 *MMC5HackExNTARAMPtr;
 uint8 *MMC5HackVROMPTR;
-uint8 MMC5HackCHRMode=0; 
+uint8 MMC5HackCHRMode=0;
 uint8 MMC5HackSPMode;
 uint8 MMC5HackSPScroll;
 uint8 MMC5HackSPPage;
@@ -217,9 +217,9 @@ uint8 PAL=0;
 
 #define MMC5BGVRAMADR(V)      &MMC5BGVPage[(V)>>10][(V)]
 #define	VRAMADR(V)	&VPage[(V)>>10][(V)]
- 
+
 static DECLFW(BRAML)
-{  
+{
         RAM[A]=V;
 }
 
@@ -238,7 +238,7 @@ static DECLFR(ARAMH)
         return RAM[A&0x7FF];
 }
 
-           
+
 static DECLFR(A2002)
 {
                         uint8 ret;
@@ -260,11 +260,11 @@ static DECLFR(A2007)
 
                         PPUGenLatch=ret=VRAMBuffer;
 			if(PPU_hook) PPU_hook(tmp);
-                        if(tmp<0x2000) 
+                        if(tmp<0x2000)
 			{
 			 VRAMBuffer=VPage[tmp>>10][tmp];
 			}
-                        else 
+                        else
 			{
 			 VRAMBuffer=vnapage[(tmp>>10)&0x3][tmp&0x3FF];
 			}
@@ -366,7 +366,7 @@ static DECLFW(B2006)
 }
 
 static DECLFW(B2007)
-{  
+{
 			uint32 tmp=RefreshAddr&0x3FFF;
 
                         PPUGenLatch=V;
@@ -384,7 +384,7 @@ static DECLFW(B2007)
                             VPage[tmp>>10][tmp]=V;
                         }
                         else
-			{                         			
+			{
                          if(PPUNTARAM&(1<<((tmp&0xF00)>>10)))
                           vnapage[((tmp&0xF00)>>10)][tmp&0x3FF]=V;
                         }
@@ -394,7 +394,7 @@ static DECLFW(B2007)
 }
 
 static DECLFW(B4014)
-{                        
+{
 	uint32 t=V<<8;
 	int x;
 	for(x=0;x<256;x++)
@@ -415,7 +415,7 @@ void BGRender(uint8 *target)
 }
 
 #ifdef FRAMESKIP
-extern int framesRendered;
+int FSkip_setting=-1; // auto
 int FSkip=0;
 void FCEUI_FrameSkip(int x)
 {
@@ -466,7 +466,7 @@ static void Loop6502(void)
 	 {
 	 #endif
 	  if(PPU[1]&0x01)
-	  { 
+	  {
 	   for(x=63;x>=0;x--)
 	    *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])&0xF0F0F0F0;
 	  }
@@ -488,7 +488,7 @@ static void Loop6502(void)
 	{
 	 tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
 	 FCEU_dwmemset(target,tem,256);
-	}		
+	}
         if(InputScanlineHook)
          InputScanlineHook(target, scanline);
 }
@@ -526,10 +526,10 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
 {
 	uint32 vofs;
         int X1;
-        uint8 *P=target; 
+        uint8 *P=target;
 
 	vofs=0;
-	
+
         Pal[0]|=64;
         Pal[4]|=64;
         Pal[8]|=64;
@@ -556,12 +556,12 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 uint8 cc,zz,zz2;
                 uint32 vadr;
 
-                if((tochange<=0 && MMC5HackSPMode&0x40) || 
+                if((tochange<=0 && MMC5HackSPMode&0x40) ||
 		   (tochange>0 && !(MMC5HackSPMode&0x40)))
                 {
                  uint8 xs,ys;
 
-                 xs=33-X1; 
+                 xs=33-X1;
                  ys=((scanline>>3)+MMC5HackSPScroll)&0x1F;
                  if(ys>=0x1E) ys-=0x1E;
                  vadr=(MMC5HackExNTARAMPtr[xs|(ys<<5)]<<4)+(vofs&7);
@@ -608,7 +608,7 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 {
                  uint8 xs,ys;
 
-                 xs=33-X1; 
+                 xs=33-X1;
                  ys=((scanline>>3)+MMC5HackSPScroll)&0x1F;
                  if(ys>=0x1E) ys-=0x1E;
                  vadr=(MMC5HackExNTARAMPtr[xs|(ys<<5)]<<4)+(vofs&7);
@@ -642,15 +642,15 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
          {
           for(X1=33;X1;X1--,P+=8)
           {
-                uint8 *C;                                   
+                uint8 *C;
                 uint8 cc;
                 uint8 zz2;
-                uint32 vadr;  
+                uint32 vadr;
 
                 C=MMC5HackVROMPTR;
                 zz2=(RefreshAddr>>10)&3;
                 vadr = (vnapage[zz2][RefreshAddr & 0x3ff] << 4) + vofs;
-                C += (((MMC5HackExNTARAMPtr[RefreshAddr & 0x3ff]) & 0x3f & 
+                C += (((MMC5HackExNTARAMPtr[RefreshAddr & 0x3ff]) & 0x3f &
 			MMC5HackVROMMask) << 12) + (vadr & 0xfff);
                 vadr = (MMC5HackExNTARAMPtr[RefreshAddr & 0x3ff] & 0xC0)>> 4;
                 cc = vadr;
@@ -678,22 +678,22 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 cc=((cc >> ((zz&2) + ((RefreshAddr&0x40)>>4))) &3) <<2;
 
 		#include "fceline.h"
-                
+
 		if((RefreshAddr&0x1f)==0x1f)
                  RefreshAddr^=0x41F;
                 else
                  RefreshAddr++;
-          }          
+          }
          }
-        }       // End if(MMC5Hack) 
+        }       // End if(MMC5Hack)
 
         else if(PPU_hook)
         {
          for(X1=33;X1;X1--,P+=8)
          {
-                uint8 *C;                                   
+                uint8 *C;
                 uint8 cc,zz,zz2;
-                uint32 vadr;  
+                uint32 vadr;
 
                 zz=RefreshAddr&0x1F;
                 zz2=(RefreshAddr>>10)&3;
@@ -714,7 +714,7 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
          }
         }
         else
-        {      
+        {
          for(X1=33;X1;X1--,P+=8)
          {
                 uint8 *C;
@@ -728,7 +728,7 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
 		cc=vnapage[zz2][0x3c0+(zz>>2)+((RefreshAddr&0x380)>>4)];
 	        cc=((cc >> ((zz&2) + ((RefreshAddr&0x40)>>4))) &3) <<2;
 		#include "fceline.h"
-                
+
                 if((RefreshAddr&0x1f)==0x1f)
                  RefreshAddr^=0x41F;
                 else
@@ -874,7 +874,7 @@ void CloseGame(void)
    FlushGameCheats();
   #ifdef NETWORK
   if(FSettings.NetworkPlay) KillNetplay();
-  #endif       
+  #endif
   GameInterface(GI_CLOSE);
   CloseGenie();
   GameLoaded=0;
@@ -934,7 +934,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
 
         endlseq:
         FCEU_fclose(fp);
-        GameLoaded=1;        
+        GameLoaded=1;
 
         FCEU_ResetVidSys();
         if(FCEUGameInfo.type!=GIT_NSF)
@@ -951,7 +951,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
          LoadGamePalette();
          LoadGameCheats();
         }
-        
+
 	FCEU_ResetPalette();
         Exit=0;
         return(&FCEUGameInfo);
@@ -983,6 +983,7 @@ void FCEU_ResetVidSys(void)
   FSettings.FirstSLine=FSettings.UsrFirstSLine[0];
   FSettings.LastSLine=FSettings.UsrLastSLine[0];
  }
+ printf("PAL = %i\n", PAL);
  SetSoundVariables();
 }
 
@@ -1004,7 +1005,7 @@ static INLINE void Thingo(void)
    Loop6502();
 
    if(tosprite>=256)
-   { 
+   {
     X6502_Run(256-harko);
     Fixit1();
     X6502_Run(harko);
@@ -1047,14 +1048,14 @@ void EmLoop(void)
 				  breaks a Super Donkey Kong game. */
 
   X6502_Run(12);		/* I need to figure out the true nature and length
-				   of this delay. 
+				   of this delay.
 			 	*/
   if(FCEUGameInfo.type==GIT_NSF)
    TriggerNMINSF();
   else if(VBlankON)
    TriggerNMI();
 
-  X6502_Run((scanlines_per_frame-242)*(256+85)-12); 
+  X6502_Run((scanlines_per_frame-242)*(256+85)-12);
 
   PPU_status&=0x1f;
 
@@ -1110,7 +1111,6 @@ void EmLoop(void)
    {
     FCEU_PutImageDummy();
     FSkip--;
-    framesRendered++;
     FCEUD_Update(0,WaveFinalMono,ssize);
    }
    else
@@ -1194,7 +1194,7 @@ void ResetNES(void)
         X6502_Reset();
 }
 
-void PowerNES(void) 
+void PowerNES(void)
 {
         if(!GameLoaded) return;
 
