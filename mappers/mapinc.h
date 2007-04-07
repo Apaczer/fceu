@@ -1,0 +1,12 @@
+#include        "../types.h"
+#include        "../x6502.h"
+#include        "../fce.h"
+#define INESPRIV
+#include        "../ines.h"
+#include        "../version.h"
+#include        "../memory.h"
+#include	"../sound.h"
+#include        "../svga.h"
+#include	"../state.h"
+#include	"../cart.h"
+#include	"mapshare.h"

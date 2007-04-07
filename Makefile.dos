@@ -1,0 +1,23 @@
+CC	= gcc 
+TFLAGS  = -O2 -mcpu=i686 -Izlib -fomit-frame-pointer -DC80x86 -DLSB_FIRST -DDOS -DPSS_STYLE=2 -DZLIB -D_USE_LIBM_MATH_H
+RM	= del
+B	= drivers/cli/
+
+all:		fceu
+
+include zlib/Makefile
+
+OBJDRIVER	= ${B}main.o ${B}dos.o ${B}throttle.o ${B}dos-joystick.o ${B}dos-keyboard.o ${B}dos-mouse.o ${B}dos-sound.o ${B}dos-video.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o ${ZLIBOBJS} ${UNZIPOBJS}
+LDRIVER		= -lm
+
+include Makefile.base
+
+${B}main.o:             ${B}main.c ${B}main.h ${B}usage.h ${B}input.c
+${B}dos.o:		${B}dos.c ${B}dos.h
+${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
+${B}dos-joystick.o:	${B}dos-joystick.c ${B}dos.h ${B}dos-joystick.h
+${B}dos-keyboard.o:	${B}dos-keyboard.c ${B}keyscan.h
+${B}dos-mouse.o:	${B}dos-mouse.c
+${B}dos-sound.o:	${B}dos-sound.c ${B}dos.h ${B}dos-sound.h ${B}dos-joystick.h
+${B}dos-video.o:	${B}dos-video.c ${B}dos.h ${B}dos-video.h
+include Makefile.common

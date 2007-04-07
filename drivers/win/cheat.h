@@ -1,0 +1,1 @@
+void ConfigCheats(HWND hParent);

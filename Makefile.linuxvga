@@ -1,0 +1,22 @@
+CC	= gcc 
+TFLAGS  = -DFPS -mcpu=i686 -O2 -Izlib -fomit-frame-pointer -DC80x86 -DLSB_FIRST -DSVGALIB -DUNIX -DLINUX -DNETWORK -DPSS_STYLE=1 -DZLIB
+RM	= rm -f
+B	= drivers/cli/
+
+all:		fceu
+
+include zlib/Makefile
+
+OBJDRIVER	= ${B}svgalib.o ${B}main.o ${B}throttle.o ${B}svga-video.o ${B}unix-netplay.o ${B}lnx-joystick.o drivers/common/unixdsp.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o ${ZLIBOBJS} ${UNZIPOBJS}
+LDRIVER		= -lm -lvga
+
+include Makefile.base
+
+${B}lnx-joystick.o:	${B}lnx-joystick.c
+${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
+${B}throttle.o:		${B}throttle.c ${B}main.h ${B}throttle.h
+${B}svgalib.o:		${B}svgalib.c ${B}svgalib.h
+${B}svga-video.o:	${B}svga-video.c ${B}svga-video.h ${B}vgatweak.c
+${B}unix-netplay.o:	${B}unix-netplay.c
+
+include Makefile.common

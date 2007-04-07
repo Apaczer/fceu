@@ -1,0 +1,23 @@
+CC	= gcc 
+TFLAGS  = -no-fpic -DC80x86 -DNETWORK -DFPS `sdl-config --cflags` -mcpu=i686 -O2 -Izlib -fomit-frame-pointer -DLSB_FIRST -DSDL -DUNIX -DPSS_STYLE=1 -DZLIB
+RM	= rm -f
+B	= drivers/cli/
+
+all:		fceu
+
+include zlib/Makefile
+
+OBJDRIVER	= ${B}sdl.o ${B}main.o ${B}throttle.o ${B}sdl-netplay.o ${B}sdl-sound.o ${B}sdl-video.o ${B}sdl-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS}
+LDRIVER		= -static `sdl-config --libs` -lz -lSDL_net
+
+include Makefile.base
+
+${B}sdl-joystick.o:	${B}sdl-joystick.c
+${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c ${B}keyscan.h
+${B}sdl.o:		${B}sdl.c ${B}sdl.h
+${B}sdl-video.o:	${B}sdl-video.c
+${B}sdl-sound.o:	${B}sdl-sound.c
+${B}sdl-netplay.o:	${B}sdl-netplay.c
+${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
+
+include Makefile.common

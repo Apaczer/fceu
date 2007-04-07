@@ -1,0 +1,22 @@
+CC	= gcc
+TFLAGS  = -mcpu=i686 -O2 -Izlib -fomit-frame-pointer -DNOSTDOUT -DC80x86 -DLSB_FIRST -DWINDOWS -DNETWORK -DPSS_STYLE=2 -DZLIB
+RM	= del
+B	= drivers/win/
+all:		fceu
+
+include zlib/Makefile
+
+LDRIVER = -mwindows -lddraw -ldinput -ldsound -lgdi32 -ldxguid -lwinmm -lshell32 -lwsock32 -lcomdlg32 -lole32
+OBJDRIVER	= ${B}main.o ${B}input.o ${B}joystick.o ${B}keyboard.o ${B}cheat.o ${B}res.o ${ZLIBOBJS} ${UNZIPOBJS} drivers/common/config.o
+
+include Makefile.base
+
+${B}main.o:		${B}main.c drivers/win/netplay.c ${B}config.c ${B}throttle.c ${B}video.c drivers/win/window.c drivers/win/sound.c drivers/win/wave.c
+${B}cheat.o:		${B}common.h ${B}cheat.h
+${B}input.o:		${B}common.h ${B}input.h ${B}joystick.h ${B}keyboard.h
+${B}joystick.o:		${B}common.h ${B}joystick.h ${B}input.h
+${B}keyboard.o:		${B}common.h ${B}keyboard.h ${B}input.h
+drivers/win/res.o:	drivers/win/res.res
+			windres -o drivers/win/res.o drivers/win/res.res
+
+include Makefile.common
