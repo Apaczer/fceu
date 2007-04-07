@@ -16,7 +16,6 @@
 
 #include <fcntl.h>
 #include <linux/fb.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -68,7 +67,7 @@ enum  { GP2X_UP=0x1,       GP2X_LEFT=0x4,       GP2X_DOWN=0x10,  GP2X_RIGHT=0x40
 #define gp2x_1stcore_code_ptr(v)       (&gp2x_dualcore_ram[(v)>>2])
 #define gp2x_2ndcore_data_ptr(v)       gp2x_2ndcore_code_ptr((v)+0x100000)
 #define gp2x_1stcore_data_ptr(v)       gp2x_1stcore_code_ptr((v)+0x100000)
-                                            
+
 #define gp2x_video_wait_vsync()        while(gp2x_memregs[0x1182>>1]&(1<<4));
 #define gp2x_video_wait_hsync()        while(gp2x_memregs[0x1182>>1]&(1<<5));
 

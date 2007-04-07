@@ -3,7 +3,7 @@
 
 /* Prototypes for platform interface functions follow: */
 
-void FCEUD_Update(uint8 *XBuf, int32 *Buffer, int Count);
+void FCEUD_Update(uint8 *XBuf, int16 *Buffer, int Count);
 
 /* Video interface */
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b);

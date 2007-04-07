@@ -120,7 +120,7 @@ int WriteStateChunk(FILE *st, int type, SFORMAT *sf, int count)
  int x;
 
  fputc(type,st);
- 
+
  for(x=bsize=0;x<count;x++)
   bsize+=sf[x].s&(~RLSB);
  bsize+=count<<3;
@@ -195,7 +195,7 @@ int ReadStateChunk(FILE *st, SFORMAT *sf, int count, int size)
      if(sf[x].s&RLSB)
      {
       int z;
-       for(z=(sf[x].s&(~RLSB))-1;z>=0;z--)       
+       for(z=(sf[x].s&(~RLSB))-1;z>=0;z--)
         *(uint8*)sf[x].v=fgetc(st);
      }
      else
@@ -305,7 +305,7 @@ void SaveState(void)
 	//  totalsize+=WriteStateChunk(st,4,SFCTLR,SFCTLRELEMENTS);
 	  totalsize+=WriteStateChunk(st,5,SFSND,SFSNDELEMENTS);
 	  totalsize+=WriteStateChunk(st,0x10,SFMDATA,SFEXINDEX);
-	
+
 	  fseek(st,4,SEEK_SET);
 	  write32(totalsize,st);
 	  SaveStateStatus[CurrentState]=1;
@@ -337,7 +337,7 @@ void LoadState(void)
          fread(&header,1,16,st);
          if(memcmp(header,"FCS",3))
          {
-          fseek(st,0,SEEK_SET);    
+          fseek(st,0,SEEK_SET);
           if(!LoadStateOld(st))
            goto lerror;
           goto okload;
@@ -379,7 +379,7 @@ void CheckStates(void)
 	FILE *st=NULL;
 	int ssel;
 
-	if(SaveStateStatus[0]==-1)
+	if(SaveStateStatus[0]==(char)-1)
  	 for(ssel=0;ssel<10;ssel++)
 	 {
 	  st=fopen(FCEU_MakeFName(FCEUMKF_STATE,ssel,0),"rb");
@@ -484,7 +484,7 @@ static int LoadStateOld(FILE *st)
 	int32 nada;
         uint8 version;
 	nada=0;
-	
+
 	StateBuffer=FCEU_malloc(59999);
 	if(StateBuffer==NULL)
          return 0;
@@ -523,7 +523,7 @@ static int LoadStateOld(FILE *st)
 	afread(&nada,1,1);
 	afread(&nada,1,1);
 	afread(&nada,1,1);
-	
+
 	for(x=0;x<8;x++)
 		areadupper8of16((int8 *)&CHRBankList[x]);
 	afread(PRGBankList,4,1);
@@ -549,7 +549,7 @@ static int LoadStateOld(FILE *st)
 	aread16((int8 *)&scanline);
 	aread16((int8 *)&RefreshAddr);
 	afread(&VRAMBuffer,1,1);
-	
+
 	afread(&IRQa,1,1);
 	aread32((int8 *)&IRQCount);
 	aread32((int8 *)&IRQLatch);
@@ -577,16 +577,16 @@ static int LoadStateOld(FILE *st)
         {
          nada=0;
          afread(&nada,1,1);
-         PPUCHRRAM|=(nada?1:0)<<x;         
+         PPUCHRRAM|=(nada?1:0)<<x;
         }
-			
+
          afread(mapbyte1,1,8);
          afread(mapbyte2,1,8);
          afread(mapbyte3,1,8);
          afread(mapbyte4,1,8);
          for(x=0;x<4;x++)
           aread16((int8 *)&nada);
-                
+
          PPUNTARAM=0;
          for(x=0;x<4;x++)
          {
@@ -598,7 +598,7 @@ static int LoadStateOld(FILE *st)
          afread(&vtoggle,1,1);
          aread16((int8 *)&TempAddrT);
          aread16((int8 *)&RefreshAddrT);
-				
+
          if(GameStateRestore) GameStateRestore(version);
          free(StateBuffer);
 	 FixOldSaveStateSFreq();

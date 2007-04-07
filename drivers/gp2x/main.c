@@ -373,7 +373,7 @@ static void DriverKill(void)
  inited=0;
 }
 
-void FCEUD_Update(uint8 *XBuf, int32 *Buffer, int Count)
+void FCEUD_Update(uint8 *XBuf, int16 *Buffer, int Count)
 {
  if(!Count && !NoWaiting && !(eoptions&EO_NOTHROTTLE))
   SpeedThrottle();

@@ -48,14 +48,14 @@
 
   0.9: initial FIFO message system for dual cpu cores.
        initial 48 Mb support.
-       initial quadruple buffering in 8bbp mode.              
+       initial quadruple buffering in 8bbp mode.
 
        added functions:
-        - gp2x_dualcore_exec() ; initial FIFO message system for dual cpu cores. 
+        - gp2x_dualcore_exec() ; initial FIFO message system for dual cpu cores.
         - gp2x_dualcore_sync() ; initial FIFO message system for dual cpu cores.
 
        improved functions:
-        - gp2x_video_flip()    ; initial quadruple buffering in 8bbp mode.              
+        - gp2x_video_flip()    ; initial quadruple buffering in 8bbp mode.
 
   0.8: initial dual cores cpu support.
        very basic blit functions by popular demand ;-)
@@ -119,7 +119,6 @@
 volatile unsigned long   gp2x_sound_pausei=1,           gp2x_ticks=0,      gp2x_sound=0,      *gp2x_dualcore_ram;
          unsigned short *gp2x_memregs,                 *gp2x_screen15,    *gp2x_logvram15[4],  gp2x_sound_buffer[4+((44100/25)*2)*8]; //25 Hz gives our biggest supported sampling buffer
 volatile unsigned short  gp2x_palette[512];
-         pthread_t       gp2x_sound_thread=0;
 
 extern void gp2x_sound_frame(void *blah, void *buff, int samples);
 
@@ -129,9 +128,9 @@ void gp2x_video_flip(void)
   unsigned long address=gp2x_physvram[gp2x_physvram[7]];
 
   if(++gp2x_physvram[7]==4) gp2x_physvram[7]=0;
-  gp2x_screen15=gp2x_logvram15[gp2x_physvram[7]]; 
-  gp2x_screen8=(unsigned char *)gp2x_screen15; 
- 
+  gp2x_screen15=gp2x_logvram15[gp2x_physvram[7]];
+  gp2x_screen8=(unsigned char *)gp2x_screen15;
+
   gp2x_memregs[0x290E>>1]=(unsigned short)(address & 0xFFFF);
   gp2x_memregs[0x2910>>1]=(unsigned short)(address >> 16);
   gp2x_memregs[0x2912>>1]=(unsigned short)(address & 0xFFFF);
@@ -142,9 +141,9 @@ void gp2x_video_flip_single(void)
 {
   unsigned long address=gp2x_physvram[0];
 
-  gp2x_screen15=gp2x_logvram15[0]; 
-  gp2x_screen8=(unsigned char *)gp2x_screen15; 
- 
+  gp2x_screen15=gp2x_logvram15[0];
+  gp2x_screen8=(unsigned char *)gp2x_screen15;
+
   gp2x_memregs[0x290E>>1]=(unsigned short)(address & 0xFFFF);
   gp2x_memregs[0x2910>>1]=(unsigned short)(address >> 16);
   gp2x_memregs[0x2912>>1]=(unsigned short)(address & 0xFFFF);
@@ -154,16 +153,16 @@ void gp2x_video_flip_single(void)
 
 void gp2x_video_setgamma(unsigned short gamma) /*0..255*/
 {
-  int i=256*3; 
-  gp2x_memregs[0x295C>>1]=0;                                                     
-  while(i--) gp2x_memregs[0x295E>>1]=gamma; 
+  int i=256*3;
+  gp2x_memregs[0x295C>>1]=0;
+  while(i--) gp2x_memregs[0x295E>>1]=gamma;
 }
 
 void gp2x_video_setpalette(void)
 {
   unsigned short *g=(unsigned short *)gp2x_palette; int i=512;
-  gp2x_memregs[0x2958>>1]=0;                                                     
-  while(i--) gp2x_memregs[0x295A>>1]=*g++; 
+  gp2x_memregs[0x2958>>1]=0;
+  while(i--) gp2x_memregs[0x295A>>1]=*g++;
 }
 
 void gp2x_blitter_rect15(gp2x_rect *r)
@@ -179,7 +178,7 @@ void gp2x_blitter_rect15(gp2x_rect *r)
 
 void gp2x_blitter_rect8(gp2x_rect *r)
 {
- int x, y; unsigned char *data=r->data8,   *offset=&gp2x_screen8[r->x+r->y*320]; 
+ int x, y; unsigned char *data=r->data8,   *offset=&gp2x_screen8[r->x+r->y*320];
 
  y=r->h; if(r->solid)
          while(y--) { x=r->w; while(x--) *offset++=*data++; offset+=320-x; }
@@ -187,7 +186,7 @@ void gp2x_blitter_rect8(gp2x_rect *r)
          while(y--) { x=r->w; while(x--) { if(*data) *offset=*data; offset++, data++; }
                       offset+=320-x; }
 }
- 
+
 unsigned long gp2x_joystick_read(void)
 {
   unsigned long value=(gp2x_memregs[0x1198>>1] & 0x00FF);
@@ -196,7 +195,7 @@ unsigned long gp2x_joystick_read(void)
   if(value==0xF7) value=0xEB;
   if(value==0xDF) value=0xAF;
   if(value==0x7F) value=0xBE;
- 
+
   return ~((gp2x_memregs[0x1184>>1] & 0xFF00) | value | (gp2x_memregs[0x1186>>1] << 16));
 }
 
@@ -209,54 +208,55 @@ void gp2x_sound_volume(int l, int r)
 void gp2x_timer_delay(unsigned long ticks)
 {
  unsigned long target=gp2x_memregl[0x0A00>>2]+ticks*gp2x_ticks_per_second;
- while(gp2x_memregl[0x0A00>>2]<target); 
+ while(gp2x_memregl[0x0A00>>2]<target);
 }
 
 unsigned long gp2x_timer_read(void)
 {
  return gp2x_memregl[0x0A00>>2]/gp2x_ticks_per_second;
-} 
+}
 
 unsigned long gp2x_timer_read_ms(void)
 {
  return gp2x_memregl[0x0A00>>2];
-} 
+}
 
 
 void gp2x_sound_pause(int yes) { gp2x_sound_pausei=yes; }
 
-
+#if 0
 static void *gp2x_sound_play(void *blah)
 {
   int flip=0, flyp=gp2x_sound_buffer[1];
   struct timespec ts; ts.tv_sec=0, ts.tv_nsec=gp2x_sound_buffer[2];
 
-  while(!gp2x_sound)  
-  { 
+  while(!gp2x_sound)
+  {
     nanosleep(&ts, NULL);
-                        
-                        
-   if(!gp2x_sound_pausei) 
-   { 
+
+
+   if(!gp2x_sound_pausei)
+   {
      // [1] is sound buffer size     at 22050, 16, stereo, it is 1468 (367*4)
      // [0] number of bytes?,  at 22050,16,stereo, it is 367
      // first half of buffer
 
      // first one is 368
 
-     
+
     gp2x_sound_frame(blah, (void *)(&gp2x_sound_buffer[4+flip]), gp2x_sound_buffer[0]);
     // write out to second half of buffer
     write(gp2x_dev[3],     (void *)(&gp2x_sound_buffer[4+flyp]), gp2x_sound_buffer[1]);
 
     flip+=gp2x_sound_buffer[1];
          if(flip==gp2x_sound_buffer[1]*8) flip=0;
-   flyp+=gp2x_sound_buffer[1]; 
+   flyp+=gp2x_sound_buffer[1];
    if(flyp==gp2x_sound_buffer[1]*8) flyp=0;
-   }              
+   }
   }
   return NULL;
 }
+#endif
 
 static void gp2x_initqueue(gp2x_queue *q, unsigned long queue_items, unsigned long *position920t, unsigned long *position940t)
 {
@@ -268,7 +268,7 @@ static void gp2x_initqueue(gp2x_queue *q, unsigned long queue_items, unsigned lo
 }
 
 static void gp2x_enqueue(gp2x_queue *q, unsigned long data)
-{	
+{
   while(q->items==q->max_items); /*waiting for tail to decrease...*/
   q->place920t[q->head = (q->head < q->max_items ? q->head+1 : 0)] = data;
   q->items++;
@@ -322,7 +322,7 @@ void gp2x_dualcore_exec(unsigned long command) { gp2x_enqueue((gp2x_queue *)gp2x
 void gp2x_dualcore_launch_program(unsigned long *area, unsigned long size)
 {
   unsigned long i=0, *arm940t_ram=(unsigned long *)gp2x_dualcore_ram;
-  
+
   gp2x_940t_reset(1);
 
   gp2x_memregs[0x3B40>>1] = 0;                               //disable interrupts
@@ -330,8 +330,8 @@ void gp2x_dualcore_launch_program(unsigned long *area, unsigned long size)
   gp2x_memregs[0x3B44>>1] = 0xffff;
   gp2x_memregs[0x3B46>>1] = 0xffff;
 
-  gp2x_940t_pause(0);            
-                             
+  gp2x_940t_pause(0);
+
   while(i < size) *arm940t_ram++=area[i++];
 
   gp2x_initqueue((gp2x_queue *)gp2x_1stcore_data_ptr(GP2X_QUEUE_ARRAY_PTR), GP2X_QUEUE_MAX_ITEMS, (unsigned long *)gp2x_1stcore_data_ptr(GP2X_QUEUE_DATA_PTR), (unsigned long *)gp2x_2ndcore_data_ptr(GP2X_QUEUE_DATA_PTR));
@@ -363,16 +363,16 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
   int channels=1;
   int stereoLocal=0;
 
-  gp2x_ticks_per_second=7372800/ticks_per_second; 
+  gp2x_ticks_per_second=7372800/ticks_per_second;
 
   if(!gp2x_dev[0])   gp2x_dev[0] = open("/dev/fb0",   O_RDWR);
   if(!gp2x_dev[1])   gp2x_dev[1] = open("/dev/fb1",   O_RDWR);
-  if(!gp2x_dev[2])   gp2x_dev[2] = open("/dev/mem",   O_RDWR); 
-  
+  if(!gp2x_dev[2])   gp2x_dev[2] = open("/dev/mem",   O_RDWR);
+
   // don't run sound right now
   if ( gp2x_do_sound)
   {
-    if(!gp2x_dev[3])   gp2x_dev[3] = open("/dev/dsp",   O_WRONLY);
+    if(!gp2x_dev[3])   gp2x_dev[3] = open("/dev/dsp",   O_WRONLY|O_ASYNC);
     if(!gp2x_dev[4])   gp2x_dev[4] = open("/dev/mixer", O_RDWR);
   }
 
@@ -382,12 +382,12 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
         gp2x_memregs=(unsigned short *)gp2x_memregl;
 
   if(first) { printf(MINILIB_VERSION "\n");
-              gp2x_dualcore_registers(1); 
+              gp2x_dualcore_registers(1);
               gp2x_sound_volume(100,100);
               gp2x_memregs[0x0F16>>1] = 0x830a; usleep(100000);
               gp2x_memregs[0x0F58>>1] = 0x100c; usleep(100000); }
 
-  ioctl(gp2x_dev[gp2x_physvram[7]=0], FBIOGET_FSCREENINFO, &fixed_info); 
+  ioctl(gp2x_dev[gp2x_physvram[7]=0], FBIOGET_FSCREENINFO, &fixed_info);
    gp2x_screen15=gp2x_logvram15[2]=gp2x_logvram15[0]=(unsigned short *)mmap(0, 320*240*2, PROT_WRITE, MAP_SHARED, gp2x_dev[0], 0);
                                         gp2x_screen8=(unsigned char *)gp2x_screen15;
                    gp2x_physvram[2]=gp2x_physvram[0]=fixed_info.smem_start;
@@ -403,12 +403,12 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
   memset(gp2x_screen15, 0, 320*240*2); gp2x_video_flip();
 
   if(bpp==8)  gp2x_physvram[2]+=320*240,    gp2x_physvram[3]+=320*240,
-             gp2x_logvram15[2]+=320*240/2, gp2x_logvram15[3]+=320*240/2; 
+             gp2x_logvram15[2]+=320*240/2, gp2x_logvram15[3]+=320*240/2;
 
 
  if ( gp2x_do_sound)
  {
-   
+
     ioctl(gp2x_dev[3], SNDCTL_DSP_SPEED,  &rate);
     ioctl(gp2x_dev[3], SNDCTL_DSP_SETFMT, &bits);
 
@@ -417,15 +417,15 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
 
     frag = 0x40000|13;
     ioctl(gp2x_dev[3], SNDCTL_DSP_SETFRAGMENT, &frag);
-  
+
 
     printf("minimal() do sound, rate %d, bits %d, stereo %d, frag %d\n", rate, bits, stereo, frag);
 
-    if(first) 
-    {   
-      first=0; 
+    if(first)
+    {
+      first=0;
     }
-  }  
+  }
 
 }
 
@@ -438,19 +438,19 @@ void gp2x_deinit(void)
   gp2x_dualcore_registers(0);
 
   gp2x_memregs[0x28DA>>1]=0x4AB;                               //set video mode
-  gp2x_memregs[0x290C>>1]=640;   
- 
+  gp2x_memregs[0x290C>>1]=640;
+
   { int i; for(i=0;i<8;i++) if(gp2x_dev[i]) close(gp2x_dev[i]); }    //close all devices
 
   fcloseall();                                                   //close all files
 
 }
 
- 
+
 void SetVideoScaling(int pixels,int width,int height)
 {
         float x, y;
-        float xscale,yscale;
+        float xscale,yscale=0;
 
         int bpp=(gp2x_memregs[0x28DA>>1]>>9)&0x3;  /* bytes per pixel */
 
@@ -462,7 +462,7 @@ void SetVideoScaling(int pixels,int width,int height)
                 else if (gp2x_memregs[0x2818>>1]  == 239) /* NTSC? */
                         yscale=(pixels*331.0)/320.0; /* Y-Scale with NTSC */
         }
-        else /* TV-Out OFF? */ 
+        else /* TV-Out OFF? */
         {
                 xscale=1024.0; /* X-Scale for LCD */
                 yscale=pixels; /* Y-Scale for LCD */

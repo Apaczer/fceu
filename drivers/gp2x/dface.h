@@ -6,7 +6,7 @@ void DoDriverArgs(void);
 void GetBaseDirectory(char *BaseDirectory);
 
 int InitSound(void);
-void WriteSound(int32 *Buffer, int Count, int NoWaiting);
+void WriteSound(int16 *Buffer, int Count, int NoWaiting);
 void KillSound(void);
 void SilenceSound(int s); /* DOS and SDL */
 

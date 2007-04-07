@@ -2,7 +2,7 @@ CC	= arm-linux-gcc
 STRIP	= arm-linux-strip
 TFLAGS  = -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DSDL -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
 RM	= rm -f
-B	= drivers/pc/
+B	= drivers/gp2x/
 ifdef DEBUG
 TFLAGS	+= -ggdb
 else
@@ -16,18 +16,17 @@ gpfce: fceu
 
 include zlib/Makefile
 
-OBJDRIVER	= ${B}minimal.o ${B}sdl.o ${B}main.o ${B}throttle.o ${B}unix-netplay.o ${B}sdl-sound.o ${B}sdl-video.o ${B}lnx-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
+OBJDRIVER	= ${B}minimal.o ${B}gp2x.o ${B}main.o ${B}throttle.o ${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
 LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib  -lm  -lpthread -lz -static
-#		     `arm-linux-sdl-config --libs`
 
 include Makefile.base
 
 ${B}lnx-joystick.o:	${B}lnx-joystick.c
 ${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
-${B}sdl.o:		${B}sdl.c ${B}sdl.h
-${B}sdl-video.o:	${B}sdl-video.c
-${B}sdl-video.o:	${B}minimal.c
-${B}sdl-sound.o:	${B}sdl-sound.c
+${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h
+${B}gp2x-video.o:	${B}gp2x-video.c
+${B}gp2x-video.o:	${B}minimal.c
+${B}gp2x-sound.o:	${B}gp2x-sound.c
 ${B}unix-netplay.o:	${B}unix-netplay.c
 ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
 ppu.o:			ppu.c ppu.h

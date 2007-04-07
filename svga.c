@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO 
+ *  Copyright (C) 1998 BERO
  *  Copyright (C) 2002 Ben Parnell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@
 #endif
 
 #include "types.h"
-#include "svga.h" 
+#include "svga.h"
 #include "fce.h"
 #include "general.h"
 #include "video.h"
@@ -193,7 +193,7 @@ void FCEUI_SetPaletteArray(uint8 *pal)
 
 void FCEUI_SelectState(int w)
 {
- if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF) 
+ if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
   CommandQueue=42+w;
 }
 
@@ -205,7 +205,7 @@ void FCEUI_SaveState(void)
 
 void FCEUI_LoadState(void)
 {
- if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF) 
+ if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
   CommandQueue=41;
 }
 
@@ -251,7 +251,7 @@ void DriverInterface(int w, void *d)
 
   case DES_NSFINC:NSFControl(1);break;
   case DES_NSFDEC:NSFControl(2);break;
-  case DES_NSFRES:NSFControl(0);break;  
+  case DES_NSFRES:NSFControl(0);break;
 
   case DES_VSUNIDIPSET:CommandQueue=10+(int)d;break;
   case DES_VSUNITOGGLEDIPVIEW:CommandQueue=10;break;
@@ -270,16 +270,16 @@ void DriverInterface(int w, void *d)
 		     which=controlselect==1?ntschue:ntsctint;
 		     which--;
 		     if(which<0) which=0;
-			 if(controlselect==1) 
-			  ntschue=which;		     
-			 else ntsctint=which;		     
+			 if(controlselect==1)
+			  ntschue=which;
+			 else ntsctint=which;
 		     CalculatePalette();
 		    }
 		   controllength=360;
 		    }
 		   }
 		  break;
-  case DES_NTSCINC:	
+  case DES_NTSCINC:
 		   if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF)
 		     if(controlselect)
 		     {
@@ -312,12 +312,12 @@ void SetNESDeemph(uint8 d, int force)
  uint32 r,g,b;
  int x;
 
- /* If it's not forced(only forced when the palette changes), 
-    don't waste cpu time if the same deemphasis bits are set as the last call. 
+ /* If it's not forced(only forced when the palette changes),
+    don't waste cpu time if the same deemphasis bits are set as the last call.
  */
- if(!force) 
+ if(!force)
  {
-  if(d==lastd) 
+  if(d==lastd)
    return;
  }
  else	/* Only set this when palette has changed. */
@@ -366,7 +366,7 @@ void SetNESDeemph(uint8 d, int force)
      FCEUD_SetPalette(x|0xC0,m,n,o);
 
     }
- 
+
  lastd=d;
 }
 
@@ -382,25 +382,25 @@ static void CalculatePalette(void)
  static uint8 br1[4]={6,9,12,12};
  static double br2[4]={.29,.45,.73,.9};
  static double br3[4]={0,.24,.47,.77};
-  
+
  for(x=0;x<=3;x++)
   for(z=0;z<16;z++)
   {
    s=(double)TINTVAL;
    y=(double)br2[x];
    if(z==0)  {s=0;y=((double)br1[x])/12;}
-   
+
    if(z>=13)
    {
     s=y=0;
     if(z==13)
-     y=(double)br3[x];     
+     y=(double)br3[x];
    }
 
    theta=(double)M_PI*(double)(((double)cols[z]*10+HUEVAL)/(double)180);
    r=(int)(((double)y+(double)s*(double)sin(theta))*(double)256);
    g=(int)(((double)y-(double)((double)27/(double)53)*s*(double)sin(theta)+(double)((double)10/(double)53)*s*cos(theta))*(double)256);
-   b=(int)(((double)y-(double)s*(double)cos(theta))*(double)256);  
+   b=(int)(((double)y-(double)s*(double)cos(theta))*(double)256);
 
    // TODO:  Fix RGB to compensate for phosphor changes(add to red??).
 
@@ -410,7 +410,7 @@ static void CalculatePalette(void)
    if(r<0) r=0;
    if(g<0) g=0;
    if(b<0) b=0;
-    
+
    paletten[(x<<4)+z].r=r;
    paletten[(x<<4)+z].g=g;
    paletten[(x<<4)+z].b=b;
@@ -453,14 +453,14 @@ void FCEU_PutImage(void)
          }
 	}
         else
-        {	
+        {
 	 /* Save snapshot before overlay stuff is written. */
          if(dosnapsave)
          {
           ReallySnap();
           dosnapsave=0;
          }
-	 if(FCEUGameInfo.type==GIT_VSUNI && DIPS&2)         
+	 if(FCEUGameInfo.type==GIT_VSUNI && DIPS&2)
 	  DrawDips();
          if(StateShow) DrawState();
          if(controllength) {controllength--;DrawBars();}
@@ -506,7 +506,7 @@ void FCEU_ResetPalette(void)
 static void ChoosePalette(void)
 {
     if(FCEUGameInfo.type==GIT_NSF)
-     palo=NSFPalette;   
+     palo=NSFPalette;
     else if(ipalette)
      palo=palettei;
     else if(ntsccol && !PAL && FCEUGameInfo.type!=GIT_VSUNI)
@@ -515,7 +515,7 @@ static void ChoosePalette(void)
       CalculatePalette();
      }
     else
-     palo=palpoint[pale];  
+     palo=palpoint[pale];
 }
 
 void WritePalette(void)
@@ -527,7 +527,7 @@ void WritePalette(void)
     if(FCEUGameInfo.type==GIT_NSF)
     {
      for(x=0;x<39;x++)
-      FCEUD_SetPalette(x,palo[x].r,palo[x].g,palo[x].b); 
+      FCEUD_SetPalette(x,palo[x].r,palo[x].g,palo[x].b);
     }
     else
     {

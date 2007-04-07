@@ -19,10 +19,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "sdl.h"
-//#include "../common/vidblit.h"
-
-
+#include "gp2x.h"
 #include "minimal.h"
 
 extern int showfps;
@@ -191,7 +188,7 @@ static INLINE void printFps(uint8 *screen)
 	gettimeofday(&tv_now, 0);
 	if (prevsec != tv_now.tv_sec)
 	{
-		sprintf(fps_str, "%i/%i", framesRendered, framesEmulated);
+		sprintf(fps_str, "%2i/%2i", framesRendered, framesEmulated);
 		framesEmulated = framesRendered = 0;
 		needfpsflip = 4;
 		prevsec = tv_now.tv_sec;

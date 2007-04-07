@@ -1,18 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
-#include "sdl.h"
-#include "sdl-video.h"
+#include "gp2x.h"
+#include "gp2x-video.h"
 #ifdef NETWORK
 #include "unix-netplay.h"
 #endif
 #include "minimal.h"
-//extern int soundvol;
+
 int CLImain(int argc, char *argv[]);
-extern int gp2x_in_sound_thread;
-extern void pthread_yield(void);
 extern void SetVideoScaling(int, int, int);
 
 //#define SOUND_RATE 44100
@@ -229,8 +226,6 @@ int main(int argc, char *argv[])
 
         gp2x_deinit();
         // make sure sound thread has exited cleanly
-        while (gp2x_in_sound_thread) pthread_yield();
-        printf("Sound thread exited\n");
         printf("Exiting main().  terminated");
         if (showfps && swapbuttons)
         {
