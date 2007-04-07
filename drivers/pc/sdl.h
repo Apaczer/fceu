@@ -1,6 +1,3 @@
-#ifndef GP2X
-#include <SDL.h>
-#endif
 #include "../../driver.h"
 #include "../common/args.h"
 #include "../common/config.h"

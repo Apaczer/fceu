@@ -14,7 +14,7 @@ int CLImain(int argc, char *argv[]);
 extern int gp2x_in_sound_thread;
 extern void pthread_yield(void);
 extern void SetVideoScaling(int, int, int);
- 
+
 //#define SOUND_RATE 44100
 #define SOUND_RATE 22050
 
@@ -112,21 +112,13 @@ void GetBaseDirectory(char *BaseDirectory)
 {
  char *ol;
 
-#ifdef GP2X
  ol="/mnt/sd/roms/nes";
-#else
- ol=getenv("HOME");
-#endif
  BaseDirectory[0]=0;
  if(ol)
  {
   strncpy(BaseDirectory,ol,2047);
   BaseDirectory[2047]=0;
-#ifdef GP2X
   strcat(BaseDirectory,"/fceultra");
-#else
-  strcat(BaseDirectory,"/.fceultra");
-#endif
  }
 }
 
@@ -175,7 +167,7 @@ void DoDriverArgs(void)
 	#endif
 
         for(x=0;x<4;x++)
-         if(!joy[x]) 
+         if(!joy[x])
 	 {
 	  memset(joyBMap[x],0,sizeof(joyBMap[0]));
 	  memset(joyAMap[x],0,sizeof(joyAMap[0]));
@@ -188,20 +180,6 @@ int InitMouse(void)
 void KillMouse(void){}
 void GetMouseData(uint32 *d)
 {
-#ifndef GP2X
- int x,y;
- uint32 t;
-
- t=SDL_GetMouseState(&x,&y);
- d[2]=0;
- if(t&SDL_BUTTON(1))
-  d[2]|=1;
- if(t&SDL_BUTTON(3))
-  d[2]|=2;
- t=PtoV(x,y); 
- d[0]=t&0xFFFF;
- d[1]=(t>>16)&0xFFFF;
-#endif
 }
 
 int InitKeyboard(void)
@@ -221,13 +199,9 @@ void KillKeyboard(void)
 
 char *GetKeyboard(void)
 {
-#ifndef GP2X
- SDL_PumpEvents();
- return (char *)(SDL_GetKeyState(0));
-#else
  return NULL;
-#endif
 }
+
 #include "unix-basedir.h"
 extern int showfps;
 extern int swapbuttons;
@@ -235,18 +209,18 @@ extern int swapbuttons;
 int main(int argc, char *argv[])
 {
 
-        puts("Starting GPFCE - Port version 0.2 05-29-2006");           
+        puts("Starting GPFCE - Port version 0.2 05-29-2006");
         puts("Based on FCE Ultra "VERSION_STRING"...");
         puts("Ported by Zheng Zhu\n");
-#ifdef GP2X
+
          //  stereo
     	 //gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
-    	 
+
     	 // mono 44khz
     	//gp2x_init (1000, 8, SOUND_RATE<<1, 16, 0, 60);
     	 // mono 22khz
     	gp2x_init (1000, 8, SOUND_RATE, 16, 0, 60);
-       
+
         SetDefaults();
         int ret=CLImain(argc,argv);
 
@@ -275,35 +249,5 @@ int main(int argc, char *argv[])
           execl("./selector","./selector","./gpfce_config",NULL);
         }
         return(ret?0:-1);
-#else
-	gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
-        
-	if(SDL_Init(0))
-	{
-	 printf("Could not initialize SDL: %s.\n", SDL_GetError());
-	 return(-1);
-	}
-	SetDefaults();
-
-	#ifdef BROKEN
-        if(getenv("SDL_VIDEODRIVER"))
-	{
-	 if((_fshacksave=malloc(strlen(getenv("SDL_VIDEODRIVER"))+1)))
-	  strcpy(_fshacksave,getenv("SDL_VIDEODRIVER"));
-	}
-        else
-         _fshacksave=0;
-	#endif
-
-	{
-	 int ret=CLImain(argc,argv);
-	 SDL_Quit();
-         // make sure sound thread has exited cleanly
-         while (gp2x_in_sound_thread) pthread_yield();
-         printf("Sound thread exited\n");
-         printf("Exiting main().  terminated");
-	 return(ret);
-	}
-#endif
 }
 

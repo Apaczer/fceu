@@ -50,8 +50,6 @@ static int InputTypeFC;
 static uint32 JSreturn;
 int NoWaiting=0;
 
-#include "keyscan.h"
-
 static int powerpadsc[2][12];
 static int powerpadside=0;
 
