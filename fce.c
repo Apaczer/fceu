@@ -51,7 +51,7 @@
 #define Pal     (PALRAM)
 
 
-static void FASTAPASS(1) RefreshLine(uint8 *target);
+static void (*RefreshLine)(uint8 *P, uint32 vofs) = NULL;
 static void PRefreshLine(void);
 
 static void ResetPPU(void);
@@ -404,8 +404,19 @@ static DECLFW(B4014)
 
 void BGRender(uint8 *target)
 {
-	uint32 tem;
-        RefreshLine(target);
+	uint32 tem, vofs;
+	vofs=((PPU[0]&0x10)<<8) | ((RefreshAddr>>12)&7);
+
+        Pal[0]|=64;
+        Pal[4]|=64;
+        Pal[8]|=64;
+        Pal[0xC]|=64;
+        RefreshLine(target-XOffset, vofs);
+        Pal[0]&=63;
+        Pal[4]&=63;
+        Pal[8]&=63;
+        Pal[0xC]&=63;
+
         if(!(PPU[1]&2))
         {
          tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
@@ -521,32 +532,13 @@ static void PRefreshLine(void)
         }
 }
 
-/*              Total of 33 tiles(32 + 1 extra) */
-static void FASTAPASS(1) RefreshLine(uint8 *target)
+/* This high-level graphics MMC5 emulation code was written
+   for MMC5 carts in "CL" mode.  It's probably not totally
+   correct for carts in "SL" mode.
+   */
+static void RefreshLine_MMC5Hack1(uint8 *P, uint32 vofs)
 {
-	uint32 vofs;
-        int X1;
-        uint8 *P=target;
-
-	vofs=0;
-
-        Pal[0]|=64;
-        Pal[4]|=64;
-        Pal[8]|=64;
-        Pal[0xC]|=64;
-
-	vofs=((PPU[0]&0x10)<<8) | ((RefreshAddr>>12)&7);
-        P-=XOffset;
-
-	/* This high-level graphics MMC5 emulation code was written
-	   for MMC5 carts in "CL" mode.  It's probably not totally
-	   correct for carts in "SL" mode.
-	*/
-        if(MMC5Hack && geniestage!=1)
-        {
-	 if(MMC5HackCHRMode==0 && (MMC5HackSPMode&0x80))
-	 {
-	  int8 tochange;
+	  int8 tochange, X1;
 
           tochange=MMC5HackSPMode&0x1F;
 
@@ -589,10 +581,11 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                  RefreshAddr++;
                 tochange--;
           }
-	 }
-	 else if(MMC5HackCHRMode==1 && (MMC5HackSPMode&0x80))
-	 {
-          int8 tochange;
+}
+
+static void RefreshLine_MMC5Hack2(uint8 *P, uint32 vofs)
+{
+          int8 tochange, X1;
 
           tochange=MMC5HackSPMode&0x1F;
 
@@ -636,10 +629,12 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                  RefreshAddr++;
 		tochange--;
           }
-	 }
+}
 
-         else if(MMC5HackCHRMode==1)
-         {
+static void RefreshLine_MMC5Hack3(uint8 *P, uint32 vofs)
+{
+          int8 X1;
+
           for(X1=33;X1;X1--,P+=8)
           {
                 uint8 *C;
@@ -661,9 +656,12 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 else
                  RefreshAddr++;
           }
-         }
-         else
-         {
+}
+
+static void RefreshLine_MMC5Hack4(uint8 *P, uint32 vofs)
+{
+          int8 X1;
+
           for(X1=33;X1;X1--,P+=8)
           {
                 uint8 *C;
@@ -684,11 +682,12 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 else
                  RefreshAddr++;
           }
-         }
-        }       // End if(MMC5Hack)
+}
 
-        else if(PPU_hook)
-        {
+static void RefreshLine_PPU_hook(uint8 *P, uint32 vofs)
+{
+         int8 X1;
+
          for(X1=33;X1;X1--,P+=8)
          {
                 uint8 *C;
@@ -712,9 +711,12 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 else
                  RefreshAddr++;
          }
-        }
-        else
-        {
+}
+
+static void RefreshLine_normal(uint8 *P, uint32 vofs)
+{
+         int8 X1;
+
          for(X1=33;X1;X1--,P+=8)
          {
                 uint8 *C;
@@ -727,21 +729,66 @@ static void FASTAPASS(1) RefreshLine(uint8 *target)
                 C = VRAMADR(vadr);
 		cc=vnapage[zz2][0x3c0+(zz>>2)+((RefreshAddr&0x380)>>4)];
 	        cc=((cc >> ((zz&2) + ((RefreshAddr&0x40)>>4))) &3) <<2;
-		#include "fceline.h"
+        {
+	 uint8 *S=PALRAM+cc;
+	 uint8 c1,c2;
+
+	 c1=((C[0]>>1)&0x55)|(C[8]&0xAA);
+         c2=(C[0]&0x55)|((C[8]<<1)&0xAA);
+
+         P[6]=S[c1&3];
+         P[7]=S[c2&3];
+         P[4]=S[(c1>>2)&3];
+         P[5]=S[(c2>>2)&3];
+         P[2]=S[(c1>>4)&3];
+         P[3]=S[(c2>>4)&3];
+
+         P[0]=S[c1>>6];
+         P[1]=S[c2>>6];
+        }
 
                 if((RefreshAddr&0x1f)==0x1f)
                  RefreshAddr^=0x41F;
                 else
                  RefreshAddr++;
          }
+}
+
+static void SetRefreshLine(void)
+{
+        if(MMC5Hack && geniestage!=1)
+        {
+	 if(MMC5HackCHRMode==0 && (MMC5HackSPMode&0x80))
+	 {
+		 if (RefreshLine != RefreshLine_MMC5Hack1) printf("set refr RefreshLine_MMC5Hack1\n");
+		 RefreshLine = RefreshLine_MMC5Hack1;
+	 }
+	 else if(MMC5HackCHRMode==1 && (MMC5HackSPMode&0x80))
+	 {
+		if (RefreshLine != RefreshLine_MMC5Hack2) printf("set refr RefreshLine_MMC5Hack2\n");
+		 RefreshLine = RefreshLine_MMC5Hack2;
+	 }
+         else if(MMC5HackCHRMode==1)
+         {
+		if (RefreshLine != RefreshLine_MMC5Hack3) printf("set refr RefreshLine_MMC5Hack3\n");
+		 RefreshLine = RefreshLine_MMC5Hack3;
+         }
+         else
+         {
+		if (RefreshLine != RefreshLine_MMC5Hack4) printf("set refr RefreshLine_MMC5Hack4\n");
+		 RefreshLine = RefreshLine_MMC5Hack4;
+         }
+        }       // End if(MMC5Hack)
+        else if(PPU_hook)
+        {
+		if (RefreshLine != RefreshLine_PPU_hook) printf("set refr RefreshLine_PPU_hook\n");
+		RefreshLine = RefreshLine_PPU_hook;
         }
-
-        #undef vofs
-
-        Pal[0]&=63;
-        Pal[4]&=63;
-        Pal[8]&=63;
-        Pal[0xC]&=63;
+        else
+        {
+		if (RefreshLine != RefreshLine_normal) printf("set refr RefreshLine_normal\n");
+		RefreshLine = RefreshLine_normal;
+        }
 }
 
 static INLINE void Fixit2(void)
@@ -1082,6 +1129,7 @@ void EmLoop(void)
    int x,max,maxref;
 
    deemp=PPU[1]>>5;
+   SetRefreshLine();
    for(scanline=0;scanline<240;scanline++)
    {
     deempcnt[deemp]++;
