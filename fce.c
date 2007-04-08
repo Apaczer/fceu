@@ -205,12 +205,13 @@ uint32 TempAddr,RefreshAddr;
 int scanline;
 static uint32 scanlines_per_frame;
 
+uint8 GameMemBlock[131072] __attribute__ ((aligned (4)));
+uint8 NTARAM[0x800] __attribute__ ((aligned (4)));
+uint8 PALRAM[0x20] __attribute__ ((aligned (4)));
+uint8 RAM[0x800] __attribute__ ((aligned (4)));
+
 uint8 PPU[4];
 uint8 PPUSPL;
-
-uint8 GameMemBlock[131072];
-uint8 NTARAM[0x800],PALRAM[0x20];
-uint8 RAM[0x800];
 
 uint8 PAL=0;
 
@@ -419,8 +420,9 @@ void BGRender(uint8 *target)
 
         if(!(PPU[1]&2))
         {
-         tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
-         tem|=0x40404040;
+         tem=Pal[0]|0x40;
+	 tem|=tem<<8;
+	 tem|=tem<<16;
          *(uint32 *)target=*(uint32 *)(target+4)=tem;
         }
 }
@@ -713,45 +715,36 @@ static void RefreshLine_PPU_hook(uint8 *P, uint32 vofs)
          }
 }
 
-static void RefreshLine_normal(uint8 *P, uint32 vofs)
+static void RefreshLine_normal(uint8 *P, uint32 vofs) // vofs is 0x107 max
 {
          int8 X1;
+	 uint32 rfraddr = RefreshAddr;
+	 uint8 *page = vnapage[(rfraddr>>10)&3];
+         uint32 cc2=0;
 
-         for(X1=33;X1;X1--,P+=8)
+	 if ((rfraddr&0xc)!=0)
+	  cc2=*(uint32 *) (page + ((rfraddr&0x380)>>4) + ((rfraddr&0x10)>>2) + 0x3c0);
+
+         for (X1=33;X1;X1--,P+=8)
          {
-                uint8 *C;
-                uint8 cc,zz,zz2;
+                uint8 cc,*C;
                 uint32 vadr;
 
-                zz=RefreshAddr&0x1F;
-		zz2=(RefreshAddr>>10)&3;
-                vadr=(vnapage[zz2][RefreshAddr&0x3ff]<<4)+vofs;
+                vadr=(page[rfraddr&0x3ff]<<4)+vofs;
                 C = VRAMADR(vadr);
-		cc=vnapage[zz2][0x3c0+(zz>>2)+((RefreshAddr&0x380)>>4)];
-	        cc=((cc >> ((zz&2) + ((RefreshAddr&0x40)>>4))) &3) <<2;
-        {
-	 uint8 *S=PALRAM+cc;
-	 uint8 c1,c2;
+		if ((rfraddr&0xc)==0)
+	         cc2=*(uint32 *) (page + ((rfraddr&0x380)>>4) + ((rfraddr&0x10)>>2) + 0x3c0);
+	        cc=((cc2 >> ((rfraddr&2) + ((rfraddr&0x40)>>4) + ((rfraddr&0xc)<<1))) & 3) << 2;
 
-	 c1=((C[0]>>1)&0x55)|(C[8]&0xAA);
-         c2=(C[0]&0x55)|((C[8]<<1)&0xAA);
+	        #include "fceline.h"
 
-         P[6]=S[c1&3];
-         P[7]=S[c2&3];
-         P[4]=S[(c1>>2)&3];
-         P[5]=S[(c2>>2)&3];
-         P[2]=S[(c1>>4)&3];
-         P[3]=S[(c2>>4)&3];
-
-         P[0]=S[c1>>6];
-         P[1]=S[c2>>6];
-        }
-
-                if((RefreshAddr&0x1f)==0x1f)
-                 RefreshAddr^=0x41F;
-                else
-                 RefreshAddr++;
+                if((rfraddr&0x1f)==0x1f) {
+                 rfraddr^=0x41F;
+	         page = vnapage[(rfraddr>>10)&3];
+                } else
+                 rfraddr++;
          }
+	 RefreshAddr = rfraddr;
 }
 
 static void SetRefreshLine(void)
@@ -853,20 +846,6 @@ static void DoHBlank(void)
  //PPU_hook(0,-1);
  //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

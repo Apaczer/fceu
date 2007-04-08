@@ -1,6 +1,6 @@
 CC	= arm-linux-gcc
 STRIP	= arm-linux-strip
-TFLAGS  = -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DSDL -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
+TFLAGS  = -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
 RM	= rm -f
 B	= drivers/gp2x/
 ifdef DEBUG
@@ -17,7 +17,7 @@ gpfce: fceu
 include zlib/Makefile
 
 OBJDRIVER	= ${B}minimal.o ${B}gp2x.o ${B}main.o ${B}throttle.o ${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
-LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib  -lm  -lpthread -lz -static
+LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static
 
 include Makefile.base
 
