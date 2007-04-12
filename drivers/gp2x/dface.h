@@ -6,7 +6,7 @@ void DoDriverArgs(void);
 void GetBaseDirectory(char *BaseDirectory);
 
 int InitSound(void);
-void WriteSound(int16 *Buffer, int Count, int NoWaiting);
+void WriteSound(int16 *Buffer, int Count);
 void KillSound(void);
 void SilenceSound(int s); /* DOS and SDL */
 
@@ -26,7 +26,7 @@ void KillKeyboard(void);
 
 int InitVideo(void);
 void KillVideo(void);
-void BlitScreen(uint8 *XBuf);
+void BlitScreen(uint8 *buf);
 void LockConsole(void);
 void UnlockConsole(void);
 void ToggleFS();		/* SDL */

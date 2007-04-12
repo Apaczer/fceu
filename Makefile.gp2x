@@ -1,12 +1,18 @@
-CC	= arm-linux-gcc
-STRIP	= arm-linux-strip
-TFLAGS  = -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
+CROSS	= arm-linux-
+CC	= $(CROSS)gcc
+STRIP	= $(CROSS)strip
+AS	= $(CROSS)as
+TFLAGS  = -Winline -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
+ASFLAGS	= -mcpu=arm920t -mfloat-abi=soft
 RM	= rm -f
 B	= drivers/gp2x/
 ifdef DEBUG
 TFLAGS	+= -ggdb
+LDRIVER	+= -ggdb
 else
-TFLAGS	+= -O3
+TFLAGS	+= -ftracer -fstrength-reduce -funroll-loops -fomit-frame-pointer -fstrict-aliasing -ffast-math
+TFLAGS	+= -O3 # -pg
+LDRIVER	+= -O3 # -pg
 endif
 
 all:		fceu
@@ -16,22 +22,22 @@ gpfce: fceu
 
 include zlib/Makefile
 
-OBJDRIVER	= ${B}minimal.o ${B}gp2x.o ${B}main.o ${B}throttle.o ${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
-LDRIVER		= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static
+OBJDRIVER	 = ${B}minimal.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
+		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o \
+		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
+LDRIVER		+= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static
 
 include Makefile.base
 
-${B}lnx-joystick.o:	${B}lnx-joystick.c
 ${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
 ${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h
-${B}gp2x-video.o:	${B}gp2x-video.c
-${B}gp2x-video.o:	${B}minimal.c
-${B}gp2x-sound.o:	${B}gp2x-sound.c
-${B}unix-netplay.o:	${B}unix-netplay.c
 ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
 ppu.o:			ppu.c ppu.h
 
 include Makefile.common
+
+#x6502.o:	x6502.c x6502.h ops.h fce.h sound.h
+#	$(CC) $(CFLAGS) -finline-limit=60000 -c $< -o $@
 
 up: fceu
 	cp -v fceu /mnt/gp2x/mnt/sd/emus/Gpfce_v02/gpfce

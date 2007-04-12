@@ -441,7 +441,7 @@ static void Loop6502(void)
 {
 	uint32 tem;
 	int x;
-        uint8 *target=XBuf+(scanline<<8)+(scanline<<4)+8;
+        uint8 *target=XBuf+scanline*320+32;
 
         if(ScreenON || SpriteON)
         {
@@ -481,18 +481,19 @@ static void Loop6502(void)
 	  if(PPU[1]&0x01)
 	  {
 	   for(x=63;x>=0;x--)
-	    *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])&0xF0F0F0F0;
+	    ((uint32 *)target)[x]=((uint32*)target)[x]&0xF0F0F0F0;
 	  }
 	   if((PPU[1]>>5)==0x7)
 	    for(x=63;x>=0;x--)
-	     *(uint32 *)&target[x<<2]=((*(uint32*)&target[x<<2])&0x3f3f3f3f)|0x40404040;
+	     ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x40404040;
 	   else	if(PPU[1]&0xE0)
 	    for(x=63;x>=0;x--)
-	     *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])|0xC0C0C0C0;
+	     ((uint32 *)target)[x]=((uint32*)target)[x]|0xC0C0C0C0;
 	   else
             for(x=63;x>=0;x--)
-             *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])&0x3f3f3f3f;
-
+             ((uint32 *)target)[x]=((uint32*)target)[x]&0x3f3f3f3f;
+	  FCEU_dwmemset(target-  8,0x3f3f3f3f,8);
+	  FCEU_dwmemset(target+256,0x3f3f3f3f,8);
 	 #ifdef FRAMESKIP
 	 }
 	 #endif
@@ -784,7 +785,8 @@ static void SetRefreshLine(void)
         }
 }
 
-static INLINE void Fixit2(void)
+//static INLINE
+void Fixit2(void)
 {
    if(ScreenON || SpriteON)
    {
@@ -796,7 +798,8 @@ static INLINE void Fixit2(void)
    }
 }
 
-static INLINE void Fixit1(void)
+//static INLINE
+void Fixit1(void)
 {
    if(ScreenON || SpriteON)
    {
@@ -824,7 +827,10 @@ static INLINE void Fixit1(void)
    }
 }
 
+//#define NEW_TRY
+
 /*      This is called at the beginning of all h-blanks on visible lines. */
+#ifndef NEW_TRY
 static void DoHBlank(void)
 {
  if(ScreenON || SpriteON)
@@ -846,7 +852,7 @@ static void DoHBlank(void)
  //PPU_hook(0,-1);
  //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
 }
-
+#endif
 
 
 // ============================//
@@ -1029,6 +1035,7 @@ int FCEUI_Initialize(void)
 static INLINE void Thingo(void)
 {
    Loop6502();
+#ifndef NEW_TRY
 
    if(tosprite>=256)
    {
@@ -1057,6 +1064,9 @@ static INLINE void Thingo(void)
     tosprite=256;
    }
    DoHBlank();
+#else
+   X6502_Run_scanline();
+#endif
 }
 #undef harko
 
@@ -1064,6 +1074,9 @@ void EmLoop(void)
 {
  for(;;)
  {
+	//extern int asdc;
+	//printf("asdc: %i\n", asdc);
+	//asdc=0;
   ApplyPeriodicCheats();
   X6502_Run(256+85);
 
@@ -1102,7 +1115,9 @@ void EmLoop(void)
    if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
   }
   if(FCEUGameInfo.type==GIT_NSF)
+  {
    X6502_Run((256+85)*240);
+  }
   else
   {
    int x,max,maxref;

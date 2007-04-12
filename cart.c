@@ -31,7 +31,7 @@
 #include "general.h"
 #include "svga.h"
 
-/* 
+/*
    This file contains all code for coordinating the mapping in of the
    address space external to the NES.
    It's also (ab)used by the NSF code.
@@ -110,7 +110,7 @@ void SetupCartPRGMapping(int chip, uint8 *p, uint32 size, int ram)
  PRGmask4[chip]=(size>>12)-1;
  PRGmask8[chip]=(size>>13)-1;
  PRGmask16[chip]=(size>>14)-1;
- PRGmask32[chip]=(size>>15)-1; 
+ PRGmask32[chip]=(size>>15)-1;
 
  PRGram[chip]=ram?1:0;
 }
@@ -444,7 +444,7 @@ void OpenGenie(void)
     goto grerr;
   }
   fclose(fp);
- 
+
   /* Workaround for the FCE Ultra CHR page size only being 1KB */
   for(x=0;x<4;x++)
    memcpy(GENIEROM+4096+(x<<8),GENIEROM+4096,256);
@@ -492,7 +492,7 @@ static DECLFW(GenieWrite)
               else
               {
                modcon=V^0xFF;
-               if(V==0x71) 
+               if(V==0x71)
 		modcon=0;
               }
               break;
@@ -549,7 +549,7 @@ void FixGenieMap(void)
 
  VPageR=VPage;
  FlushGenieRW();
- 
+
  for(x=0;x<3;x++)
   if((modcon>>(4+x))&1)
   {

@@ -14,6 +14,7 @@ extern void SetVideoScaling(int, int, int);
 
 //#define SOUND_RATE 44100
 #define SOUND_RATE 22050
+#define GP2X_PORT_VERSION "0.3"
 
 DSETTINGS Settings;
 CFGSTRUCT DriverConfig[]={
@@ -202,13 +203,16 @@ char *GetKeyboard(void)
 #include "unix-basedir.h"
 extern int showfps;
 extern int swapbuttons;
+char **g_argv;
 
 int main(int argc, char *argv[])
 {
+	g_argv = argv;
 
-        puts("Starting GPFCE - Port version 0.2 05-29-2006");
+        puts("Starting GPFCE - Port version " GP2X_PORT_VERSION " (" __DATE__ ")");
         puts("Based on FCE Ultra "VERSION_STRING"...");
-        puts("Ported by Zheng Zhu\n");
+        puts("Ported by Zheng Zhu");
+        puts("Additional optimization/misc work by notaz\n");
 
          //  stereo
     	 //gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
@@ -217,6 +221,9 @@ int main(int argc, char *argv[])
     	//gp2x_init (1000, 8, SOUND_RATE<<1, 16, 0, 60);
     	 // mono 22khz
     	gp2x_init (1000, 8, SOUND_RATE, 16, 0, 60);
+
+        // unscale the screen, in case this is bad.
+        SetVideoScaling(320, 320, 240);
 
         SetDefaults();
         int ret=CLImain(argc,argv);

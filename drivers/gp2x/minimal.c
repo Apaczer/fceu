@@ -113,19 +113,28 @@
 */
 
 #include "minimal.h"
+#include "squidgehack.h"
+#include "asmutils.h"
 
          unsigned char  *gp2x_screen8                 ,*gp2x_upperRAM;
          unsigned long   gp2x_dev[8]={0,0,0,0,0,0,0,0}, gp2x_physvram[8], *gp2x_memregl,       gp2x_volume,                      gp2x_ticks_per_second;
-volatile unsigned long   gp2x_sound_pausei=1,           gp2x_ticks=0,      gp2x_sound=0,      *gp2x_dualcore_ram;
+volatile unsigned long   gp2x_sound_pausei=1,           gp2x_ticks=0,      gp2x_sound=0,      *gp2x_dualcore_ram=0;
          unsigned short *gp2x_memregs,                 *gp2x_screen15,    *gp2x_logvram15[4],  gp2x_sound_buffer[4+((44100/25)*2)*8]; //25 Hz gives our biggest supported sampling buffer
 volatile unsigned short  gp2x_palette[512];
 
 extern void gp2x_sound_frame(void *blah, void *buff, int samples);
 
+// hack
+static int scaling_enabled = 0;
 
 void gp2x_video_flip(void)
 {
   unsigned long address=gp2x_physvram[gp2x_physvram[7]];
+  if (scaling_enabled) address += 32;
+
+  // since we are using the mmu hack, we must flush the cache first
+  // (the params are most likely wrong, but they seem to work somehow)
+  flushcache(address, address + 320*240, 0);
 
   if(++gp2x_physvram[7]==4) gp2x_physvram[7]=0;
   gp2x_screen15=gp2x_logvram15[gp2x_physvram[7]];
@@ -258,6 +267,7 @@ static void *gp2x_sound_play(void *blah)
 }
 #endif
 
+#if 0
 static void gp2x_initqueue(gp2x_queue *q, unsigned long queue_items, unsigned long *position920t, unsigned long *position940t)
 {
   q->head  = q->tail  = q->items = 0;
@@ -281,8 +291,7 @@ static void gp2x_enqueue(gp2x_queue *q, unsigned long data)
   q->items--;
   return q->place920t[q->tail = (q->tail < q->max_items ? q->tail+1 : 0)];
 } */
-
-
+#endif
 
        void gp2x_dualcore_pause(int yes) { if(yes) gp2x_memregs[0x0904>>1] &= 0xFFFE; else gp2x_memregs[0x0904>>1] |= 1; }
 static void gp2x_940t_reset(int yes)     { gp2x_memregs[0x3B48>>1] = ((yes&1) << 7) | (0x03); }
@@ -311,6 +320,7 @@ static void gp2x_dualcore_registers(int save)
  }
 }
 
+#if 0
 void gp2x_dualcore_sync(void)
 {
   gp2x_queue *q=(gp2x_queue *)gp2x_1stcore_data_ptr(GP2X_QUEUE_ARRAY_PTR);
@@ -351,6 +361,7 @@ void gp2x_dualcore_launch_program_from_disk(const char *file, unsigned long offs
  free(data);
  fclose(in);
 }
+#endif
 
 void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int Hz)
 {
@@ -362,12 +373,30 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
   int frag=0;
   int channels=1;
   int stereoLocal=0;
+  int ret;
 
   gp2x_ticks_per_second=7372800/ticks_per_second;
 
   if(!gp2x_dev[0])   gp2x_dev[0] = open("/dev/fb0",   O_RDWR);
   if(!gp2x_dev[1])   gp2x_dev[1] = open("/dev/fb1",   O_RDWR);
   if(!gp2x_dev[2])   gp2x_dev[2] = open("/dev/mem",   O_RDWR);
+
+  ioctl(gp2x_dev[gp2x_physvram[7]=0], FBIOGET_FSCREENINFO, &fixed_info);
+   gp2x_physvram[2]=gp2x_physvram[0]=fixed_info.smem_start;
+   gp2x_screen15=gp2x_logvram15[2]=gp2x_logvram15[0]=
+    (unsigned short *)mmap(0, 0x20000*2, PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], gp2x_physvram[0]);
+                                        gp2x_screen8=(unsigned char *)gp2x_screen15;
+  printf("/dev/fb0 is @ %08lx / %p\n", gp2x_physvram[0], gp2x_screen15);
+
+  ioctl(gp2x_dev[1], FBIOGET_FSCREENINFO, &fixed_info);
+   gp2x_physvram[3]=gp2x_physvram[1]=fixed_info.smem_start;
+   gp2x_logvram15[3]=gp2x_logvram15[1]=
+    (unsigned short *)mmap(0, 0x20000*2, PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], gp2x_physvram[1]);
+  printf("/dev/fb1 is @ %08lx / %p\n", gp2x_physvram[1], gp2x_logvram15[1]);
+
+  // apply the MMU hack
+  ret = mmuhack();
+  printf("squidge hack code finished and returned %s\n", ret ? "ok" : "fail");
 
   // don't run sound right now
   if ( gp2x_do_sound)
@@ -376,7 +405,7 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
     if(!gp2x_dev[4])   gp2x_dev[4] = open("/dev/mixer", O_RDWR);
   }
 
-  gp2x_dualcore_ram=(unsigned long  *)mmap(0, 0x1000000, PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], 0x03000000);
+//  gp2x_dualcore_ram=(unsigned long  *)mmap(0, 0x1000000, PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], 0x03000000);
 /*gp2x_dualcore_ram=(unsigned long  *)mmap(0, 0x2000000, PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], 0x02000000);*/
        gp2x_memregl=(unsigned long  *)mmap(0, 0x10000,   PROT_READ|PROT_WRITE, MAP_SHARED, gp2x_dev[2], 0xc0000000);
         gp2x_memregs=(unsigned short *)gp2x_memregl;
@@ -387,28 +416,20 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
               gp2x_memregs[0x0F16>>1] = 0x830a; usleep(100000);
               gp2x_memregs[0x0F58>>1] = 0x100c; usleep(100000); }
 
-  ioctl(gp2x_dev[gp2x_physvram[7]=0], FBIOGET_FSCREENINFO, &fixed_info);
-   gp2x_screen15=gp2x_logvram15[2]=gp2x_logvram15[0]=(unsigned short *)mmap(0, 320*240*2, PROT_WRITE, MAP_SHARED, gp2x_dev[0], 0);
-                                        gp2x_screen8=(unsigned char *)gp2x_screen15;
-                   gp2x_physvram[2]=gp2x_physvram[0]=fixed_info.smem_start;
-
-  ioctl(gp2x_dev[1], FBIOGET_FSCREENINFO, &fixed_info);
-                 gp2x_logvram15[3]=gp2x_logvram15[1]=(unsigned short *)mmap(0, 320*240*2, PROT_WRITE, MAP_SHARED, gp2x_dev[1], 0);
-                   gp2x_physvram[3]=gp2x_physvram[1]=fixed_info.smem_start;
-
   gp2x_memregs[0x28DA>>1]=(((bpp+1)/8)<<9)|0xAB; /*8/15/16/24bpp...*/
   gp2x_memregs[0x290C>>1]=320*((bpp+1)/8);       /*line width in bytes*/
 
   memset(gp2x_screen15, 0, 320*240*2); gp2x_video_flip();
   memset(gp2x_screen15, 0, 320*240*2); gp2x_video_flip();
 
-  if(bpp==8)  gp2x_physvram[2]+=320*240,    gp2x_physvram[3]+=320*240,
-             gp2x_logvram15[2]+=320*240/2, gp2x_logvram15[3]+=320*240/2;
+  //if(bpp==8)  gp2x_physvram[2]+=320*240,    gp2x_physvram[3]+=320*240,
+  //           gp2x_logvram15[2]+=320*240/2, gp2x_logvram15[3]+=320*240/2;
+  if(bpp==8)  gp2x_physvram[2]+=0x20000,   gp2x_physvram[3]+=0x20000,
+             gp2x_logvram15[2]+=0x20000/2, gp2x_logvram15[3]+=0x20000/2;
 
 
  if ( gp2x_do_sound)
  {
-
     ioctl(gp2x_dev[3], SNDCTL_DSP_SPEED,  &rate);
     ioctl(gp2x_dev[3], SNDCTL_DSP_SETFMT, &bits);
 
@@ -426,7 +447,6 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
       first=0;
     }
   }
-
 }
 
 
@@ -436,6 +456,7 @@ void gp2x_deinit(void)
   while((gp2x_sound++)<1000000);                               //wait arm920t threads to finish
 
   gp2x_dualcore_registers(0);
+  mmuunhack();
 
   gp2x_memregs[0x28DA>>1]=0x4AB;                               //set video mode
   gp2x_memregs[0x290C>>1]=640;
@@ -453,6 +474,8 @@ void SetVideoScaling(int pixels,int width,int height)
         float xscale,yscale=0;
 
         int bpp=(gp2x_memregs[0x28DA>>1]>>9)&0x3;  /* bytes per pixel */
+
+	scaling_enabled = (width == 320) ? 0 : 1;
 
         if(gp2x_memregs[0x2800>>1]&0x100) /* TV-Out ON? */
         {

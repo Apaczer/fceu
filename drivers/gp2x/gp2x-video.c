@@ -19,6 +19,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "../../video.h"
+
 #include "gp2x.h"
 #include "minimal.h"
 
@@ -27,7 +29,7 @@ extern int showfps;
 static char fps_str[32];
 static int framesEmulated, framesRendered;
 
-int stretch_offset=32;
+int scaled_display=0;
 int paletterefresh;
 
 #define FPS_COLOR 61
@@ -136,6 +138,7 @@ void CleanSurface(void)
 		memset (gp2x_screen8, 0x80, 320*240);
 		gp2x_video_flip();
 	}
+	XBuf = gp2x_screen8;
 }
 
 
@@ -154,6 +157,7 @@ int InitVideo(void)
 
 	srendline=0;
 	erendline=239;
+	XBuf = gp2x_screen8; // TODO: use mmuhacked upper mem
 	return 1;
 }
 
@@ -194,19 +198,19 @@ static INLINE void printFps(uint8 *screen)
 		prevsec = tv_now.tv_sec;
 	}
 
-	if (stretch_offset > 0)
+	if (!scaled_display)
 	{
 		if (needfpsflip)
 		{
 			int y, *destt = (int *) screen;
-			for (y = 240; y; y--)
+			for (y = 20/*240*/; y; y--)
 			{
 				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
 				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
-				destt += 64;
+				destt += 64+8;
 
-				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
-				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
 			}
 			if (showfps)
 			{
@@ -221,46 +225,23 @@ static INLINE void printFps(uint8 *screen)
 	{
 		if (showfps)
 		{
-			gp2x_text(screen, 0, 0, fps_str, FPS_COLOR, 0);
+			gp2x_text(screen+32, 0, 0, fps_str, FPS_COLOR, 0);
 		}
 	}
 }
 
 
-void BlitScreen(uint8 * XBuf)
+void BlitScreen(uint8 *buf)
 {
-	int x, y, yinc;
-
 	framesEmulated++;
 
-	if (!XBuf) return;
+	if (!buf) return;
 
 	framesRendered++;
 
-#if 1 // 48->54
-	y=240;
-	yinc=272*(y-1);
-	while (y--)
-	{
-		int* dest=(int *) (gp2x_screen8+((y << 8) + (y << 6))+stretch_offset);
-
-		int* src=(int *) (XBuf+yinc);
-		x=64;
-		while (x--)
-		{
-			dest[x]=src[x];
-		}
-		yinc-=272;
-	}
-
-	if (paletterefresh)
-	{
-		gp2x_video_setpalette();
-		paletterefresh = 0;
-	}
-#endif
 	printFps(gp2x_screen8);
 	gp2x_video_flip();
+	XBuf = gp2x_screen8;
 }
 
 

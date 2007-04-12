@@ -6,6 +6,7 @@ void SetupCartCHRMapping(int chip, uint8 *p, uint32 size, int ram);
 void SetupCartMirroring(int m, int hard, uint8 *extra);
 
 DECLFR(CartBR);
+
 extern uint8 *PRGptr[32];
 extern uint8 *CHRptr[32];
 

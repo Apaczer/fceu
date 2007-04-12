@@ -16,7 +16,7 @@ static void DrawDips(void)
    {
     *dest=0x81818181;
     dest+=2;
-   }   
+   }
 
   dest=(uint32 *)(XBuf+272*(12+4)+164+6 );
   for(x=0;x<8;x++,dest+=2)
@@ -25,10 +25,10 @@ static void DrawDips(void)
 
    if(!((vsdip>>x)&1))
     da+=(272>>2)*10;
-    
+
    for(y=4;y;y--,da+=272>>2)
     *da=0x80808080;
-   
+
   }
 }
 
@@ -38,9 +38,9 @@ static void DrawMessage(void)
   {
    uint8 *t;
    howlong--;
-   t=XBuf+(FSettings.LastSLine-29)*272+32;
+   t=XBuf+(FSettings.LastSLine-29)*320+32;
    if(t>=XBuf)
-    DrawTextTrans(t,272,(uint8 *)errmsg,132);
+    DrawTextTrans(t,320,(uint8 *)errmsg,132);
   }
 }
 
@@ -80,11 +80,11 @@ static void DrawState(void)
  if(XBaf>=XBuf)
  for(z=1;z<11;z++)
  {
-  if(SaveStateStatus[z%10]) 
+  if(SaveStateStatus[z%10])
    {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
-           XBaf[y*272+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];           
+           XBaf[y*272+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];
    } else {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
@@ -103,7 +103,7 @@ static void DrawState(void)
     for(x=0;x<21;x++)
      XBaf[3264+x+z*21+z*1]=132;
    }
-  } 
+  }
  StateShow--;
 }
 
@@ -114,9 +114,9 @@ void DrawTextTrans(uint8 *dest, uint32 width, uint8 *textmsg, uint8 fgcolor)
 	uint8 y;
 	uint8 z;
 
-	for(x=0;x<length;x++)    
-         for(y=0;y<8;y++)       
-          for(z=0;z<8;z++) 
+	for(x=0;x<length;x++)
+         for(y=0;y<8;y++)
+          for(z=0;z<8;z++)
            if((fontdata2[(textmsg[x]<<3)+y]>>z)&1) dest[y*width+(x<<3)+z]=fgcolor;
 }
 

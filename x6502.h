@@ -55,7 +55,15 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 
 void X6502_Reset(void);
 void X6502_Power(void);
-void X6502_Run(int32 cycles);
+#define X6502_Run(c) \
+{ \
+ int32 cycles = (c) << 4; /* *16 */ \
+ if (PAL) cycles -= (c);  /* *15 */ \
+ X.count+=cycles; \
+ if (X.count > 0) X6502_Run_(); \
+}
+void X6502_Run_(void);
+
 
 void TriggerIRQ(void);
 void TriggerNMI(void);
@@ -64,3 +72,4 @@ void TriggerNMINSF(void);
 void FASTAPASS(1) X6502_AddCycles(int x);
 void FASTAPASS(1) X6502_IRQBegin(int w);
 void FASTAPASS(1) X6502_IRQEnd(int w);
+

@@ -46,17 +46,17 @@ int InitVirtualVideo(void)
  uint32 m;
 
  if(!XBuf)		/* Some driver code may allocate XBuf externally. */
-  if(!(XBuf = (uint8*) (FCEU_malloc((256+16) * 240 + 8))))
+  if(!(XBuf = (uint8*) (FCEU_malloc(320 * 240))))
    return 0;
-
+/*
  if(sizeof(uint8*)==4)
  {
   m=(uint32) XBuf;
   m+=8;m&=0xFFFFFFF8;
   XBuf=(uint8 *)m;
- } 
-
- memset(XBuf,128,272*240);
+ }
+*/
+ memset(XBuf,128,320*240);
  return 1;
 }
 
@@ -116,7 +116,7 @@ int SaveSnapshot(void)
   fputc(b,pp);
  }
  fclose(pp);
- 
+
  return u+1;
 }
 
@@ -207,7 +207,7 @@ int SaveSnapshot(void)
 
  {
   char pdata[256*3];
-  
+
   //void FCEUD_GetPalette(uint8 i,uint8 *r, unsigned char *g, unsigned char *b);
   for(x=0;x<256;x++)
    FCEUD_GetPalette(x,(uint8*)(pdata+x*3),(unsigned char*)(pdata+x*3+1),(unsigned char*)(pdata+x*3+2));
@@ -231,7 +231,7 @@ int SaveSnapshot(void)
    *dest=0;			// No filter.
    dest++;
    for(x=256;x;x--,tmp++,dest++)
-    *dest=*tmp; 	
+    *dest=*tmp;
    tmp+=16;
   }
 

@@ -304,17 +304,23 @@ int CLImain(int argc, char *argv[])
 	FCEUGI *tmp;
 	int ret;
 
+        if(argc<=1)
+        {
+         ShowUsage(argv[0]);
+         return 1;
+        }
+
+        if(!DriverInitialize())
+        {
+	 return 1;
+        }
+
 	if(!(ret=FCEUI_Initialize()))
          return(1);
         GetBaseDirectory(BaseDirectory);
 	FCEUI_SetBaseDirectory(BaseDirectory);
 
 	CreateDirs();
-        if(argc<=1)
-        {
-         ShowUsage(argv[0]);
-         return 1;
-        }
         LoadConfig();
         DoArgs(argc-2,&argv[1]);
 	if(cpalette)
@@ -329,11 +335,6 @@ int CLImain(int argc, char *argv[])
         }
 	ParseGI(tmp);
 	//RefreshThrottleFPS();
-        if(!DriverInitialize())
-        {
-         ret=0;
-         goto dk;
-        }
 	InitOtherInput();
 	FCEUI_Emulate();
 
@@ -373,13 +374,13 @@ static void DriverKill(void)
  inited=0;
 }
 
-void FCEUD_Update(uint8 *XBuf, int16 *Buffer, int Count)
+void FCEUD_Update(uint8 *xbuf, int16 *Buffer, int Count)
 {
  if(!Count && !NoWaiting && !(eoptions&EO_NOTHROTTLE))
   SpeedThrottle();
- BlitScreen(XBuf);
- if(Count)
-  WriteSound(Buffer,Count,NoWaiting);
+ BlitScreen(xbuf);
+ if(Count && !NoWaiting && !(eoptions&EO_NOTHROTTLE))
+  WriteSound(Buffer,Count);
  FCEUD_UpdateInput();
 }
 

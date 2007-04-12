@@ -30,11 +30,11 @@
 
 #include "minimal.h"
 extern int swapbuttons;
-extern int stretch_offset;
+extern int scaled_display;
 extern int FSkip_setting;
 
 extern void SetVideoScaling(int pixels,int width,int height);
-INLINE long UpdateGamepadGP2X(void);
+static INLINE long UpdateGamepadGP2X(void);
 
 
 
@@ -125,7 +125,7 @@ static void setsoundvol(int soundvolume)
  * GP2x joystick reader
  *
  */
-INLINE long UpdateGamepadGP2X(void)
+static INLINE long UpdateGamepadGP2X(void)
 {
   uint32 JS=0;
 
@@ -173,23 +173,15 @@ INLINE long UpdateGamepadGP2X(void)
           // still pressed down from stretching from last one
           goto no_pad;
 	}
-        if (stretch_offset == 32)
-	{
-          stretch_offset=0;
-	}
-        else
-	{
-          stretch_offset=32;
-	}
+        scaled_display = !scaled_display;
 
-        if (stretch_offset == 32)
-	{
-          SetVideoScaling(320, 320, 240);
-          CleanSurface();
-	}
-        else
+        if (scaled_display)
 	{
 	  SetVideoScaling(320, 256, 240);
+	}
+        else
+	{
+          SetVideoScaling(320, 320, 240);
 	}
 
         goto no_pad;

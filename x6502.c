@@ -24,6 +24,7 @@
 #include "x6502.h"
 #include "fce.h"
 #include "sound.h"
+#include "cart.h"
 
 X6502 X;
 uint32 timestamp;
@@ -46,11 +47,27 @@ void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 
 static INLINE uint8 RdMem(unsigned int A)
 {
+ // notaz: try to avoid lookup of every address at least for ROM and RAM areas
+ // I've verified that if ARead[0xfff0] points to CartBR, it is always normal ROM read.
+#if 0
+ if ((A&0x8000)/* && ARead[0xfff0] == CartBR*/) {
+  return (_DB=Page[A>>11][A]);
+ }
+#endif
+#if 0 // enabling this causes 4fps slowdown. Why?
+ if ((A&0xe000) == 0) { // RAM area (always 0-0x1fff)
+  return (_DB=RAM[A&0x7FF]);
+ }
+#endif
  return((_DB=ARead[A](A)));
 }
 
 static INLINE void WrMem(unsigned int A, uint8 V)
 {
+ if ((A&0xe000) == 0) { // RAM area (always 0-0x1fff)
+  RAM[A&0x7FF] = V;
+  return;
+ }
  BWrite[A](A,V);
 }
 
@@ -66,7 +83,7 @@ static INLINE void WrRAM(unsigned int A, uint8 V)
 
 static INLINE void ADDCYC(int x)
 {
- _tcount+=x;
+ //_tcount+=x;
  _count-=x*48;
  timestamp+=x;
 }
@@ -88,6 +105,7 @@ static INLINE uint8 POP(void)
  return(RdRAM(0x100+_S));
 }
 
+#if 0
 static uint8 ZNTable[256] = {
         Z_FLAG,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -106,10 +124,13 @@ static uint8 ZNTable[256] = {
         N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,
         N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG,N_FLAG
 };
+#endif
 /* Some of these operations will only make sense if you know what the flag
    constants are. */
-#define X_ZN(zort)         _P&=~(Z_FLAG|N_FLAG);_P|=ZNTable[zort]
-#define X_ZNT(zort)	_P|=ZNTable[zort]
+//#define X_ZN(zort)         _P&=~(Z_FLAG|N_FLAG);_P|=ZNTable[zort]
+//#define X_ZNT(zort)	_P|=ZNTable[zort]
+#define X_ZN(zort)         _P&=~(Z_FLAG|N_FLAG);if(!zort) _P|=Z_FLAG;else _P|=zort&N_FLAG
+#define X_ZNT(zort)	if(!zort) _P|=Z_FLAG;else _P|=zort&N_FLAG
 
 /* Care must be taken if you want to turn this into a macro.  Use { and }. */
 #define JR();	\
@@ -130,7 +151,8 @@ static uint8 ZNTable[256] = {
 
 /*  All of the freaky arithmetic operations. */
 #define AND        _A&=x;X_ZN(_A)
-#define BIT        _P&=~(Z_FLAG|V_FLAG|N_FLAG);_P|=ZNTable[x&_A]&Z_FLAG;_P|=x&(V_FLAG|N_FLAG)
+//#define BIT        _P&=~(Z_FLAG|V_FLAG|N_FLAG);_P|=ZNTable[x&_A]&Z_FLAG;_P|=x&(V_FLAG|N_FLAG)
+#define BIT        _P&=~(Z_FLAG|V_FLAG|N_FLAG);if(!(x&_A)) _P|=Z_FLAG;_P|=x&(V_FLAG|N_FLAG)
 #define EOR        _A^=x;X_ZN(_A)
 #define ORA        _A|=x;X_ZN(_A)
 
@@ -197,7 +219,7 @@ static uint8 ZNTable[256] = {
 		 _P|=l;	\
 		 X_ZNT(x);	\
 		}
-		 
+
 /* Icky icky thing for some undocumented instructions.  Can easily be
    broken if names of local variables are changed.
 */
@@ -325,7 +347,7 @@ static uint8 ZNTable[256] = {
 #define ST_IY(r)	{unsigned int A; GetIYWR(A); WrMem(A,r); break; }
 
 static uint8 CycTable[256] =
-{                             
+{
 /*0x00*/ 7,6,2,8,3,3,5,5,3,2,2,2,4,4,6,6,
 /*0x10*/ 2,5,2,8,4,4,6,6,2,4,2,7,4,4,7,7,
 /*0x20*/ 6,6,2,8,3,3,5,5,4,2,2,2,4,4,6,6,
@@ -411,19 +433,25 @@ void X6502_Reset(void)
 
 void X6502_Power(void)
 {
- memset((void *)&X,0,sizeof(X)); 
+ memset((void *)&X,0,sizeof(X));
  timestamp=0;
  X6502_Reset();
 }
 
-void X6502_Run(int32 cycles)
+
+//int asdc = 0;
+
+void X6502_Run_(void/*int32 cycles*/)
 {
+/*
 	if(PAL)
 	 cycles*=15;          // 15*4=60
 	else
 	 cycles*=16;          // 16*4=64
 
 	_count+=cycles;
+*/
+//	if (_count <= 0) asdc++;
 
 	while(_count>0)
 	{
@@ -443,9 +471,10 @@ void X6502_Run(int32 cycles)
 	 }
 	 _PI=_P;
 	 b1=RdMem(_PC);
-	 ADDCYC(CycTable[b1]);
-	 temp=_tcount;
-	 _tcount=0;
+	 temp=CycTable[b1];
+	 ADDCYC(temp);
+	 //temp=_tcount;
+	 //_tcount=0;
 	 if(MapIRQHook) MapIRQHook(temp);
 
 	 temp*=48;
@@ -457,7 +486,7 @@ void X6502_Run(int32 cycles)
 	  fhcnt+=fhinc;
 	 }
 
-	
+
 	 if(PCMIRQCount>0)
 	 {
 	  PCMIRQCount-=temp;
@@ -479,6 +508,8 @@ void X6502_Run(int32 cycles)
          switch(b1)
          {
           #include "ops.h"
-         } 
+         }
 	}
 }
+
+

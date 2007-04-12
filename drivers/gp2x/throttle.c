@@ -82,11 +82,11 @@ INLINE void SpeedThrottle(void)
 			FSkip = 1;
 		}
 	}
-	else if (usec_done > usec_aim)
+	else if (usec_done > usec_aim + 1024*4)
 	{
 		/* auto frameskip */
 		if (usec_done - usec_aim > 150000)
-			usec_done = usec_aim = 0; // too much behind, try to recover..
+			usec_done = usec_aim = 1; // too much behind, try to recover..
 		FSkip = 1;
 		tv_prev = tv_now;
 		return;
