@@ -1,0 +1,7 @@
+#!/bin/sh
+
+./selector ./gpfce_showfps_config > ./gpfce.log
+sync
+
+cd /usr/gp2x/
+exec /usr/gp2x/gp2xmenu

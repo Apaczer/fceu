@@ -1,0 +1,23 @@
+#Selector configuration file
+#Version 1.0
+
+#selector-language english (and it doesn't work, crap)
+langCode=EN
+layoutCode=0
+
+#List of full paths of command line options
+cmdLine=./gpfce -swapbuttons
+
+#skins
+skinPath=./
+
+#selectRectange
+selectRectangle=2
+scrollWrap=0
+
+#Full absolute path to base directory for file explorer
+baseDir=/mnt/sd/roms/nes/
+
+#File filters
+fileFilter=zip
+

@@ -60,3 +60,14 @@ include Makefile.common
 up: fceu
 	cp -v fceu /mnt/gp2x/mnt/sd/emus/Gpfce_v02/gpfce
 
+# ----------- release -----------
+ifneq ($(findstring rel,$(MAKECMDGOALS)),)
+ifeq ($(VER),)
+$(error need VER)
+endif
+endif
+
+rel: gpfce
+	zip -9 -j Gpfce_v$(VER).zip $^ drivers/gp2x/mmuhack.o out_gp2x/*
+
+
