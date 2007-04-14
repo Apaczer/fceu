@@ -29,6 +29,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GP2X
+#include <unistd.h>
+#endif
 
 #include "../../types.h"
 #include "config.h"
@@ -40,7 +43,7 @@ static int FReadString(FILE *fp, char *str, int n)
  {
   z=fgetc(fp);
   str[x]=z;
-  x++;  
+  x++;
   if(z<=0) break;
   if(x>=n) return 0;
  }
@@ -122,6 +125,9 @@ void SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst)
 	SaveParse(cfgst,fp);
 
 	fclose(fp);
+#ifdef GP2X
+	sync();
+#endif
 }
 
 static void LoadParse(CFGSTRUCT *cfgst, FILE *fp)

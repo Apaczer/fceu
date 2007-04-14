@@ -37,7 +37,7 @@ void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define _S               X.S
 #define _P               X.P
 #define _PI              X.mooPI
-#define _PZ              X.PZ		// unused?
+//#define _PZ              X.PZ		// unused?
 #define _DB              X.DB
 #define _count           X.count
 #define _tcount          X.tcount
@@ -475,7 +475,7 @@ void X6502_Run_c(void/*int32 cycles*/)
 	 ADDCYC(temp);
 	 //temp=_tcount;
 	 //_tcount=0;
-/*
+
 	 if(MapIRQHook) MapIRQHook(temp);
 
 	 temp*=48;
@@ -486,7 +486,6 @@ void X6502_Run_c(void/*int32 cycles*/)
 	  FrameSoundUpdate();
 	  fhcnt+=fhinc;
 	 }
-
 
 	 if(PCMIRQCount>0)
 	 {
@@ -502,7 +501,7 @@ void X6502_Run_c(void/*int32 cycles*/)
 	   }
 	  }
 	 }
-*/
+
 	  //printf("$%04x:$%02x\n",_PC,b1);
 	 //_PC++;
 	 //printf("$%02x\n",b1);

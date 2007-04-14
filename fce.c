@@ -51,6 +51,11 @@
 #define Pal     (PALRAM)
 
 
+#ifdef DEBUG_ASM_6502
+extern int cpu_repeat;
+extern int cpu_lastval;
+#endif
+
 static void (*RefreshLine)(uint8 *P, uint32 vofs) = NULL;
 static void PRefreshLine(void);
 
@@ -97,6 +102,71 @@ writefunc BWrite[0x10000];
 static readfunc *AReadG;
 static writefunc *BWriteG;
 static int RWWrap=0;
+
+#ifdef ASM_6502
+static void asmcpu_update(int32 cycles)
+{
+ // timestamp..
+ timestamp += ((cycles >> 4) * 43) >> 7; // aproximating /= 48
+
+ // some code from x6502.c
+ fhcnt-=cycles;
+ if(fhcnt<=0)
+ {
+  FrameSoundUpdate();
+  fhcnt+=fhinc;
+ }
+
+ if(PCMIRQCount>0)
+ {
+  PCMIRQCount-=cycles;
+  if(PCMIRQCount<=0)
+  {
+   vdis=1;
+   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
+   {
+    extern uint8 SIRQStat;
+    SIRQStat|=0x80;
+    X6502_IRQBegin(FCEU_IQDPCM);
+   }
+  }
+ }
+}
+
+void asmcpu_unpack(void)
+{
+	nes_registers[0] = X.A << 24;
+	nes_registers[1] = X.X;
+	nes_registers[2] = X.Y;
+	pc_base = 0;
+	nes_registers[3] = X.PC;
+	X6502_rebase_a();
+	nes_registers[4] = X.S << 24;
+	nes_registers[4]|= X.IRQlow << 8;
+	nes_registers[7] = (uint32)X.count;
+
+	// NVUB DIZC
+	nes_registers[4]|= X.P & 0x5d;
+	nes_registers[5] = X.P << 24; // N
+	if (!(X.P&0x02)) nes_registers[5] |= 1; // Z
+}
+
+void asmcpu_pack(void)
+{
+	X.A = nes_registers[0] >> 24;
+	X.X = nes_registers[1];
+	X.Y = nes_registers[2];
+	X.PC= nes_registers[3] - pc_base;
+	X.S = nes_registers[4] >> 24;
+	X.IRQlow = nes_registers[4] >> 8;
+	X.count = (int32) nes_registers[7];
+
+	// NVUB DIZC
+	X.P = nes_registers[4] & 0x5d;
+	if (  nes_registers[5]&0x80000000)  X.P |= 0x80; // N
+	if (!(nes_registers[5]&0x000000ff)) X.P |= 0x02; // Z
+}
+#endif
 
 DECLFW(BNull)
 {
@@ -203,12 +273,11 @@ uint32 TempAddr,RefreshAddr;
 /* scanline is equal to the current visible scanline we're on. */
 
 int scanline;
-static uint32 scanlines_per_frame;
 
 uint8 GameMemBlock[131072] __attribute__ ((aligned (4)));
 uint8 NTARAM[0x800] __attribute__ ((aligned (4)));
 uint8 PALRAM[0x20] __attribute__ ((aligned (4)));
-#ifndef ASM_6502
+#if !defined(ASM_6502) || defined(DEBUG_ASM_6502)
 uint8 RAM[0x800] __attribute__ ((aligned (4)));
 #endif
 
@@ -245,9 +314,15 @@ static DECLFR(ARAMH)
 static DECLFR(A2002)
 {
                         uint8 ret;
+#ifdef DEBUG_ASM_6502
+	if (cpu_repeat) return cpu_lastval;
+#endif
                         ret = PPU_status;
                         vtoggle=0;
                         PPU_status&=0x7F;
+#ifdef DEBUG_ASM_6502
+	cpu_lastval=ret|(PPUGenLatch&0x1F);
+#endif
                         return ret|(PPUGenLatch&0x1F);
 }
 
@@ -260,6 +335,9 @@ static DECLFR(A2007)
 {
                         uint8 ret;
 			uint32 tmp=RefreshAddr&0x3FFF;
+#ifdef DEBUG_ASM_6502
+	if (cpu_repeat) return cpu_lastval;
+#endif
 
                         PPUGenLatch=ret=VRAMBuffer;
 			if(PPU_hook) PPU_hook(tmp);
@@ -275,6 +353,9 @@ static DECLFR(A2007)
                         if (INC32) RefreshAddr+=32;
                         else RefreshAddr++;
 			if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
+#ifdef DEBUG_ASM_6502
+	cpu_lastval=ret;
+#endif
                         return ret;
 }
 
@@ -400,9 +481,16 @@ static DECLFW(B4014)
 {
 	uint32 t=V<<8;
 	int x;
+#ifdef DEBUG_ASM_6502
+  if (cpu_repeat) { X6502_AddCycles_a(512); return; }
+	for(x=0;x<256;x++)
+	 B2004(0x2004,X.DB=ARead[t+x](t+x));
+	X6502_AddCycles_c(512);
+#else
 	for(x=0;x<256;x++)
 	 B2004(0x2004,X.DB=ARead[t+x](t+x));
 	X6502_AddCycles(512);
+#endif
 }
 
 void BGRender(uint8 *target)
@@ -1006,14 +1094,12 @@ void FCEU_ResetVidSys(void)
  if(w)
  {
   PAL=1;
-  scanlines_per_frame=312;
   FSettings.FirstSLine=FSettings.UsrFirstSLine[1];
   FSettings.LastSLine=FSettings.UsrLastSLine[1];
  }
  else
  {
   PAL=0;
-  scanlines_per_frame=262;
   FSettings.FirstSLine=FSettings.UsrFirstSLine[0];
   FSettings.LastSLine=FSettings.UsrLastSLine[0];
  }
@@ -1076,6 +1162,7 @@ void EmLoop(void)
 {
  for(;;)
  {
+  uint32 scanlines_per_frame = PAL ? 312 : 262;
 	//extern int asdc;
 	//printf("asdc: %i\n", asdc);
 	//asdc=0;
@@ -1096,7 +1183,9 @@ void EmLoop(void)
   else if(VBlankON)
    TriggerNMI();
 
-  X6502_Run((scanlines_per_frame-242)*(256+85)-12);
+  X6502_Run(256+85-12);
+  for(scanline=242+1;scanline<scanlines_per_frame;scanline++)
+    X6502_Run(256+85);
 
   PPU_status&=0x1f;
 
@@ -1246,6 +1335,8 @@ void PowerNES(void)
 	FCEU_CheatAddRAM(2,0,RAM);
 
         GeniePower();
+
+printf("X.DB offs: %02x\n", (int)&X.DB - (int)&X);
 
         memset(RAM,0x00,0x800);
         ResetMapping();

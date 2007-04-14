@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GP2X
+#include <unistd.h>
+#endif
 
 #include "types.h"
 #include "x6502.h"
@@ -255,7 +258,11 @@ for(;;)
   if(!read32(&size,st)) break;
   switch(t)
   {
-   case 1:if(!ReadStateChunk(st,SFCPU,SFCPUELEMENTS,size)) ret=0;break;
+   case 1:if(!ReadStateChunk(st,SFCPU,SFCPUELEMENTS,size)) ret=0;
+#ifdef ASM_6502
+          asmcpu_unpack();
+#endif
+	  break;
    case 2:if(!ReadStateChunk(st,SFCPUC,SFCPUCELEMENTS,size)) ret=0;
           else
 	  {
@@ -299,6 +306,9 @@ void SaveState(void)
 	  header[3]=VERSION_NUMERIC;
 	  fwrite(header,1,16,st);
 
+#ifdef ASM_6502
+          asmcpu_pack();
+#endif
 	  totalsize=WriteStateChunk(st,1,SFCPU,SFCPUELEMENTS);
 	  totalsize+=WriteStateChunk(st,2,SFCPUC,SFCPUCELEMENTS);
 	  totalsize+=WriteStateChunk(st,3,SFPPU,SFPPUELEMENTS);
@@ -310,6 +320,9 @@ void SaveState(void)
 	  write32(totalsize,st);
 	  SaveStateStatus[CurrentState]=1;
 	  fclose(st);
+#ifdef GP2X
+	  sync();
+#endif
 	  FCEU_DispMessage("State %d saved.",CurrentState);
 	 }
 	 else

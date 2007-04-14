@@ -78,7 +78,8 @@
  * note: fceu uses this differently
  * [7:0]   - interrupt flags (same as above)
  * [15:8]  - FCEU IRQ pending sources
- * [23:16] - unused
+ * [16]    - a flag which indicates that MapIRQHook is not null
+ * [23:17] - unused
  * [31:24] - stack pointer
  */
 

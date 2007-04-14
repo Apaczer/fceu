@@ -27,6 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GP2X
+#include <unistd.h>
+#endif
 
 
 #include	"types.h"
@@ -132,7 +135,7 @@ static int DoMirroring(int fp)
 {
  uint8 t;
  t=FCEU_fgetc(fp);
- mirrortodo=t; 
+ mirrortodo=t;
 
  {
   static char *stuffo[6]={"Horizontal","Vertical","$2000","$2400","\"Four-screen\"","Controlled by Mapper Hardware"};
@@ -209,7 +212,7 @@ static int LoadPRG(int fp)
  else
   puts("");
 
- SetupCartPRGMapping(z,malloced[z],t,0); 
+ SetupCartPRGMapping(z,malloced[z],t,0);
  return(1);
 }
 
@@ -340,13 +343,13 @@ int LoadUNIFChunks(int fp)
    for(;;)
    {
     t=FCEU_fread(&uchead,1,4,fp);
-    if(t<4) 
+    if(t<4)
     {
      if(t>0)
-      return 0; 
+      return 0;
      return 1;
     }
-    if(!(FCEU_read32(&uchead.info,fp))) 
+    if(!(FCEU_read32(&uchead.info,fp)))
      return 0;
     t=0;
     for(x=0;x<BMF;x++)
@@ -356,7 +359,7 @@ int LoadUNIFChunks(int fp)
      if(!bfunc[x].init(fp))
       return 0;
      t=1;
-     break;     
+     break;
     }
     if(!t)
      if(FCEU_fseek(fp,uchead.info,SEEK_CUR))
@@ -416,7 +419,7 @@ int UNIFLoad(char *name, int fp)
         FCEU_fseek(fp,0,SEEK_SET);
         FCEU_fread(&unhead,1,4,fp);
         if(memcmp(&unhead,"UNIF",4))
-         return 0;        
+         return 0;
 
 	ResetCartMapping();
 
@@ -433,7 +436,7 @@ int UNIFLoad(char *name, int fp)
 
         GameInterface=UNIFGI;
         return 1;
-	
+
 	aborto:
 
 	FreeUNIF();
@@ -467,4 +470,7 @@ void UNIFCloseWRAM(void)
  if(fssp)
   fclose(fssp);
  fssp=0;
+#ifdef GP2X
+ sync();
+#endif
 }

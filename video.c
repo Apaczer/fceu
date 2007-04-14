@@ -30,6 +30,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef GP2X
+#include <unistd.h>
+#endif
 
 #include "types.h"
 #include "video.h"
@@ -249,6 +252,9 @@ int SaveSnapshot(void)
 
  free(compmem);
  fclose(pp);
+#ifdef GP2X
+ sync();
+#endif
 
  return u+1;
 

@@ -24,7 +24,7 @@ typedef struct {
         uint16 PC;		/* I'll change this to uint32 later... */
 				/* I'll need to AND PC after increments to 0xFFFF */
 				/* when I do, though.  Perhaps an IPC() macro? */
-        uint8 A,X,Y,S,P,mooPI,PZ;
+        uint8 A,X,Y,S,P,mooPI;
         uint8 DB;               /* Data bus "cache" for reads from certain areas */
 	uint8 IRQlow;		/* Simulated IRQ pin held low(or is it high?). */
 	uint8 jammed;
@@ -78,16 +78,30 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_IRQEnd X6502_IRQEnd_a
 #define X6502_A
 
-extern uint32 nes_registers[0x10];
 #define X6502_Run(c) \
 { \
  int32 cycles = (c) << 4; /* *16 */ \
  if (PAL) cycles -= (c);  /* *15 */ \
  nes_registers[7]+=cycles; \
- if (nes_registers[7] > 0) X6502_Run_a(); \
+ if (nes_registers[7] > 0) { \
+   cycles = (int32)nes_registers[7]; \
+   X6502_Run_a(); \
+   cycles -= (int32)nes_registers[7]; \
+   asmcpu_update(cycles); \
+ } \
 }
 
 #else
+#define TriggerIRQ TriggerIRQ_c
+#define TriggerNMI TriggerNMI_c
+#define TriggerNMINSF TriggerNMINSF_c
+#define X6502_Reset X6502_Reset_c
+#define X6502_Power X6502_Power_c
+#define X6502_AddCycles X6502_AddCycles_c
+#define X6502_IRQBegin X6502_IRQBegin_c
+#define X6502_IRQEnd X6502_IRQEnd_c
+#define X6502_C
+
 #define X6502_Run(c) \
 { \
  int32 cycles = (c) << 4; /* *16 */ \
@@ -113,6 +127,8 @@ void FASTAPASS(1) X6502_IRQEnd_c(int w);
 
 // asm
 #ifdef X6502_A
+extern uint32 nes_registers[0x10];
+extern uint32 pc_base;
 void TriggerIRQ_a(void);
 void TriggerNMI_a(void);
 void TriggerNMINSF_a(void);
@@ -122,6 +138,7 @@ void X6502_Power_a(void);
 void X6502_AddCycles_a(int x);
 void X6502_IRQBegin_a(int w);
 void X6502_IRQEnd_a(int w);
+void X6502_rebase_a(void);
 #endif
 
 // debug

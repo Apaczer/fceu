@@ -16,7 +16,7 @@ LDRIVER	+= -O3 # -pg
 endif
 
 asm_6502=1
-debug_asm_6502=1
+#debug_asm_6502=1
 
 all:		fceu
 
@@ -43,7 +43,7 @@ endif
 
 x6502.o: x6502.c x6502.h ops.h fce.h sound.h
 ncpu.o: ncpu.S ncpu.h
-	$(CC) -c $< -o $@
+	$(CC) $(TFLAGS) -c $< -o $@
 
 include Makefile.base
 

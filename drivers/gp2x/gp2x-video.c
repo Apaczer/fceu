@@ -214,9 +214,12 @@ static INLINE void printFps(uint8 *screen)
 			}
 			if (showfps)
 			{
-				fps_str[2] = 0;
-				gp2x_text(screen, 0,  0, fps_str,   FPS_COLOR, 0);
-				gp2x_text(screen, 0, 10, fps_str+3, FPS_COLOR, 0);
+				int sep;
+				for (sep=1; sep < 5; sep++)
+					if (fps_str[sep] == '/' || fps_str[sep] == 0) break;
+				fps_str[sep] = 0;
+				gp2x_text(screen, 0,  0, fps_str,       FPS_COLOR, 0);
+				gp2x_text(screen, 0, 10, fps_str+sep+1, FPS_COLOR, 0);
 			}
 			needfpsflip--;
 		}

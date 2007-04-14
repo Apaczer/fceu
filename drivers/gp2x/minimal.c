@@ -439,8 +439,17 @@ void gp2x_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, in
     frag = 0x40000|13;
     ioctl(gp2x_dev[3], SNDCTL_DSP_SETFRAGMENT, &frag);
 
-
-    printf("minimal() do sound, rate %d, bits %d, stereo %d, frag %d\n", rate, bits, stereo, frag);
+    {
+	// calculate buffer size
+	int frag = 0, bsize, buffers = 16;
+	bsize = rate / 32;
+	if (rate > 22050) { bsize*=4; buffers*=2; } // 44k mode seems to be very demanding
+	while ((bsize>>=1)) frag++;
+	frag |= buffers<<16; // 16 buffers
+	ioctl(gp2x_dev[3], SNDCTL_DSP_SETFRAGMENT, &frag);
+	printf("gp2x_set_sound: %i/%ibit/%s, %i buffers of %i bytes\n",
+		rate, bits, stereo?"stereo":"mono", frag>>16, 1<<(frag&0xffff));
+    }
 
     if(first)
     {

@@ -1,4 +1,10 @@
 #ifndef _FCEH
+
+#ifdef ASM_6502
+void asmcpu_unpack(void);
+void asmcpu_pack(void);
+#endif
+
 extern int GameLoaded;
 void ResetGameLoaded(void);
 
@@ -52,7 +58,7 @@ extern readfunc ARead[0x10000];
 extern writefunc BWrite[0x10000];
 
 #define	VBlankON	(PPU[0]&0x80)	/* Generate VBlank NMI */
-#define	SpHitON		(PPU[0]&0x40)	
+#define	SpHitON		(PPU[0]&0x40)
 #define	Sprite16	(PPU[0]&0x20)	/* Sprites 8x16/8x8        */
 #define	BGAdrHI		(PPU[0]&0x10)	/* BG pattern adr $0000/$1000 */
 #define	SpAdrHI		(PPU[0]&0x08)	/* Sprite pattern adr $0000/$1000 */

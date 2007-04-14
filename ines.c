@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO 
+ *  Copyright (C) 1998 BERO
  *  Copyright (C) 2002 Ben Parnell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GP2X
+#include <unistd.h>
+#endif
 
 #include "types.h"
 #include "x6502.h"
@@ -58,7 +61,7 @@ static int SaveGame=0;
 
 static iNES_HEADER head;
 
-/*  MapperReset() is called when the NES is reset(with the reset button).  
+/*  MapperReset() is called when the NES is reset(with the reset button).
     Mapperxxx_init is called when the NES has been powered on.
 */
 
@@ -77,7 +80,7 @@ static void iNESGI(int h)
   case GI_CLOSE:
 		{
 	         FILE *sp;
-	        
+
 	 	 if(ROM) {free(ROM);ROM=0;}
 		 if(VROM) {free(VROM);VROM=0;}
 
@@ -110,6 +113,9 @@ static void iNESGI(int h)
 
 		   fwrite(ptr,1,amount,sp);
 	           fclose(sp);
+#ifdef GP2X
+		   sync();
+#endif
 	          }
         	 }
 	         if(MapClose) MapClose();
@@ -236,7 +242,7 @@ static void CheckHInfo(void)
 	 {0x932ff06e,34,1},	/* Classic Concentration */
 	 {0x4c7c1af3,34,1},	/* Caesar's Palace */
 	 {0x9ea1dc76,2,0},	/* Rainbow Islands */
-	 
+
 	 {0x9eefb4b4,4,8},	/* Pachi Slot Adventure 2 */
 	 {0x5337f73c,4,8},	/* Niji no Silk Road */
 	 {0x7474ac92,4,8},	/* Kabuki: Quantum Fighter */
@@ -411,7 +417,7 @@ static void CheckHInfo(void)
    sprintf(gigastr+strlen(gigastr),"Mirroring should be set to \"%s\".  ",mstr[Mirroring&3]);
   }
   if(tofix&4)
-   strcat(gigastr,"The battery-backed bit should be set.  ");  
+   strcat(gigastr,"The battery-backed bit should be set.  ");
   if(tofix&8)
    strcat(gigastr,"This game should not have any CHR ROM.  ");
   strcat(gigastr,"\n");
@@ -465,8 +471,8 @@ int iNESLoad(char *name, int fp)
 
         if(!(ROM=(uint8 *)FCEU_malloc(ROM_size<<14)))
 	 return 0;
-		
-        if (VROM_size) 
+
+        if (VROM_size)
          if(!(VROM=(uint8 *)FCEU_malloc(VROM_size<<13)))
 	 {
 	  free(ROM);
@@ -523,7 +529,7 @@ int iNESLoad(char *name, int fp)
 	else if(MapperNo==1) DetectMMC1WRAMSize();
 
         if(head.ROM_type&2)
-        {         
+        {
          char *soot;
 
          SaveGame=1;
@@ -589,7 +595,7 @@ static void NONE_init(void)
         ROM_BANK16(0x8000,0);
         ROM_BANK16(0xC000,~0);
 
-        if(VROM_size) 
+        if(VROM_size)
 	 VROM_BANK8(0);
         else
 	 setvram8(CHRRAM);
@@ -616,7 +622,7 @@ static uint8 *secptr;
 static void CheckVSUni(void)
 {
         FCEUGameInfo.type=GIT_VSUNI;
-	
+
 	/* FCE Ultra doesn't complain when headers for these games are bad. */
 	secptr=0;
 	switch(iNESGameCRC32)
@@ -625,9 +631,9 @@ static void CheckVSUni(void)
 
 	 case 0xffbef374: pale=1;break;	/* Castlevania */
 
-	 case 0x98e3c75a: 
+	 case 0x98e3c75a:
 	 case 0x7cff0f84: pale=2;break;	/* SMB */
-	
+
 	 case 0xef7af338: pale=2;break; /* Ice Climber */
 	 case 0xabe1a0c2: FCEUGameInfo.input[0]=SI_ZAPPER;break; /*Duck hunt */
 	 case 0x16aa4e2d: pale=7;FCEUGameInfo.input[0]=SI_ZAPPER;break; /* hoganal ^_^ */
@@ -653,7 +659,7 @@ static void CheckVSUni(void)
 
          case 0x159ef3c1:break; /* Star Luster */
          case 0x9768e5e0:break; /* Stroke and Match Golf */
-	
+
 	 /* FCE Ultra doesn't have correct palettes for the following games. */
 	 case 0x0fa322c2:pale=2;break; /* Clu Clu Land */
 
@@ -664,7 +670,7 @@ static void CheckVSUni(void)
 	 case 0x832cf592:FCEUGameInfo.input[0]=SI_ZAPPER;break; /* Freedom Force */
 	 case 0x63abf889:break; /* Ladies Golf */
 	 case 0x8c0c2df5:pale=2;MapperNo=1;Mirroring=1;break; /* Top Gun */
-	 case 0x52c501d0:vsdip=0x80;MapperNo=4;secptr=secdata[0];break; 
+	 case 0x52c501d0:vsdip=0x80;MapperNo=4;secptr=secdata[0];break;
 			/* TKO Boxing */
 	}
 
@@ -753,14 +759,14 @@ void (*MapStateRestore)(int version);
 void iNESStateRestore(int version)
 {
  int x;
- 
+
  if(!MapperNo) return;
 
  for(x=0;x<4;x++)
   setprg8(0x8000+x*8192,PRGBankList[x]);
 
  if(VROM_size)
-  for(x=0;x<8;x++) 
+  for(x=0;x<8;x++)
     setchr1(0x400*x,CHRBankList[x]);
 
  switch(Mirroring)
@@ -833,7 +839,7 @@ static int MMC_init(int type)
         if(head.ROM_type&8)
          AddExState(ExtraNTARAM, 2048, 0, "EXNR");
 
-	/* Exclude some mappers whose emulation code handle save state stuff 
+	/* Exclude some mappers whose emulation code handle save state stuff
 	   themselves. */
 	if(type && type!=13 && type!=96)
 	{
@@ -846,7 +852,7 @@ static int MMC_init(int type)
          for(x=0;x<8;x++)
          {
           char tak[8];
-          sprintf(tak,"CBL%d",x);         
+          sprintf(tak,"CBL%d",x);
           AddExState(&CHRBankList[x], 2, 1,tak);
          }
 	}

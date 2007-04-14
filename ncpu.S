@@ -15,6 +15,8 @@
 #define OTOFFS_NES_STACK (nes_stack        - cpu_exec_table)
 #define OTOFFS_NES_REGS  (nes_registers    - cpu_exec_table)
 #define OTOFFS_PC_BASE   (pc_base          - cpu_exec_table)
+#define OTOFFS_IRQ_HOOK  (MapIRQHook       - cpu_exec_table)
+#define OTOFFS_X         (X                - cpu_exec_table)
 
 @ fceu
 #define FCEU_IQNMI      0x08
@@ -48,10 +50,6 @@
 .endm
 
 
-.macro	RETURN_FROM_CPU_EXEC
-	b	cpu_exec_end
-.endm
-
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -68,6 +66,9 @@
 
 	subs	REG_CYCLE, REG_CYCLE, #\n*48
 	ble	cpu_exec_end
+	tst	REG_P_REST, #1<<16
+	movne	r0, #\n
+	blne	do_irq_hook
 	ldrb	r0, [REG_PC], #1
 	tst	REG_P_REST, #0xff<<8
 	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
@@ -429,6 +430,14 @@
 	subgt	REG_CYCLE,REG_CYCLE,#1*48
 .endm
 
+@ Indirect Indexed (for writes and rmws)
+.macro	INDY_ADDR_W
+	ZERO_ADDR
+	ZP_READ_ADDR
+	add	REG_ADDR, REG_ADDR, REG_Y
+	bic	REG_ADDR, REG_ADDR, #0x10000
+.endm
+
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -458,6 +467,13 @@
 	subgt	REG_CYCLE,REG_CYCLE,#1*48
 .endm
 
+@ Absolute Indexed (for writes and rmws)
+.macro	ABSX_ADDR_W
+	ABS_ADDR
+	add	REG_ADDR, REG_ADDR, REG_X
+	bic	REG_ADDR, REG_ADDR, #0x10000
+.endm
+
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn, Y
 .macro	ABSY_ADDR
@@ -468,6 +484,15 @@
 	cmp	REG_Y,r0
 	subgt	REG_CYCLE,REG_CYCLE,#1*48
 .endm
+
+@ Absolute Indexed (for writes and rmws)
+.macro	ABSY_ADDR_W
+	ABS_ADDR
+	add	REG_ADDR, REG_ADDR, REG_Y
+	bic	REG_ADDR, REG_ADDR, #0x10000
+.endm
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @@@ P を復元する
 @@@ r0		=> 6502 の P レジスタ
@@ -843,7 +868,7 @@ op8D:	@ STA $nnnn
 	CYCLE_NEXT 4
 
 op9D:	@ STA $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	OP_STA
 	WRITE_1
 	CYCLE_NEXT 5
@@ -851,7 +876,7 @@ op9D:	@ STA $nnnn, X
 	CYCLE_NEXT 5
 
 op99:	@ STA $nnnn, Y
-	ABSY_ADDR
+	ABSY_ADDR_W
 	OP_STA
 	WRITE_1
 	CYCLE_NEXT 5
@@ -867,7 +892,7 @@ op81:	@ STA ($nn, X)
 	CYCLE_NEXT 6
 
 op91:	@ STA ($nn), Y
-	INDY_ADDR
+	INDY_ADDR_W
 	OP_STA
 	WRITE_1
 	CYCLE_NEXT 6
@@ -974,7 +999,7 @@ opEE:	@ INC $nnnn
 	CYCLE_NEXT	6
 
 opFE:	@ INC $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_INC
 	READ_WRITE_2
@@ -1020,7 +1045,7 @@ opCE:	@ DEC $nnnn
 	CYCLE_NEXT	6
 
 opDE:	@ DEC $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_DEC
 	READ_WRITE_2
@@ -1660,7 +1685,7 @@ op0E:	@ ASL $nnnn
 	CYCLE_NEXT	6
 
 op1E:	@ ASL $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_ASL
 	READ_WRITE_2
@@ -1702,7 +1727,7 @@ op4E:	@ LSR $nnnn
 	CYCLE_NEXT	6
 
 op5E:	@ LSR $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_LSR
 	READ_WRITE_2
@@ -1790,7 +1815,7 @@ op2E:	@ ROL $nnnn
 
 
 op3E:	@ ROL $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_ROL
 	READ_WRITE_2
@@ -1832,7 +1857,7 @@ op6E:	@ ROR $nnnn
 	CYCLE_NEXT	6
 
 op7E:	@ ROR $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_ROR
 	READ_WRITE_2
@@ -2078,7 +2103,7 @@ op43:	@ SRE ($nn, X)
 	CYCLE_NEXT	8
 
 op53:	@ SRE ($nn), Y
-	INDY_ADDR
+	INDY_ADDR_W
 	READ_WRITE_1
 	OP_SRE
 	READ_WRITE_2
@@ -2090,7 +2115,7 @@ op53:	@ SRE ($nn), Y
 
 
 op9C:	@ SHY $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	OP_SHY
 	WRITE_1
 	CYCLE_NEXT 5
@@ -2264,7 +2289,7 @@ op1F:	@ SLO $nnnn, X
 	CYCLE_NEXT	7
 
 op1B:	@ SLO $nnnn, Y
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_SLO
 	READ_WRITE_2
@@ -2286,7 +2311,7 @@ op03:	@ SLO ($nn, X)
 	CYCLE_NEXT	8
 
 op13:	@ SLO ($nn), Y
-	INDY_ADDR
+	INDY_ADDR_W
 	READ_WRITE_1
 	OP_SLO
 	READ_WRITE_2
@@ -2409,7 +2434,7 @@ op2F:	@ RLA $nnnn
 	CYCLE_NEXT	6
 
 op3F:	@ RLA $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_RLA
 	READ_WRITE_2
@@ -2420,11 +2445,11 @@ op3F:	@ RLA $nnnn, X
 	CYCLE_NEXT	7
 
 op3B:	@ RLA $nnnn, Y
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_RLA
-    READ_WRITE_2
-    CYCLE_NEXT	7
+	READ_WRITE_2
+	CYCLE_NEXT	7
 	READ_WRITE_3
 	OP_RLA
 	READ_WRITE_4
@@ -2442,7 +2467,7 @@ op23:	@ RLA ($nn, X)
 	CYCLE_NEXT	8
 
 op33:	@ RLA ($nn), Y
-	INDY_ADDR
+	INDY_ADDR_W
 	READ_WRITE_1
 	OP_RLA
 	READ_WRITE_2
@@ -2482,7 +2507,7 @@ op6F:	@ RRA $nnnn
 	CYCLE_NEXT	6
 
 op7F:	@ RRA $nnnn, X
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_RRA
 	READ_WRITE_2
@@ -2495,7 +2520,7 @@ op7F:	@ RRA $nnnn, X
 	CYCLE_NEXT	7
 
 op7B:	@ RRA $nnnn, Y
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_RRA
 	READ_WRITE_2
@@ -2521,7 +2546,7 @@ op63:	@ RRA ($nn, X)
 	CYCLE_NEXT	8
 
 op73:	@ RRA ($nn), Y
-	INDY_ADDR
+	INDY_ADDR_W
 	READ_WRITE_1
 	OP_RRA
 	READ_WRITE_2
@@ -2708,9 +2733,11 @@ op60:
 
 @@@
 @@@ 割り込みの処理
+@@@ WARNING: decrements REG_PC
 @@@
 do_int:
 	ldr	r0, [REG_OP_TABLE, #OTOFFS_PC_BASE]
+	sub	REG_PC, REG_PC, #1
 	sub	r0, REG_PC, r0
 	PUSH_WORD
 	bic	REG_P_REST, REG_P_REST, #P_REST_B_FLAG
@@ -2742,6 +2769,12 @@ reset_cpu:
 	@@REG_P_REST = 0, don't touch REG_S
 	bic	REG_P_REST, REG_P_REST, #0xff
 
+	@ fceu: set MapIRQHook present flag
+	ldr	r0, [REG_OP_TABLE, #OTOFFS_IRQ_HOOK]
+	tst	r0, r0
+	orrne	REG_P_REST, REG_P_REST, #1<<16
+	biceq	REG_P_REST, REG_P_REST, #1<<16
+
 	@@ R bit is always 1
 	orr	REG_NZ, REG_NZ, #P_R_FLAG
 
@@ -2763,12 +2796,26 @@ reset_cpu:
 @@@ low-level memhandlers
 @@@
 
+read_rom_byte:
+	ldr	r0, =CartBR
+	ldr	r2, =ARead
+	mov	r1, #0xff00
+	orr	r1, r1, r1, lsr #4
+	ldr	r1, [r2, r1, lsl #2]		@ if (ARead[0xfff0] == CartBR)
+	cmp	r0, r1
+	bne	read_ppu_reg
+	ldr	r2, =Page
+	mov	r1, REG_ADDR, lsr #11
+	ldr	r2, [r2, r1, lsl #2]
+	ldrb	r0, [r2, REG_ADDR]
+	bx	lr
+
+
 read_ppu_reg:
 read_high_reg:
 read_save_ram:
-read_rom_byte:
 	@ must preserve r3 for the callers too
-	@ TODO: check if all of saves are needed, optimize read_rom_byte, _DB
+	@ TODO: check if all of saves are needed, _DB (is full needed?)
 	str     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	str     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
@@ -2786,6 +2833,7 @@ read_rom_byte:
 	ldr     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	ldr     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
+	strb    r0,         [REG_OP_TABLE, #(OTOFFS_X + 0x10)]		@ X.DB
 	bx	lr
 
 
@@ -2910,7 +2958,9 @@ cpu_exec_table:
 @@@
 nes_registers:
 	.fill   0x40, 1, 0
+#ifndef DEBUG_ASM_6502
 RAM:
+#endif
 nes_internal_ram:
 	.fill	0x100, 1, 0
 nes_stack:
@@ -2918,6 +2968,13 @@ nes_stack:
 @ TODO: write code which keeps it up-to-date
 pc_base:
 	.long	0
+#ifndef DEBUG_ASM_6502
+MapIRQHook:
+	.long	0
+timestamp:
+	.long	0
+X:	.fill   0x20, 1, 0
+#endif
 
 .pool
 
@@ -2982,16 +3039,12 @@ opAB:	@ LXA #$nn
 @op37:	@ RLA $nn, X
 @op2F:	@ RLA $nnnn
 @op3F:	@ RLA $nnnn, X
-@op3B:	@ RLA $nnnn, Y
 @op23:	@ RLA ($nn, X)
-@op33:	@ RLA ($nn), Y
 @op67:	@ RRA $nn
 @op77:	@ RRA $nn, X
 @op6F:	@ RRA $nnnn
 @op7F:	@ RRA $nnnn, X
-@op7B:	@ RRA $nnnn, Y
 @op63:	@ RRA ($nn, X)
-@op73:	@ RRA ($nn), Y
 op87:	@ SAX $nn
 op97:	@ SAX $nn, Y
 op8F:	@ SAX $nnnn
@@ -3001,21 +3054,17 @@ op9F:	@ SHA $nnnn, Y
 op93:	@ SHA ($nn), Y
 op9B:	@ SHS $nnnn, Y
 op9E:	@ SHX $nnnn, Y
-@op9C:	@ SHY $nnnn, X
 @op03:   @ SLO ($nn, X)
 @op07:	@ SLO $nn
 @op17:	@ SLO $nn, X
 @op0F:	@ SLO $nnnn
 @op1F:	@ SLO $nnnn, X
-@op1B:	@ SLO $nnnn, Y
-@op13:	@ SLO ($nn), Y
 @op47:	@ SRE $nn
 @op57:	@ SRE $nn, X
 @op4F:	@ SRE $nnnn
 @op5F:	@ SRE $nnnn, X
 @op5B:	@ SRE $nnnn, Y
 @op43:	@ SRE ($nn, X)
-@op53:	@ SRE ($nn), Y
 	CYCLE_NEXT   1
 @ emu_panic?
 
@@ -3029,20 +3078,19 @@ op9E:	@ SHX $nnnn, Y
 .extern Page
 .extern ARead
 .extern BWrite
+.extern MapIRQHook
 
 
 	SECTION_DATA
 	ALIGN
-@	.globl	X
-	.globl	RAM
 	.globl	nes_registers @ TODO: hide?
 	.globl	pc_base
-@	.globl	timestamp
-@	.globl	MapIRQHook @ (int a)
-@ TODO... .. conversion X <-> nes_registers for savestates
-@timestamp:	.long	0
-@MapIRQHook:	.long   0
-@X:		.fill   0x20, 1, 0
+#ifndef DEBUG_ASM_6502
+	.globl	X
+	.globl	RAM
+	.globl	timestamp
+	.globl	MapIRQHook @ (int a)
+#endif
 	.globl	X6502_Reset_a @ (void);
 	.globl	X6502_Power_a @ (void);
 	.globl	X6502_Run_a @ (int32 cycles);
@@ -3099,7 +3147,7 @@ X6502_IRQEnd_a:
 
 
 TriggerNMI_a:
-	mov     r0, #FCEU_IQTEMP
+	mov     r0, #FCEU_IQNMI
 	b	X6502_IRQBegin_a
 
 
@@ -3111,7 +3159,7 @@ TriggerNMINSF_a:
 X6502_AddCycles_a:
 	ldr	r2, =nes_registers
 	ldr	r1, [r2, #0x1c]
-	mvn	r3, #49
+	mvn	r3, #47			@ r3=-48
 	mla	r0, r3, r0, r1
 	str	r0, [r2, #0x1c]
 	bx	lr
@@ -3129,6 +3177,22 @@ X6502_rebase_a:
 	ldmfd	sp!,{REG_PC,REG_OP_TABLE}
 	bx	lr
 .pool
+
+
+@ the nasty MapIRQHook thing from FCE..
+do_irq_hook:
+	@ I have reviewed all MapIRQHook functions, they only seem to cause IRQs, not messing cycles or something
+	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
+	mov	REG_P_REST, lr			@ r8
+
+	@ if somebody modifies MapIRQHook without calling reset, we are doomed
+	mov	lr, pc
+	ldr	pc, [REG_OP_TABLE, #OTOFFS_IRQ_HOOK]
+
+	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
+	mov	lr, REG_P_REST
+	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
+	bx	lr
 
 
 @ vim:filetype=armasm
