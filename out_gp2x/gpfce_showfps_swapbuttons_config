@@ -20,4 +20,5 @@ baseDir=/mnt/sd/roms/nes/
 
 #File filters
 fileFilter=zip
+fileFilter=nes
 

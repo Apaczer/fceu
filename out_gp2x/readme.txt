@@ -2,7 +2,8 @@
                      GPFCE - NES emulator for the GP2X
 =================================================================================
                          Ported by:        zzhu8192
-                         Current version:  0.2
+                         Optimized by:     notaz
+                         Current version:  0.3
                          Email:            zzhu8192@yahoo.com
                          Web Site:         www.unicorn-jockey.com
                          Web Site Admin:   Lil-kun
@@ -28,7 +29,6 @@ original games in Java for the GP2x.  This should be interesting....
 ------------------------------------------------------------------
 What's new
 ------------------------------------------------------------------
-Current version number is now:  0.2
 
 Many usability features were added, thanks to some great input 
 from developers and users on the gp32x.com board.  Some of the
@@ -79,6 +79,26 @@ Current Features
 --------------------------------------------------------------------
  Version History
 --------------------------------------------------------------------
+
+
+ver 0.3 (by notaz)
+
+          - Major improvement: added ARM asm CPU core from LJGP32,
+            which itself was adapted from FCA by Yoyofr.
+            The core required substantial changes to make it work in
+            FCE ultra.
+          - The emulator renders directly to frame buffer now (previously
+            it was drawing to offscreen buffer, which was then copied to
+            framebuffer).
+          - Squidge's MMU hack added.
+          - Added sync() calls after savestate writes.
+          - Some additional tweaking here and there to get a few more FPS.
+          - Volume middle now can be used as shift to emulator functions
+            instead stick click (saving, stretching, etc.).
+          - Added frameskip selection with shift+A and shift+Y (shift is
+            stick click or volume middle).
+          - Probably some more changes I forgot about.
+
 
 
 ver 0.2   5/29/2006  MD5SUM: dd75fa3f090f9298f9f4afff01ab96f2 *gpfce
