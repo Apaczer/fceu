@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO 
+ *  Copyright (C) 1998 BERO
  *  Copyright (C) 2002 Ben Parnell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 #include "svga.h"
 
 #include "input.h"
+#include "movie.h"
 
 extern INPUTC *FCEU_InitZapper(int w);
 extern INPUTC *FCEU_InitPowerpad(int w);
@@ -37,7 +38,7 @@ extern INPUTCFC *FCEU_InitArkanoidFC(void);
 extern INPUTCFC *FCEU_InitSpaceShadow(void);
 extern INPUTCFC *FCEU_InitFKB(void);
 static uint8 joy_readbit[2];
-static uint16 joy[2]={0,0};
+static uint16 joy[4]={0,0,0,0};
 
 extern int coinon;
 
@@ -73,7 +74,7 @@ static uint8 FP_FASTAPASS(1) ReadGPVS(int w)
 static uint8 FP_FASTAPASS(1) ReadGP(int w)
 {
                 uint8 ret;
-                //if(JoyMulti) 
+                //if(JoyMulti)
 		//{
                  //ret = ((joy[w]>>(joy_readbit[w]))&1)|
                  //(((joy[w]>>(joy_readbit[w]+8))&1)<<1);
@@ -98,7 +99,7 @@ static DECLFR(JPRead)
 
 	if(JPorts[A&1]->Read)
 	 ret|=JPorts[A&1]->Read(A&1);
-	
+
 	if(FCExp)
 	 if(FCExp->Read)
 	  ret=FCExp->Read(A&1,ret);
@@ -188,6 +189,7 @@ void UpdateInput(void)
 	#ifdef NETWORK
 	if(netplay) NetplayUpdate(&joy[0],&joy[1]);
 	#endif
+	if (current < 0) FCEUMOV_AddJoy(joy);
 	FlushCommandQueue();
 }
 
@@ -221,7 +223,7 @@ static void SLHLHook(uint8 *buf, int line)
  for(x=0;x<2;x++)
   if(JPorts[x]->SLHook)
    JPorts[x]->SLHook(x,buf,line);
- if(FCExp) 
+ if(FCExp)
   if(FCExp->SLHook)
    FCExp->SLHook(buf,line);
 }
@@ -290,7 +292,7 @@ static void SetInputStuffFC(void)
 // rewrite code to make this more sane?
 
 void InitializeInput(void)
-{ 
+{
 	memset(joy_readbit,0,sizeof(joy_readbit));
 	memset(joy,0,sizeof(joy));
 

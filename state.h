@@ -20,6 +20,7 @@
 
 void SaveState(void);
 void LoadState(void);
+int FCEUSS_LoadFP(FILE *st, int make_backup);
 
 extern uint8 StateName[2048];
 extern uint8 StateFile[2048];

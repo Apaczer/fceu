@@ -330,19 +330,9 @@ void SaveState(void)
 }
 
 static int LoadStateOld(FILE *st);
-void LoadState(void)
+int FCEUSS_LoadFP(FILE *st, int make_backup)
 {
 	int x;
-	FILE *st=NULL;
-
-        if(geniestage==1)
-        {
-         FCEU_DispMessage("Cannot load FCS in GG screen.");
-         return;
-        }
-
-	st=fopen(FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0),"rb");
-
 	if(st!=NULL)
 	{
 	 uint8 header[16];
@@ -381,9 +371,27 @@ void LoadState(void)
 	 lerror:
 	 FCEU_DispMessage("State %d load error.",CurrentState);
 	 SaveStateStatus[CurrentState]=0;
-	 return;
+	 return 0;
 	}
-	fclose(st);
+	return 1;
+}
+
+void LoadState(void)
+{
+	FILE *st=NULL;
+
+        if(geniestage==1)
+        {
+         FCEU_DispMessage("Cannot load FCS in GG screen.");
+         return;
+        }
+
+	st=fopen(FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0),"rb");
+	if (st)
+	{
+	 FCEUSS_LoadFP(st, 0);
+	 fclose(st);
+	}
 }
 
 char SaveStateStatus[10];

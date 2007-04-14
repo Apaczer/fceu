@@ -48,6 +48,8 @@
 #include	"crc32.h"
 #include        "ppu.h"
 
+#include        "movie.h"
+
 #define Pal     (PALRAM)
 
 
@@ -1026,28 +1028,54 @@ void ResetGameLoaded(void)
 	FCEUGameInfo.inputfc=-1;
 }
 
+char lastLoadedGameName [2048];
+
 FCEUGI *FCEUI_LoadGame(char *name)
 {
+	char name2[512];
+	int have_movie = 0;
         int fp;
 
         Exit=1;
         ResetGameLoaded();
 
-	fp=FCEU_fopen(name,"rb");
+	strncpy(name2, name, sizeof(name2));
+	name2[sizeof(name2)-1] = 0;
+
+	fp=FCEU_fopen(name2,"rb");
 	if(!fp)
         {
  	 FCEU_PrintError("Error opening \"%s\"!",name);
 	 return 0;
 	}
 
-        GetFileBase(name);
-        if(iNESLoad(name,fp))
+        {
+	 char *p = name2 + strlen(name2) - 4;
+	 if (strcmp(p, ".fcm") == 0)
+	 {
+	  // movie detected
+	  printf("movie detected\n");
+	  FCEU_fclose(fp);
+	  *p = 0;
+	  fp=FCEU_fopen(name2,"rb");
+	  if (!fp) {
+	   printf("no ROM for movie\n");
+	   return 0;
+	  }
+	  have_movie = 1;
+	 }
+	}
+
+	strcpy(lastLoadedGameName, name2);
+
+        GetFileBase(name2);
+        if(iNESLoad(name2,fp))
          goto endlseq;
         if(NSFLoad(fp))
          goto endlseq;
-        if(FDSLoad(name,fp))
+        if(FDSLoad(name2,fp))
          goto endlseq;
-        if(UNIFLoad(name,fp))
+        if(UNIFLoad(name2,fp))
          goto endlseq;
 
         FCEU_PrintError("An error occurred while loading the file.");
@@ -1076,6 +1104,9 @@ FCEUGI *FCEUI_LoadGame(char *name)
 
 	FCEU_ResetPalette();
         Exit=0;
+
+	if (have_movie)
+		FCEUI_LoadMovie(name, 1);
         return(&FCEUGameInfo);
 }
 
@@ -1335,8 +1366,6 @@ void PowerNES(void)
 	FCEU_CheatAddRAM(2,0,RAM);
 
         GeniePower();
-
-printf("X.DB offs: %02x\n", (int)&X.DB - (int)&X);
 
         memset(RAM,0x00,0x800);
         ResetMapping();
