@@ -208,7 +208,9 @@ static uint32 scanlines_per_frame;
 uint8 GameMemBlock[131072] __attribute__ ((aligned (4)));
 uint8 NTARAM[0x800] __attribute__ ((aligned (4)));
 uint8 PALRAM[0x20] __attribute__ ((aligned (4)));
+#ifndef ASM_6502
 uint8 RAM[0x800] __attribute__ ((aligned (4)));
+#endif
 
 uint8 PPU[4];
 uint8 PPUSPL;

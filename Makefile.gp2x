@@ -15,6 +15,9 @@ TFLAGS	+= -O3 # -pg
 LDRIVER	+= -O3 # -pg
 endif
 
+asm_6502=1
+debug_asm_6502=1
+
 all:		fceu
 
 gpfce: fceu
@@ -25,7 +28,22 @@ include zlib/Makefile
 OBJDRIVER	 = ${B}minimal.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
 		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o \
 		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o
-LDRIVER		+= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static
+LDRIVER		+= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static -Wl,-Map=fceu.map
+
+ifeq ($(asm_6502),1)
+TFLAGS  += -DASM_6502
+OBJDRIVER += ncpu.o
+ifeq ($(debug_asm_6502),1)
+TFLAGS  += -DDEBUG_ASM_6502
+OBJDRIVER += x6502.o ncpu_debug.o
+endif
+else
+OBJDRIVER += x6502.o
+endif
+
+x6502.o: x6502.c x6502.h ops.h fce.h sound.h
+ncpu.o: ncpu.S ncpu.h
+	$(CC) -c $< -o $@
 
 include Makefile.base
 

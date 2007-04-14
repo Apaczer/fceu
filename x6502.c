@@ -37,7 +37,7 @@ void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define _S               X.S
 #define _P               X.P
 #define _PI              X.mooPI
-#define _PZ              X.PZ
+#define _PZ              X.PZ		// unused?
 #define _DB              X.DB
 #define _count           X.count
 #define _tcount          X.tcount
@@ -88,7 +88,7 @@ static INLINE void ADDCYC(int x)
  timestamp+=x;
 }
 
-void FASTAPASS(1) X6502_AddCycles(int x)
+void FASTAPASS(1) X6502_AddCycles_c(int x)
 {
  ADDCYC(x);
 }
@@ -366,22 +366,22 @@ static uint8 CycTable[256] =
 /*0xF0*/ 2,5,2,8,4,4,6,6,2,4,2,7,4,4,7,7,
 };
 
-void FASTAPASS(1) X6502_IRQBegin(int w)
+void FASTAPASS(1) X6502_IRQBegin_c(int w)
 {
  _IRQlow|=w;
 }
 
-void FASTAPASS(1) X6502_IRQEnd(int w)
+void FASTAPASS(1) X6502_IRQEnd_c(int w)
 {
  _IRQlow&=~w;
 }
 
-void TriggerIRQ(void)	/* This function should probably be phased out. */
+void TriggerIRQ_c(void)	/* This function should probably be phased out. */
 {
  _IRQlow|=FCEU_IQTEMP;
 }
 
-void TriggerNMINSF(void)
+void TriggerNMINSF_c(void)
 {
  ADDCYC(7);
  PUSH(_PC>>8);
@@ -390,7 +390,7 @@ void TriggerNMINSF(void)
  _PC=0x3800;
 }
 
-void TriggerNMI(void)
+void TriggerNMI_c(void)
 {
  _IRQlow|=FCEU_IQNMI;
 }
@@ -422,7 +422,7 @@ void TriggerIRQReal(void)
  }
 }
 
-void X6502_Reset(void)
+void X6502_Reset_c(void)
 {
   _PC=RdMem(0xFFFC);
   _PC|=RdMem(0xFFFD)<<8;
@@ -431,17 +431,17 @@ void X6502_Reset(void)
   _PI=_P=I_FLAG;
 }
 
-void X6502_Power(void)
+void X6502_Power_c(void)
 {
  memset((void *)&X,0,sizeof(X));
  timestamp=0;
- X6502_Reset();
+ X6502_Reset_c();
 }
 
 
 //int asdc = 0;
 
-void X6502_Run_(void/*int32 cycles*/)
+void X6502_Run_c(void/*int32 cycles*/)
 {
 /*
 	if(PAL)
@@ -475,6 +475,7 @@ void X6502_Run_(void/*int32 cycles*/)
 	 ADDCYC(temp);
 	 //temp=_tcount;
 	 //_tcount=0;
+/*
 	 if(MapIRQHook) MapIRQHook(temp);
 
 	 temp*=48;
@@ -497,10 +498,11 @@ void X6502_Run_(void/*int32 cycles*/)
 	   {
 	    extern uint8 SIRQStat;
 	    SIRQStat|=0x80;
-	    X6502_IRQBegin(FCEU_IQDPCM);
+	    X6502_IRQBegin_c(FCEU_IQDPCM);
 	   }
 	  }
 	 }
+*/
 	  //printf("$%04x:$%02x\n",_PC,b1);
 	 //_PC++;
 	 //printf("$%02x\n",b1);
@@ -509,6 +511,10 @@ void X6502_Run_(void/*int32 cycles*/)
          {
           #include "ops.h"
          }
+
+#ifdef DEBUG_ASM_6502
+	 _PI=_P;
+#endif
 	}
 }
 

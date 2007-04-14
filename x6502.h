@@ -53,23 +53,87 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define FCEU_IQFCOUNT   0x20
 #define FCEU_IQTEMP     0x80
 
-void X6502_Reset(void);
-void X6502_Power(void);
+#if defined(DEBUG_ASM_6502)
+#define TriggerIRQ TriggerIRQ_d
+#define TriggerNMI TriggerNMI_d
+#define TriggerNMINSF TriggerNMINSF_d
+#define X6502_Run X6502_Run_d
+#define X6502_Reset X6502_Reset_d
+#define X6502_Power X6502_Power_d
+#define X6502_AddCycles X6502_AddCycles_d
+#define X6502_IRQBegin X6502_IRQBegin_d
+#define X6502_IRQEnd X6502_IRQEnd_d
+#define X6502_C
+#define X6502_A
+#define X6502_D
+
+#elif defined(ASM_6502)
+#define TriggerIRQ TriggerIRQ_a
+#define TriggerNMI TriggerNMI_a
+#define TriggerNMINSF TriggerNMINSF_a
+#define X6502_Reset X6502_Reset_a
+#define X6502_Power X6502_Power_a
+#define X6502_AddCycles X6502_AddCycles_a
+#define X6502_IRQBegin X6502_IRQBegin_a
+#define X6502_IRQEnd X6502_IRQEnd_a
+#define X6502_A
+
+extern uint32 nes_registers[0x10];
+#define X6502_Run(c) \
+{ \
+ int32 cycles = (c) << 4; /* *16 */ \
+ if (PAL) cycles -= (c);  /* *15 */ \
+ nes_registers[7]+=cycles; \
+ if (nes_registers[7] > 0) X6502_Run_a(); \
+}
+
+#else
 #define X6502_Run(c) \
 { \
  int32 cycles = (c) << 4; /* *16 */ \
  if (PAL) cycles -= (c);  /* *15 */ \
  X.count+=cycles; \
- if (X.count > 0) X6502_Run_(); \
+ if (X.count > 0) X6502_Run_c(); \
 }
-void X6502_Run_(void);
+#define X6502_C
+#endif
 
+// c
+#ifdef X6502_C
+void TriggerIRQ_c(void);
+void TriggerNMI_c(void);
+void TriggerNMINSF_c(void);
+void X6502_Run_c(void);
+void X6502_Reset_c(void);
+void X6502_Power_c(void);
+void FASTAPASS(1) X6502_AddCycles_c(int x);
+void FASTAPASS(1) X6502_IRQBegin_c(int w);
+void FASTAPASS(1) X6502_IRQEnd_c(int w);
+#endif
 
-void TriggerIRQ(void);
-void TriggerNMI(void);
-void TriggerNMINSF(void);
+// asm
+#ifdef X6502_A
+void TriggerIRQ_a(void);
+void TriggerNMI_a(void);
+void TriggerNMINSF_a(void);
+void X6502_Run_a(void);
+void X6502_Reset_a(void);
+void X6502_Power_a(void);
+void X6502_AddCycles_a(int x);
+void X6502_IRQBegin_a(int w);
+void X6502_IRQEnd_a(int w);
+#endif
 
-void FASTAPASS(1) X6502_AddCycles(int x);
-void FASTAPASS(1) X6502_IRQBegin(int w);
-void FASTAPASS(1) X6502_IRQEnd(int w);
+// debug
+#ifdef X6502_D
+void TriggerIRQ_d(void);
+void TriggerNMI_d(void);
+void TriggerNMINSF_d(void);
+void X6502_Run_d(int32 c);
+void X6502_Reset_d(void);
+void X6502_Power_d(void);
+void X6502_AddCycles_d(int x);
+void X6502_IRQBegin_d(int w);
+void X6502_IRQEnd_d(int w);
+#endif
 
