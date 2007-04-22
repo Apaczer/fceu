@@ -39,7 +39,7 @@ DECLFW(SUN5BWRAM)
 DECLFR(SUN5AWRAM)
 {
  if((sungah&0xC0)==0x40)
-  return X.DB; 
+  return X.DB;
  return CartBR(A);
 }
 
@@ -67,7 +67,7 @@ DECLFW(Mapper69_SWH)
                      DoAYSQ(1);
                      DoAYSQ(2);break;
              }
-             MapperExRAM[sunindex]=V; 
+             MapperExRAM[sunindex]=V;
 }
 
 DECLFW(Mapper69_write)
@@ -91,10 +91,14 @@ DECLFW(Mapper69_write)
                         }
                         else
                          setprg8(0x6000,V);
+                        X6502_Rebase();
                         break;
-                case 9:ROM_BANK8(0x8000,V);break;
-                case 0xa:ROM_BANK8(0xa000,V);break;
-                case 0xb:ROM_BANK8(0xc000,V);break;
+                case 9:ROM_BANK8(0x8000,V);
+                         X6502_Rebase();break;
+                case 0xa:ROM_BANK8(0xa000,V);
+                         X6502_Rebase();break;
+                case 0xb:ROM_BANK8(0xc000,V);
+                         X6502_Rebase();break;
                 case 0xc:
                          switch(V&3)
                          {
@@ -121,7 +125,7 @@ static void DoAYSQ(int x)
     unsigned char amp;
     int32 start,end;
 
-    start=CAYBC[x];    
+    start=CAYBC[x];
     end=(timestamp<<16)/soundtsinc;
     if(end<=start) return;
     CAYBC[x]=end;
@@ -153,7 +157,7 @@ static void DoAYNoise(void)
     unsigned char amp;
     int32 start,end;
 
-    start=CAYBC[3];    
+    start=CAYBC[3];
     end=(timestamp<<16)/soundtsinc;
     if(end<=start) return;
     CAYBC[3]=end;
@@ -239,13 +243,13 @@ static void M69SC(void)
 {
  if(FSettings.SndRate)
   Mapper69_ESI();
- else 
+ else
   SetWriteHandler(0xc000,0xffff,(writefunc)0);
 }
 
 void Mapper69_ESI(void)
 {
- GameExpSound.RChange=M69SC; 
+ GameExpSound.RChange=M69SC;
  if(FSettings.SndRate)
  {
   SetWriteHandler(0xc000,0xdfff,Mapper69_SWL);

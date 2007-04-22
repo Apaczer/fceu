@@ -8,15 +8,19 @@
 // asm core state
 extern uint32 nes_registers[0x10];
 extern uint32 pc_base;
-uint32 PC_prev = 0, g_cnt = 0;
+extern uint8  nes_internal_ram[0x800];
+uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
+int32  g_cnt = 0;
 
 int cpu_repeat;
 int cpu_lastval;
+static int pending_add_cycles = 0, pending_rebase = 0;
 
 static void leave(void)
 {
 	printf("\nA: %02x, X: %02x, Y: %02x, S: %02x\n", X.A, X.X, X.Y, X.S);
-	printf("PC = %04lx, OP=%02X\n", PC_prev, (PC_prev < 0x2000) ? RAM[PC_prev&0x7ff] : ARead[PC_prev](PC_prev));
+	printf("PC = %04lx, OP=%02lX\n", PC_prev, OP_prev);
+	printf("cpu_lastval = %02x\n", cpu_lastval);
 	exit(1);
 }
 
@@ -74,6 +78,24 @@ static void compare_state(void)
 	if (fail) leave();
 }
 
+#if 1
+static void compare_ram(void)
+{
+	int i, fail = 0;
+	for (i = 0; i < 0x800/4; i++)
+	{
+		if (((int *)nes_internal_ram)[i] != ((int32 *)RAM)[i]) {
+			int u;
+			fail = 1;
+			for (u = i*4; u < i*4+4; u++)
+				if (nes_internal_ram[u] != RAM[u])
+					printf("RAM[%03x]: %02x vs %02x\n", u, nes_internal_ram[u], RAM[u]);
+		}
+	}
+
+	if (fail) leave();
+}
+#endif
 
 void TriggerIRQ_d(void)
 {
@@ -97,18 +119,21 @@ void TriggerNMINSF_d(void)
 
 void X6502_Run_d(int32 c)
 {
-	int32 cycles = c << 4; /* *16 */ \
-	if (PAL) cycles -= c;  /* *15 */ \
+	int32 cycles = c << 4; /* *16 */
+	if (PAL) cycles -= c;  /* *15 */
 
 	//printf("-- %06i: run(%i)\n", (int)g_cnt, (int)c);
-	g_cnt += c;
+	g_cnt += cycles;
 
-	while (cycles > 0)
+	if (c > 200)
+		compare_ram();
+
+	while (g_cnt > 0)
 	{
-		PC_prev = X.PC;
 		nes_registers[7]=1;
 		X.count=1;
 
+		cpu_lastval = 0;
 		cpu_repeat = 0;
 		X6502_Run_c();
 
@@ -116,7 +141,17 @@ void X6502_Run_d(int32 c)
 		X6502_Run_a();
 
 		compare_state();
-		cycles -= 1 - X.count;
+		g_cnt -= 1 - X.count;
+		if (pending_add_cycles) {
+			//X6502_AddCycles_c(pending_add_cycles);
+			//X6502_AddCycles_a(pending_add_cycles);
+			g_cnt -= pending_add_cycles*48;
+			pending_add_cycles = 0;
+		}
+		if (pending_rebase) {
+			X6502_Rebase_a();
+			pending_rebase = 0;
+		}
 	}
 
 	//printf("-- run_end\n");
@@ -134,6 +169,7 @@ void X6502_Reset_d(void)
 void X6502_Power_d(void)
 {
 	printf("-- power\n");
+	if (nes_internal_ram == RAM) printf("nes_internal_ram == RAM!!\n");
 
 	X6502_Power_c();
 	X6502_Power_a();
@@ -144,8 +180,9 @@ void X6502_AddCycles_d(int x)
 {
 	printf("-- AddCycles(%i|%i)\n", x, x*48);
 
-	printf("can't use this in debug\n");
-	exit(1);
+	pending_add_cycles = x; // *48;
+//	printf("can't use this in debug\n");
+//	exit(1);
 	//X6502_AddCycles_c(x);
 	//X6502_AddCycles_a(x);
 	//compare_state();
@@ -167,5 +204,10 @@ void X6502_IRQEnd_d(int w)
 	X6502_IRQEnd_a(w);
 }
 
+
+void X6502_Rebase_d(void)
+{
+	pending_rebase = 1;
+}
 
 

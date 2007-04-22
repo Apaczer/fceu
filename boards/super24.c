@@ -56,7 +56,7 @@ static void swsetchr2(uint32 A, uint32 V)
  else
  {
   //V&=masko1[sizer&7]>>1;
-  V|=bigbank2*4;  
+  V|=bigbank2*4;
   setchr2r((V/256)&15,A,V);
  }
 }
@@ -117,6 +117,7 @@ static INLINE void FixMMC3PRG(int V)
             swsetprg8(0x8000,DRegBuf[6]);
             swsetprg8(0xC000,~1);
            }
+	  X6502_Rebase();
 }
 
 static INLINE void FixMMC3CHR(int V)
@@ -157,8 +158,10 @@ static DECLFW(Super24hiwrite)
                   case 5: swsetchr1(cbase^0x1C00,V); break;
                   case 6: if (MMC3_cmd&0x40) swsetprg8(0xC000,V);
                           else swsetprg8(0x8000,V);
+                          X6502_Rebase();
                           break;
                   case 7: swsetprg8(0xA000,V);
+                          X6502_Rebase();
                           break;
                  }
                 }

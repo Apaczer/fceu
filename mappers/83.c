@@ -48,6 +48,7 @@ static void m83prg(void)
 {
   ROM_BANK16(0x8000,mapbyte1[0]&0x3F);
   ROM_BANK16(0xC000,(mapbyte1[0]&0x30)|0xF);
+  X6502_Rebase();
 }
 
 static void m83chr(void)
@@ -96,7 +97,7 @@ static DECLFW(Mapper83_write)
   case 0x8317:mapbyte2[7]=V;m83chr();break;
  }
 // printf("$%04x:$%02x, $%04x\n",A,V,X.PC.W);
- 
+
 }
 
 void Mapper83_init(void)

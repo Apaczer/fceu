@@ -36,10 +36,14 @@ DECLFW(Mapper117_write)
   case 0xa005:VROM_BANK1(0x1400,V);break;
   case 0xa006:VROM_BANK1(0x1800,V);break;
   case 0xa007:VROM_BANK1(0x1c00,V);break;
-  case 0x8000:ROM_BANK8(0x8000,V);break;
-  case 0x8001:ROM_BANK8(0xa000,V);break;
-  case 0x8002:ROM_BANK8(0xc000,V);break;
-  case 0x8003:ROM_BANK8(0xe000,V);break;
+  case 0x8000:ROM_BANK8(0x8000,V);
+              X6502_Rebase();break;
+  case 0x8001:ROM_BANK8(0xa000,V);
+              X6502_Rebase();break;
+  case 0x8002:ROM_BANK8(0xc000,V);
+              X6502_Rebase();break;
+  case 0x8003:ROM_BANK8(0xe000,V);
+              X6502_Rebase();break;
  }
 }
 

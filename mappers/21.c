@@ -31,13 +31,17 @@ DECLFW(Mapper21_write)
 	A|=((A>>5)&0xF);
 
 	if((A&0xF000)==0xA000)
+	{
 	  ROM_BANK8(0xA000,V);
+          X6502_Rebase();
+	}
 	else if((A&0xF000)==0x8000)
 	{
          if(K4sel&2)
           ROM_BANK8(0xC000,V);
          else
           ROM_BANK8(0x8000,V);
+         X6502_Rebase();
  	}
 	else if(A>=0xb000 && A<=0xefff)
 	{
@@ -49,7 +53,7 @@ DECLFW(Mapper21_write)
            K4buf[x]|=(V&0xF)<<((A&2)<<1);
            VROM_BANK1(x<<10,K4buf[x]);
           }
- 
+
 	}
 	else switch(A&0xF006)
         {
@@ -70,6 +74,7 @@ DECLFW(Mapper21_write)
 	              swa=PRGBankList[0];
          	      ROM_BANK8(0x8000,PRGBankList[2]);
 	              ROM_BANK8(0xc000,swa);
+	              X6502_Rebase();
          	     }
 	             K4sel=V;
         	     break;

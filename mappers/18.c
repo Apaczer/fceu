@@ -47,6 +47,7 @@ DECLFW(Mapper18_write)
          K4buf2[x]&=(0xF0)>>((A&1)<<2);
          K4buf2[x]|=(V&0xF)<<((A&1)<<2);
          ROM_BANK8(0x8000+(x<<13),K4buf2[x]);
+         X6502_Rebase();
 	}
 	else if(A>=0xa000 && A<=0xd003)
 	{

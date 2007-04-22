@@ -25,7 +25,8 @@ static DECLFW(Mapper42_write)
 {
  switch(A&0xe003)
  {
-  case 0xe000:mapbyte1[0]=V;ROM_BANK8(0x6000,V&0xF);break;
+  case 0xe000:mapbyte1[0]=V;ROM_BANK8(0x6000,V&0xF);
+              X6502_Rebase();break;
   case 0xe001:MIRROR_SET((V>>3)&1);break;
   case 0xe002:IRQa=V&2;if(!IRQa) IRQCount=0;break;
  }

@@ -48,7 +48,8 @@ DECLFW(Mapper67_write)
                case 3:onemir(1);break;
               }
               break;
-  case 0xf800:ROM_BANK16(0x8000,V);break;
+  case 0xf800:ROM_BANK16(0x8000,V);
+              X6502_Rebase();break;
  }
 }
 static void FP_FASTAPASS(1) SunIRQHook(int a)

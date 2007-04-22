@@ -30,6 +30,7 @@ DECLFW(Mapper46_writel)
   A64reg=V;
   ROM_BANK32((A64wr&1)+((A64reg&0xF)<<1));
   VROM_BANK8(((A64wr>>4)&7)+((A64reg&0xF0)>>1));
+  X6502_Rebase();
 }
 
 DECLFW(Mapper46_write)
@@ -37,6 +38,7 @@ DECLFW(Mapper46_write)
   A64wr=V;
   ROM_BANK32((V&1)+((A64reg&0xF)<<1));
   VROM_BANK8(((V>>4)&7)+((A64reg&0xF0)>>1));
+  X6502_Rebase();
 }
 
 void Mapper46_init(void)

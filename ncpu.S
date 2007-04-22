@@ -16,7 +16,7 @@
 #define OTOFFS_NES_REGS  (nes_registers    - cpu_exec_table)
 #define OTOFFS_PC_BASE   (pc_base          - cpu_exec_table)
 #define OTOFFS_IRQ_HOOK  (MapIRQHook       - cpu_exec_table)
-#define OTOFFS_X         (X                - cpu_exec_table)
+#define OTOFFS_X         (X_               - cpu_exec_table)
 
 @ fceu
 #define FCEU_IQNMI      0x08
@@ -30,6 +30,10 @@
 	SECTION_TEXT
 	ALIGN
 
+bbbb:
+.ascii "rebase: %04x"
+.byte 0x0a,0
+.align 4
 
 
 @@@
@@ -38,6 +42,12 @@
 @@@
 .macro	REBASE_PC
 	@ FIXME: do something with mem not in Page[].
+@	stmfd	sp!, {r0-r3,r12,lr}
+@	mov	r1, r0
+@	ldr     r0, =bbbb
+@	bl      printf
+@	ldmfd	sp!, {r0-r3,r12,lr}
+
 	cmp     r0, #0x2000
 	ldrge	r1, =Page
 	movge	r2, r0, lsr #11
@@ -2822,10 +2832,20 @@ read_save_ram:
 	mov     REG_PC, lr			@ r7
 	mov	REG_P_REST, r3			@ r8
 
+#ifndef DEBUG_ASM_6502
 	ldr	r2, =ARead
 	bic     r0, REG_ADDR, #0x00ff0000
 	mov	lr, pc
 	ldr	pc, [r2, r0, lsl #2]
+#else
+	ldr	r1, =cpu_lastval
+	ldr     r0, [r1]
+	tst	r0, #0x20000
+	orreq	r0, r0, #0x20000
+	streq	r0, [r1]
+	movne	r0, r0, lsr #8
+	and	r0, r0, #0xff
+#endif
 
 	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
 	mov	lr, REG_PC
@@ -2841,6 +2861,7 @@ write_ppu_reg:
 write_high_reg:
 write_save_ram:
 write_rom_byte:
+#ifndef DEBUG_ASM_6502
 	@ must preserve r3 for the callers too
 	str     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
@@ -2860,6 +2881,7 @@ write_rom_byte:
 	ldr     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	ldr     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
+#endif
 	bx	lr
 
 
@@ -2958,9 +2980,7 @@ cpu_exec_table:
 @@@
 nes_registers:
 	.fill   0x40, 1, 0
-#ifndef DEBUG_ASM_6502
 RAM:
-#endif
 nes_internal_ram:
 	.fill	0x100, 1, 0
 nes_stack:
@@ -2968,13 +2988,14 @@ nes_stack:
 @ TODO: write code which keeps it up-to-date
 pc_base:
 	.long	0
-#ifndef DEBUG_ASM_6502
 MapIRQHook:
 	.long	0
 timestamp:
 	.long	0
-X:	.fill   0x20, 1, 0
+#ifndef DEBUG_ASM_6502
+X:
 #endif
+X_:	.fill   0x20, 1, 0
 
 .pool
 
@@ -3090,6 +3111,8 @@ op9E:	@ SHX $nnnn, Y
 	.globl	RAM
 	.globl	timestamp
 	.globl	MapIRQHook @ (int a)
+#else
+	.globl	nes_internal_ram
 #endif
 	.globl	X6502_Reset_a @ (void);
 	.globl	X6502_Power_a @ (void);
@@ -3100,7 +3123,7 @@ op9E:	@ SHX $nnnn, Y
 	.globl	X6502_AddCycles_a @ (int x);
 	.globl	X6502_IRQBegin_a @ (int w);
 	.globl	X6502_IRQEnd_a @ (int w);
-	.globl	X6502_rebase_a @ (void);
+	.globl	X6502_Rebase_a @ (void);
 
 	SECTION_TEXT
 	ALIGN
@@ -3166,7 +3189,7 @@ X6502_AddCycles_a:
 
 
 @ rebase PC when not executing or in memhandlers
-X6502_rebase_a:
+X6502_Rebase_a:
 	stmfd	sp!,{REG_PC,REG_OP_TABLE}
 	ldr	REG_OP_TABLE, =cpu_exec_table
 	ldr	r0, [REG_OP_TABLE, #(OTOFFS_NES_REGS+0x0c)] @ PC

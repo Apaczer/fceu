@@ -27,16 +27,18 @@ static DECLFW(Mapper77_write)
  mapbyte1[0]=V;
  ROM_BANK32(V&0x7);
  VROM_BANK2(0x0000, (V&0xf0)>>4);
+ X6502_Rebase();
 }
 
 static void Mapper77_StateRestore(int version)
 {
  int x;
- 
+
  if(version>=72)
  {
   ROM_BANK32(mapbyte1[0]&0x7);
   VROM_BANK2(0x0000, (mapbyte1[0]&0xf0)>>4);
+  X6502_Rebase();
  }
  for(x=2;x<8;x++)
   VRAM_BANK1(x*0x400,x);

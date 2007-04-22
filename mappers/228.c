@@ -29,13 +29,14 @@ static DECLFW(Mapper228_write)
  page=(A>>7)&0x3F;
  if((page&0x30)==0x30)
   page-=0x10;
- 
+
  pagel=pageh=(page<<1) + (((A>>6)&1)&((A>>5)&1));
  pageh+=((A>>5)&1)^1;
 
  ROM_BANK16(0x8000,pagel);
  ROM_BANK16(0xC000,pageh);
  VROM_BANK8( (V&0x3) | ((A&0xF)<<2) );
+ X6502_Rebase();
 }
 
 static void A52Reset(void)

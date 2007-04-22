@@ -68,6 +68,7 @@ static void Synco(void)
  setprg8(0xA000,regsl[7]);
 
  setprg8(0xC000,regsh[7]);
+ X6502_Rebase();
 }
 
 
@@ -105,7 +106,7 @@ static DECLFW(RAMBO1_write)
                     if(rmode==1)
                      {IRQCount=IRQLatch;}
                     break;
-  }	
+  }
 }
 
 static void RAMBO1_Restore(int version)

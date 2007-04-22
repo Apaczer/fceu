@@ -41,8 +41,10 @@ static DECLFW(Mapper88_write)
 	       case 3:VROM_BANK1(0x1400,V|0x40);break;
 	       case 4:VROM_BANK1(0x1800,V|0x40);break;
 	       case 5:VROM_BANK1(0x1c00,V|0x40);break;
-	       case 6:ROM_BANK8(0x8000,V);break;
-	       case 7:ROM_BANK8(0xA000,V);break;
+	       case 6:ROM_BANK8(0x8000,V);
+                      X6502_Rebase();break;
+	       case 7:ROM_BANK8(0xA000,V);
+                      X6502_Rebase();break;
 	      }
 	      break;
 

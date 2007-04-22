@@ -34,11 +34,14 @@ switch(A)
   case 0x7ef4: VROM_BANK1(0x1800,V);break;
   case 0x7ef5: VROM_BANK1(0x1c00,V);break;
   case 0x7efa:
-  case 0x7efb: ROM_BANK8(0x8000,V);break;
+  case 0x7efb: ROM_BANK8(0x8000,V);
+               X6502_Rebase();break;
   case 0x7efd:
-  case 0x7efc: ROM_BANK8(0xA000,V);break;
+  case 0x7efc: ROM_BANK8(0xA000,V);
+               X6502_Rebase();break;
   case 0x7efe:
-  case 0x7eff: ROM_BANK8(0xC000,V);break;
+  case 0x7eff: ROM_BANK8(0xC000,V);
+               X6502_Rebase();break;
  }
 }
 

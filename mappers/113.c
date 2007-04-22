@@ -22,20 +22,22 @@
 
 /*      I'm getting the feeling this is another "jam two different bank
         switching hardwares into one mapper".
-*/        
+*/
 
 /* HES 4-in-1 */
 DECLFW(Mapper113_write)
 {
         ROM_BANK32((V>>3)&7);
         VROM_BANK8(V&7);
+        X6502_Rebase();
 }
 
-      
+
 /*      Deathbots */
 DECLFW(Mapper113_writeh)
 {
         ROM_BANK32(V&0xF);
+        X6502_Rebase();
 }
 
 

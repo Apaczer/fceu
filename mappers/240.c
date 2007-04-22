@@ -28,6 +28,7 @@ DECLFW(Mapper240_write)
  {
   ROM_BANK32(V>>4);
   VROM_BANK8(V&0xF);
+  X6502_Rebase();
  }
 }
 

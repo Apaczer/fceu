@@ -30,9 +30,11 @@ static DECLFW(Mapper33_write)
         else switch(A){
         case 0x8000:if(!mapbyte1[0])
                      MIRROR_SET((V>>6)&1);
-                     ROM_BANK8(0x8000,V);
+                    ROM_BANK8(0x8000,V);
+                    X6502_Rebase();
                     break;
-        case 0x8001:ROM_BANK8(0xA000,V); break;
+        case 0x8001:ROM_BANK8(0xA000,V);
+                    X6502_Rebase();break;
         case 0x8002:VROM_BANK2(0x0000,V);break;
         case 0x8003:VROM_BANK2(0x0800,V);break;
 	case 0xc000:IRQLatch=V;break;
@@ -48,7 +50,7 @@ static void heho(void)
  if(IRQa)
  {
    IRQCount++;
-   if(IRQCount==0x100) 
+   if(IRQCount==0x100)
    {
     TriggerIRQ();
     IRQa=0;

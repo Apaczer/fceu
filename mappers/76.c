@@ -37,8 +37,10 @@ DECLFW(Mapper76_write)
                 case 6:
                         if (MMC3_cmd&0x40) ROM_BANK8(0xC000,V);
                         else ROM_BANK8(0x8000,V);
+                        X6502_Rebase();
                         break;
                 case 7: ROM_BANK8(0xA000,V);
+                        X6502_Rebase();
                         break;
                }
                break;

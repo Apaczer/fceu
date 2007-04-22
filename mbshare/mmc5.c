@@ -25,7 +25,7 @@
 void MMC5Sound(int Count);
 void Do5SQ(int P);
 
-static INLINE void MMC5SPRVROM_BANK1(uint32 A,uint32 V) 
+static INLINE void MMC5SPRVROM_BANK1(uint32 A,uint32 V)
 {
  if(CHRptr[0])
  {
@@ -46,7 +46,7 @@ static INLINE void MMC5SPRVROM_BANK8(uint32 V) {if(CHRptr[0]){V&=CHRmask8[0];MMC
 static INLINE void MMC5BGVROM_BANK8(uint32 V) {if(CHRptr[0]){V&=CHRmask8[0];MMC5BGVPage[0]=MMC5BGVPage[1]=MMC5BGVPage[2]=MMC5BGVPage[3]=MMC5BGVPage[4]=MMC5BGVPage[5]=MMC5BGVPage[6]=MMC5BGVPage[7]=&CHRptr[0][(V)<<13];}}
 
 static int32 inc;
-uint8 MMC5fill[0x400];
+uint8 MMC5fill[0x400] __attribute__ ((aligned (4)));
 
 #define MMC5IRQR        mapbyte3[4]
 #define MMC5LineCounter mapbyte3[5]
@@ -216,6 +216,7 @@ static void MMC5PRG(void)
            MMC5ROMWrProtect[0]=MMC5ROMWrProtect[1]=
            MMC5ROMWrProtect[2]=MMC5ROMWrProtect[3]=1;
            setprg32(0x8000,((mapbyte1[5]&0x7F)>>2));
+           X6502_Rebase();
 	   for(x=0;x<4;x++)
  	    MMC5MemIn[1+x]=1;
            break;
@@ -302,8 +303,10 @@ static DECLFW(Mapper5_write)
                mapbyte4[3]=V;
                break;
 
-   case 0x5113:mapbyte4[6]=V;MMC5WRAM(0x6000,V&7);break;
-   case 0x5100:mapbyte1[0]=V;MMC5PRG();break;
+   case 0x5113:mapbyte4[6]=V;MMC5WRAM(0x6000,V&7);
+               X6502_Rebase();break;
+   case 0x5100:mapbyte1[0]=V;MMC5PRG();
+               X6502_Rebase();break;
    case 0x5101:mapbyte1[1]=V;
                if(!mapbyte4[7])
                 {MMC5CHRB();MMC5CHRA();}
@@ -315,7 +318,8 @@ static DECLFW(Mapper5_write)
    case 0x5115:
    case 0x5116:
    case 0x5117:
-               mapbyte1[A&7]=V;MMC5PRG();break;
+               mapbyte1[A&7]=V;MMC5PRG();
+               X6502_Rebase();break;
 
    case 0x5120:
    case 0x5121:
@@ -455,6 +459,7 @@ void MMC5Synco(void)
   }
   X6502_IRQEnd(FCEU_IQEXT);
   MMC5HackCHRMode=mapbyte4[2]&3;
+  X6502_Rebase();
 }
 
 void MMC5_hbo(void)
@@ -485,7 +490,7 @@ void MMC5_hb(void)
   if(MMC5LineCounter<240)
   {
    MMC5LineCounter++;
-   if(MMC5LineCounter==IRQCount) 
+   if(MMC5LineCounter==IRQCount)
    {
     MMC5IRQR|=0x80;
     if(IRQa&0x80)
@@ -523,7 +528,7 @@ static void Do5PCM(void)
    end=(timestamp<<16)/soundtsinc;
    if(end<=start) return;
    C5BC[2]=end;
-   
+
    if(!(MMC5PSG[0x10]&0x40) && MMC5PSG[0x11])
     for(V=start;V<end;V++)
      Wave[V>>4]+=MMC5PSG[0x11]<<2;
@@ -623,7 +628,7 @@ static void MMC5SoundC(void)
  if(FSettings.SndRate)
   Mapper5_ESI();
  else
-  SetWriteHandler(0x5000,0x5015,0); 
+  SetWriteHandler(0x5000,0x5015,0);
 }
 
 void Mapper5_ESI(void)
@@ -706,7 +711,7 @@ static void GenMMC5_Init(int wsize, int battery)
  AddExState(&MMC5HackSPScroll, 1, 0, "SPLS");
  AddExState(&MMC5HackSPPage, 1, 0, "SPLP");
 
- MMC5WRAMsize=wsize/8; 
+ MMC5WRAMsize=wsize/8;
  BuildWRAMSizeTable();
  GameStateRestore=Mapper5_StateRestore;
  BoardPower=GenMMC5Reset;

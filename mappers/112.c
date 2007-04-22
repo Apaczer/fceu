@@ -41,6 +41,7 @@ switch(A)
             case 6:VROM_BANK1(0x1800,V);break;
             case 7:VROM_BANK1(0x1c00,V);break;
             }
+            X6502_Rebase();
             break;
  }
 }

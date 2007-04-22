@@ -105,6 +105,7 @@ static DECLFW(MHROMWrite)
  setprg32(0x8000,V>>4);
  setchr8(V);
  latche=V;
+ X6502_Rebase();
 }
 
 static void MHROMReset(void)
@@ -123,7 +124,7 @@ static void MHROMRestore(int version)
 }
 
 void MHROM_Init(void)
-{ 
+{
  BoardPower=MHROMReset;
  AddExState(&latche, 1, 0,"LATC");
  PRGmask32[0]&=1;
@@ -140,6 +141,7 @@ static DECLFW(UNROMWrite)
 {
  setprg16(0x8000,V);
  latche=V;
+ X6502_Rebase();
 }
 
 static void UNROMReset(void)

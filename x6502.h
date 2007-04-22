@@ -63,6 +63,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_AddCycles X6502_AddCycles_d
 #define X6502_IRQBegin X6502_IRQBegin_d
 #define X6502_IRQEnd X6502_IRQEnd_d
+#define X6502_Rebase X6502_Rebase_d
 #define X6502_C
 #define X6502_A
 #define X6502_D
@@ -76,6 +77,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_AddCycles X6502_AddCycles_a
 #define X6502_IRQBegin X6502_IRQBegin_a
 #define X6502_IRQEnd X6502_IRQEnd_a
+#define X6502_Rebase X6502_Rebase_a
 #define X6502_A
 
 #define X6502_Run(c) \
@@ -100,6 +102,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_AddCycles X6502_AddCycles_c
 #define X6502_IRQBegin X6502_IRQBegin_c
 #define X6502_IRQEnd X6502_IRQEnd_c
+#define X6502_Rebase(...)
 #define X6502_C
 
 #define X6502_Run(c) \
@@ -138,7 +141,7 @@ void X6502_Power_a(void);
 void X6502_AddCycles_a(int x);
 void X6502_IRQBegin_a(int w);
 void X6502_IRQEnd_a(int w);
-void X6502_rebase_a(void);
+void X6502_Rebase_a(void);
 #endif
 
 // debug
@@ -152,5 +155,6 @@ void X6502_Power_d(void);
 void X6502_AddCycles_d(int x);
 void X6502_IRQBegin_d(int w);
 void X6502_IRQEnd_d(int w);
+void X6502_Rebase_d(void);
 #endif
 

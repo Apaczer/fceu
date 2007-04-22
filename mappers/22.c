@@ -30,8 +30,10 @@ DECLFW(Mapper22_write)
          {
           switch(A&0xF000)
           {
-          case 0x8000:ROM_BANK8(0x8000,V);break;
-          case 0xa000:ROM_BANK8(0xA000,V);break;
+          case 0x8000:ROM_BANK8(0x8000,V);
+                      X6502_Rebase();break;
+          case 0xa000:ROM_BANK8(0xA000,V);
+                      X6502_Rebase();break;
           case 0x9000:switch(V&3)
 		      {
                        case 0x00:MIRROR_SET2(1);break;

@@ -38,7 +38,7 @@ static DECLFW(MBWRAM)
 
 static DECLFR(MAWRAM)
 {
- if(MMC1_reg[3]&0x10)   
+ if(MMC1_reg[3]&0x10)
   return X.DB;          // WRAM is disabled
  return(Page[A>>11][A]);
 }
@@ -51,6 +51,7 @@ static void MMC1CHR(void)
       setprg8r(0x10,0x6000,(MMC1_reg[1]>>4)&1);
      else
       setprg8r(0x10,0x6000,(MMC1_reg[1]>>3)&1);
+     X6502_Rebase();
     }
 
     if(MMC1_reg[0]&0x10)
@@ -81,6 +82,7 @@ static void MMC1PRG(void)
                     setprg16(0xc000,((MMC1_reg[3]&~1)+offs+1));
                     break;
         }
+        X6502_Rebase();
 }
 static void MMC1MIRROR(void)
 {
@@ -189,7 +191,7 @@ void Mapper1_init(void)
 {
 	lreset=0;
 	mmc1opts=0;
-        MMC1CMReset();        
+        MMC1CMReset();
 	SetWriteHandler(0x8000,0xFFFF,MMC1_write);
 	MapStateRestore=MMC1_Restore;
 	AddExState(&lreset, 8, 1, "LRST");
@@ -245,8 +247,8 @@ static void GenMMC1Init(int prg, int chr, int wram, int battery)
  CHRmask4[0]&=(chr>>12)-1;
  CHRmask8[0]&=(chr>>13)-1;
 
- if(wram) 
- { 
+ if(wram)
+ {
   mmc1opts|=1;
   if(wram>8) mmc1opts|=4;
   SetupCartPRGMapping(0x10,WRAM,wram*1024,1);
@@ -279,7 +281,7 @@ static void GenMMC1Init(int prg, int chr, int wram, int battery)
 //static void GenMMC1Init(int prg, int chr, int wram, int battery)
 void SAROM_Init(void)
 {
- GenMMC1Init(128, 64, 8, 1); 
+ GenMMC1Init(128, 64, 8, 1);
 }
 
 void SBROM_Init(void)
@@ -287,7 +289,7 @@ void SBROM_Init(void)
  GenMMC1Init(128, 64, 0, 0);
 }
 
-void SCROM_Init(void)	
+void SCROM_Init(void)
 {
  GenMMC1Init(128, 128, 0, 0);
 }

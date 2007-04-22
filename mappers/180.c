@@ -4,7 +4,8 @@
 
 DECLFW(Mapper180_write)
 {
-ROM_BANK16(0xC000,V);
+  ROM_BANK16(0xC000,V);
+  X6502_Rebase();
 }
 
 void Mapper180_init(void)

@@ -24,6 +24,7 @@ static void DoIt(void)
 {
   ROM_BANK16(0x8000,(mapbyte1[1]&3) | ((mapbyte1[0]&0x18)>>1));
   ROM_BANK16(0xc000,3|(((mapbyte1[0])&0x18)>>1));
+  X6502_Rebase();
 }
 
 DECLFW(Mapper232_write)

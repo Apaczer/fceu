@@ -14,8 +14,10 @@ DECLFW(Mapper182_write)
                 case 1:VROM_BANK1(0x1400,V);break;
                 case 2:VROM_BANK2(0x0800,V>>1);break;
                 case 3:VROM_BANK1(0x1c00,V);break;
-                case 4:ROM_BANK8(0x8000,V);break;
-                case 5:ROM_BANK8(0xA000,V);break;
+                case 4:ROM_BANK8(0x8000,V);
+                       X6502_Rebase();break;
+                case 5:ROM_BANK8(0xA000,V);
+                       X6502_Rebase();break;
                 case 6:VROM_BANK1(0x1000,V);break;
                 case 7:VROM_BANK1(0x1800,V);break;
                }

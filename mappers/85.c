@@ -59,9 +59,12 @@ DECLFW(Mapper85_write)
 	}
 	else switch(A&0xF010)
         {
-         case 0x8000:mapbyte2[0]=V;setprg8(0x8000,V);break;
-         case 0x8010:mapbyte2[1]=V;setprg8(0xa000,V);break;
-         case 0x9000:mapbyte2[2]=V;setprg8(0xc000,V);break;
+         case 0x8000:mapbyte2[0]=V;setprg8(0x8000,V);
+                     X6502_Rebase();break;
+         case 0x8010:mapbyte2[1]=V;setprg8(0xa000,V);
+                     X6502_Rebase();break;
+         case 0x9000:mapbyte2[2]=V;setprg8(0xc000,V);
+                     X6502_Rebase();break;
          case 0x9010:indox=V;break;
          case 0xe000:mapbyte2[3]=V;DaMirror(V);break;
          case 0xE010:IRQLatch=V;

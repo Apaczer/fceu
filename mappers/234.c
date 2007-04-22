@@ -35,6 +35,7 @@ static void DoBS(void)
   ROM_BANK32(r1&0xF);
   VROM_BANK8( ((r1&0xF)<<2) | ((r2>>4)&3) );
  }
+ X6502_Rebase();
 }
 
 static void R1Set(uint8 V)
@@ -100,7 +101,7 @@ void Mapper234_init(void)
 	SetWriteHandler(0x6000,0x7FFF,0);
 
 	M15Reset();
-		
+
 	GameStateRestore=M15Restore;
 	MapperReset=M15Reset;
 }

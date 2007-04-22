@@ -74,7 +74,8 @@ DECLFW(Mapper68_write)
 	        PPUNTARAM=0;
 	       }
                break;
-  case 0xf000: ROM_BANK16(0x8000,V);break;
+  case 0xf000: ROM_BANK16(0x8000,V);
+               X6502_Rebase();break;
  }
 }
 

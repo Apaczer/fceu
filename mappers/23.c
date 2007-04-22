@@ -32,9 +32,13 @@ DECLFW(Mapper23_write)
    ROM_BANK8(0xC000,V);
   else
    ROM_BANK8(0x8000,V);
-  } 
-  else if((A&0xF000)==0xA000) 
+  X6502_Rebase();
+ }
+  else if((A&0xF000)==0xA000)
+  {
    ROM_BANK8(0xA000,V);
+   X6502_Rebase();
+  }
   else
   {
    A|=((A>>2)&0x3)|((A>>4)&0x3)|((A>>6)&0x3);
@@ -47,7 +51,7 @@ DECLFW(Mapper23_write)
     K4buf[x]|=(V&0xF)<<((A&1)<<2);
     VROM_BANK1(x<<10,K4buf[x]);
    }
-   else 
+   else
     switch(A)
     {
      case 0xf000:X6502_IRQEnd(FCEU_IQEXT);IRQLatch&=0xF0;IRQLatch|=V&0xF;break;
@@ -63,6 +67,7 @@ DECLFW(Mapper23_write)
                   swa=PRGBankList[0];
                   ROM_BANK8(0x8000,PRGBankList[2]);
                   ROM_BANK8(0xc000,swa);
+                  X6502_Rebase();
                  }
                  K4sel=V;
                  break;

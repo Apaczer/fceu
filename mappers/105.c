@@ -45,9 +45,9 @@ static void FP_FASTAPASS(1) NWCIRQHook(int a)
 static void MMC1PRG(void)
 {
 	if(MMC1_reg[1]&8)
-	{	
+	{
         switch(MMC1_reg[0]&0xC)
-         { 
+         {
            case 0xC: ROM_BANK16(0x8000,8+(MMC1_reg[3]&7));
                      ROM_BANK16(0xC000,15);
                      break;
@@ -65,6 +65,7 @@ static void MMC1PRG(void)
 	{
 	 ROM_BANK32((MMC1_reg[1]>>1)&3);
 	}
+        X6502_Rebase();
 }
 
 DECLFW(Mapper105_write)
@@ -86,7 +87,7 @@ DECLFW(Mapper105_write)
 	//MMC1_reg[n]&=~((1)<<(MMC1_sft));
         MMC1_buf|=(V&1)<<(MMC1_sft++);
 
-  if (MMC1_sft==5) 
+  if (MMC1_sft==5)
 	{
         if(n==3) V&=0xF;
         else     V&=0x1F;

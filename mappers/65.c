@@ -39,7 +39,8 @@ DECLFW(Mapper65_write)
 {
 switch(A)
 {
-case 0x8000:ROM_BANK8(0x8000,V);break;
+case 0x8000:ROM_BANK8(0x8000,V);
+            X6502_Rebase();break;
 case 0x9000:MIRROR_SET2((V>>6)&1);break;
 case 0x9003:IRQa=V&0x80;break;
 case 0x9004:IRQCount=IRQLatch;break;
@@ -56,8 +57,10 @@ case 0xB004:VROM_BANK1(0x1000,V);break;
 case 0xB005:VROM_BANK1(0x1400,V);break;
 case 0xB006:VROM_BANK1(0x1800,V);break;
 case 0xB007:VROM_BANK1(0x1C00,V);break;
-case 0xa000:ROM_BANK8(0xA000,V);break;
-case 0xC000:ROM_BANK8(0xC000,V);break;
+case 0xa000:ROM_BANK8(0xA000,V);
+            X6502_Rebase();break;
+case 0xC000:ROM_BANK8(0xC000,V);
+            X6502_Rebase();break;
  }
 }
 

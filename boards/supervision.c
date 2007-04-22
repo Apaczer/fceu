@@ -34,6 +34,7 @@ static void DoSuper(void)
   setprg32r(4,0x8000,0);
 
  setmirror(((GameMemBlock[0]&0x20)>>5)^1);
+ X6502_Rebase();
 }
 
 static DECLFW(SuperWrite)
@@ -47,7 +48,7 @@ static DECLFW(SuperWrite)
 
 static DECLFW(SuperHi)
 {
- GameMemBlock[1]=V; 
+ GameMemBlock[1]=V;
  DoSuper();
 }
 
@@ -55,7 +56,7 @@ static void SuperReset(void)
 {
   SetWriteHandler(0x6000,0x7FFF,SuperWrite);
   SetWriteHandler(0x8000,0xFFFF,SuperHi);
-  SetReadHandler(0x6000,0xFFFF,CartBR);  
+  SetReadHandler(0x6000,0xFFFF,CartBR);
   GameMemBlock[0]=GameMemBlock[1]=0;
   setprg32r(4,0x8000,0);
   setvram8(CHRRAM);

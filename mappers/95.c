@@ -59,9 +59,11 @@ DECLFW(Mapper95_write)
                 case 5: dbarray[7]=(V&0x20)>>4;onemir((V&0x20)>>4);VROM_BANK1(0x1C00,V); break;
                 case 6:
                         ROM_BANK8(0x8000,V);
+                        X6502_Rebase();
                         break;
                 case 7:
                         ROM_BANK8(0xA000,V);
+                        X6502_Rebase();
                         break;
                 }
                 break;

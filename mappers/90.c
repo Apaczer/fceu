@@ -52,6 +52,7 @@ static void tekprom(void)
           ROM_BANK8(0xe000,prgb[3]);
           break;
   }
+  X6502_Rebase();
 }
 
 static void tekvrom(void)
@@ -132,7 +133,7 @@ static void Mapper90_hb(void)
 {
  if(IRQa)
  {
-  if(IRQCount) 
+  if(IRQCount)
   {
    IRQCount--;
    if(!IRQCount)

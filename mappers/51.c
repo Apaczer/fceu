@@ -26,7 +26,7 @@
 static uint32 Get8K(uint32 A)
 {
  uint32 bank;
- 
+
  bank=(page<<2)|((A>>13)&1);
 
  if(A&0x4000 && !(mode&1)) bank|=0xC;
@@ -45,6 +45,7 @@ static void Synco(void)
   MIRROR_SET2(0);
  for(x=0x6000;x<0x10000;x+=8192)
   ROM_BANK8(x,Get8K(x));
+ X6502_Rebase();
 }
 
 static DECLFW(Write)

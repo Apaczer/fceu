@@ -67,7 +67,7 @@ static void FASTAPASS(2) DoNTARAMROM(int w, uint8 V)
 	// setntamem(NTARAM+((V&1)<<10), 1, w);
 	if((V>=0xE0)) // || ((gorko>>(6+(w>>1)))&1) )
 	 setntamem(NTARAM+((V&1)<<10), 1, w);
-	else 
+	else
 	{
 	 V&=CHRmask1[0];
 	 setntamem(VROM+(V<<10), 0, w);
@@ -134,13 +134,16 @@ static DECLFW(Mapper19_write)
         case 0xE000:gorko=V&0xC0;
 		    //FixNTAR();
                     ROM_BANK8(0x8000,V);
+                    X6502_Rebase();
                     break;
         case 0xE800:gorfus=V&0xC0;
 		    FixCRR();
                     ROM_BANK8(0xA000,V);
+                    X6502_Rebase();
                     break;
         case 0xF000:
                     ROM_BANK8(0xC000,V);
+                    X6502_Rebase();
                     break;
         }
 }
@@ -152,7 +155,7 @@ static void NamcoSoundHack(void)
 {
  int32 z,a;
 
- z=((timestamp<<16)/soundtsinc)>>4;  
+ z=((timestamp<<16)/soundtsinc)>>4;
  a=z-dwave;
  if(a)
   DoNamcoSound(&Wave[dwave], a);
@@ -208,7 +211,7 @@ static void DoNamcoSound(uint32 *Wave, int Count)
          duff>>=4;
         duff&=0xF;
         duff2=(duff*envelope)>>14;
-  
+
         lengo=((8-((MapperExRAM[0x44+(P<<3)]>>2)&7)))<<2;
         for(V=0;V<Count OVERSAMPLE;V++)
         {

@@ -26,6 +26,11 @@
 #include "sound.h"
 #include "cart.h"
 
+#ifdef DEBUG_ASM_6502
+extern uint32 PC_prev, OP_prev;
+extern int cpu_lastval;
+#endif
+
 X6502 X;
 uint32 timestamp;
 void FP_FASTAPASS(1) (*MapIRQHook)(int a);
@@ -59,7 +64,16 @@ static INLINE uint8 RdMem(unsigned int A)
   return (_DB=RAM[A&0x7FF]);
  }
 #endif
- return((_DB=ARead[A](A)));
+ _DB=ARead[A](A);
+#ifdef DEBUG_ASM_6502
+ // TODO: read counter, not 0x10000..
+ if (cpu_lastval)
+  cpu_lastval|=_DB<<8;
+ else
+  cpu_lastval=_DB|0x10000;
+ printf("read [%04x] %02x, cpu_lastval=%02x\n", A, _DB, cpu_lastval);
+#endif
+ return _DB;
 }
 
 static INLINE void WrMem(unsigned int A, uint8 V)
@@ -130,7 +144,7 @@ static uint8 ZNTable[256] = {
 //#define X_ZN(zort)         _P&=~(Z_FLAG|N_FLAG);_P|=ZNTable[zort]
 //#define X_ZNT(zort)	_P|=ZNTable[zort]
 #define X_ZN(zort)         _P&=~(Z_FLAG|N_FLAG);if(!zort) _P|=Z_FLAG;else _P|=zort&N_FLAG
-#define X_ZNT(zort)	if(!zort) _P|=Z_FLAG;else _P|=zort&N_FLAG
+#define X_ZNT(zort)	if(!zort) _P|=Z_FLAG;else _P|=(zort&N_FLAG)
 
 /* Care must be taken if you want to turn this into a macro.  Use { and }. */
 #define JR();	\
@@ -402,9 +416,14 @@ static void TriggerNMIReal(void)
   ADDCYC(7);
   PUSH(_PC>>8);
   PUSH(_PC);
-  PUSH((_P&~B_FLAG)|(U_FLAG));
+  _P&=~B_FLAG;
+  PUSH(_P|U_FLAG);
   _PC=RdMem(0xFFFA);
   _PC|=RdMem(0xFFFB)<<8;
+#ifdef DEBUG_ASM_6502
+  PC_prev = _PC;
+  OP_prev = 0x100;
+#endif
  }
 }
 
@@ -415,10 +434,15 @@ void TriggerIRQReal(void)
   ADDCYC(7);
   PUSH(_PC>>8);
   PUSH(_PC);
-  PUSH((_P&~B_FLAG)|(U_FLAG));
+  _P&=~B_FLAG;
+  PUSH(_P|U_FLAG);
   _P|=I_FLAG;
   _PC=RdMem(0xFFFE);
   _PC|=RdMem(0xFFFF)<<8;
+#ifdef DEBUG_ASM_6502
+  PC_prev = _PC;
+  OP_prev = 0x101;
+#endif
  }
 }
 
@@ -440,7 +464,6 @@ void X6502_Power_c(void)
 
 
 //int asdc = 0;
-
 void X6502_Run_c(void/*int32 cycles*/)
 {
 /*
@@ -502,6 +525,11 @@ void X6502_Run_c(void/*int32 cycles*/)
 	  }
 	 }
 
+#ifdef DEBUG_ASM_6502
+	 PC_prev = _PC;
+	 OP_prev = b1;
+	 cpu_lastval = 0;
+#endif
 	  //printf("$%04x:$%02x\n",_PC,b1);
 	 //_PC++;
 	 //printf("$%02x\n",b1);

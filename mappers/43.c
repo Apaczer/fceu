@@ -54,6 +54,7 @@ DECLFW(Mapper43_write)
    }
    else
     ROM_BANK32(m);
+   X6502_Rebase();
 }
 
 void Mapper43_init(void)

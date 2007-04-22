@@ -29,6 +29,7 @@ DECLFW(Mapper41_write)
  if(A<0x8000)
  {
  ROM_BANK32(A&7);
+ X6502_Rebase();
  MIRROR_SET((A>>5)&1);
  calreg=A;
  calchr&=0x3;

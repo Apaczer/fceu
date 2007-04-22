@@ -25,6 +25,7 @@ DECLFW(Mapper89_write)
  VROM_BANK8((V&7)|((V>>4)&8));
  ROM_BANK16(0x8000,(V>>4)&7);
  onemir((V>>3)&1);
+ X6502_Rebase();
 }
 
 void Mapper89_init(void)

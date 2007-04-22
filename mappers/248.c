@@ -35,6 +35,7 @@ static void PRGSynco(void)
   ROM_BANK8(0x8000,prgl[0]&0x1F);
   ROM_BANK8(0xa000,prgl[1]&0x1F);
  }
+ X6502_Rebase();
 }
 
 static DECLFW(Mapper248_writelow)

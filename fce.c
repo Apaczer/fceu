@@ -142,7 +142,7 @@ void asmcpu_unpack(void)
 	nes_registers[2] = X.Y;
 	pc_base = 0;
 	nes_registers[3] = X.PC;
-	X6502_rebase_a();
+	X6502_Rebase_a();
 	nes_registers[4] = X.S << 24;
 	nes_registers[4]|= X.IRQlow << 8;
 	nes_registers[7] = (uint32)X.count;
@@ -323,7 +323,7 @@ static DECLFR(A2002)
                         vtoggle=0;
                         PPU_status&=0x7F;
 #ifdef DEBUG_ASM_6502
-	cpu_lastval=ret|(PPUGenLatch&0x1F);
+//	cpu_lastval=ret|(PPUGenLatch&0x1F);
 #endif
                         return ret|(PPUGenLatch&0x1F);
 }
@@ -356,7 +356,7 @@ static DECLFR(A2007)
                         else RefreshAddr++;
 			if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
 #ifdef DEBUG_ASM_6502
-	cpu_lastval=ret;
+//	cpu_lastval=ret;
 #endif
                         return ret;
 }
@@ -483,16 +483,9 @@ static DECLFW(B4014)
 {
 	uint32 t=V<<8;
 	int x;
-#ifdef DEBUG_ASM_6502
-  if (cpu_repeat) { X6502_AddCycles_a(512); return; }
-	for(x=0;x<256;x++)
-	 B2004(0x2004,X.DB=ARead[t+x](t+x));
-	X6502_AddCycles_c(512);
-#else
 	for(x=0;x<256;x++)
 	 B2004(0x2004,X.DB=ARead[t+x](t+x));
 	X6502_AddCycles(512);
-#endif
 }
 
 void BGRender(uint8 *target)

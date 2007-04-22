@@ -76,6 +76,7 @@ DECLFW(Mapper225_write)
   {
     ROM_BANK32(((((A>>7)&0x1F)+(banks<<5))));
   }
+  X6502_Rebase();
 }
 
 void Mapper225_init(void)

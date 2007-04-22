@@ -42,11 +42,13 @@ switch(A)
         ROM_BANK16(0xC000,V+1);
         }
         MIRROR_SET((V>>6)&1);
+        X6502_Rebase();
         break;
   case 0x8001:
         MIRROR_SET(0);
         ROM_BANK16(0x8000,V);
         ROM_BANK16(0xc000,~0);
+        X6502_Rebase();
         break;
   case 0x8002:
         if(V&0x80)
@@ -63,6 +65,7 @@ switch(A)
          ROM_BANK8(0xC000,(V<<1));
          ROM_BANK8(0xE000,(V<<1));
         }
+        X6502_Rebase();
         break;
   case 0x8003:
         MIRROR_SET((V>>6)&1);
@@ -75,6 +78,7 @@ switch(A)
         {
          ROM_BANK16(0xC000,V);
         }
+        X6502_Rebase();
         break;
  }
 }

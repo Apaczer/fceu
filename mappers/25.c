@@ -29,7 +29,10 @@ DECLFW(Mapper25_write)
 	A=(A&0xF003)|((A&0xC)>>2);
 
 	if((A&0xF000)==0xA000)
+	{
 	  ROM_BANK8(0xA000,V);
+          X6502_Rebase();
+	}
 	else if(A>=0xB000 && A<=0xEFFF)
 	{
          int x=(A&1)|((A-0xB000)>>11);
@@ -44,6 +47,7 @@ DECLFW(Mapper25_write)
           ROM_BANK8(0xC000,V);
          else
           ROM_BANK8(0x8000,V);
+         X6502_Rebase();
 	}
 	else switch(A)
 	{
@@ -61,6 +65,7 @@ DECLFW(Mapper25_write)
 	              swa=PRGBankList[0];
          	      ROM_BANK8(0x8000,PRGBankList[2]);
 	              ROM_BANK8(0xc000,swa);
+                      X6502_Rebase();
 	             }
         	     K4sel=V;
 	             break;

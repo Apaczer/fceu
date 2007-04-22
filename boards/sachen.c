@@ -27,6 +27,7 @@ static uint8 latch[8];
 static void S74LS374NSynco(void)
 {
  setprg32(0x8000,latch[0]);
+ X6502_Rebase();
  setchr8(latch[1]);
  setmirror(latch[2]&1);
 // setchr8(6);
@@ -38,7 +39,7 @@ static DECLFW(S74LS374NWrite)
  A&=0x4101;
  if(A==0x4100)
   cmd=V&7;
- else 
+ else
  {
   switch(cmd)
   {
@@ -80,6 +81,7 @@ static void S8259Synco(void)
  int x;
 
  setprg32(0x8000,latch[5]&7);
+ X6502_Rebase();
 
  if(!UNIFchrrama)	// No CHR RAM?  Then BS'ing is ok.
  {
@@ -107,7 +109,7 @@ static DECLFW(S8259Write)
 {
  A&=0x4101;
  if(A==0x4100) cmd=V;
- else 
+ else
  {
   latch[cmd&7]=V;
   S8259Synco();
@@ -160,7 +162,8 @@ static void(*WSync)(void);
 
 static void SA0161MSynco()
 {
- setprg32(0x8000,(latch[0]>>3)&1); 
+ setprg32(0x8000,(latch[0]>>3)&1);
+ X6502_Rebase();
  setchr8(latch[0]&7);
 }
 
@@ -192,6 +195,7 @@ void SA0161M_Init(void)
 static void SA72007Synco()
 {
  setprg32(0x8000,0);
+ X6502_Rebase();
  setchr8(latch[0]>>7);
 }
 
@@ -206,6 +210,7 @@ void SA72007_Init(void)
 static void SA72008Synco()
 {
  setprg32(0x8000,(latch[0]>>2)&1);
+ X6502_Rebase();
  setchr8(latch[0]&3);
 }
 
@@ -234,12 +239,14 @@ static void SADReset(void)
 static void SA0036Synco()
 {
  setprg32(0x8000,0);
+ X6502_Rebase();
  setchr8(latch[0]>>7);
 }
 
 static void SA0037Synco()
 {
  setprg32(0x8000,(latch[0]>>3)&1);
+ X6502_Rebase();
  setchr8(latch[0]&7);
 }
 
@@ -262,6 +269,7 @@ void SA0037_Init(void)
 static void TCU01Synco()
 {
  setprg32(0x8000,(latch[0]>>2)&1);
+ X6502_Rebase();
  setchr8((latch[0]>>3)&0xF);
 }
 

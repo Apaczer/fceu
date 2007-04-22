@@ -43,7 +43,10 @@ static DECLFW(Mapper16_write)
         if(A<=0x7)
          VROM_BANK1(A<<10,V);
         else if(A==0x8)
+	{
          ROM_BANK16(0x8000,V);
+         X6502_Rebase();
+	}
         else switch(A) {
          case 0x9: switch(V&3) {
                     case 0x00:MIRROR_SET2(1);break;
@@ -78,17 +81,18 @@ static void PRGO(void)
  uint32 base=(mapbyte1[0]&1)<<4;
  ROM_BANK16(0x8000,(mapbyte2[0]&0xF)|base);
  ROM_BANK16(0xC000,base|0xF);
+ X6502_Rebase();
 }
 
 static DECLFW(Mapper153_write)
 {
 	A&=0xF;
-        if(A<=0x7) 
+        if(A<=0x7)
 	{
 	 mapbyte1[A&7]=V;
 	 PRGO();
 	}
-        else if(A==0x8) 
+        else if(A==0x8)
 	{
 	 mapbyte2[0]=V;
 	 PRGO();

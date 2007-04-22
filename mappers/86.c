@@ -24,6 +24,7 @@ DECLFW(Mapper86_write)
 {
  VROM_BANK8((V&3)|((V>>4)&4));
  ROM_BANK32((V>>4)&3);
+ X6502_Rebase();
 }
 
 void Mapper86_init(void)

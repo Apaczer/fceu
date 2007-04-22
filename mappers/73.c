@@ -31,7 +31,8 @@ switch(A&0xF000)
  case 0xa000:IRQCount&=0xF0FF;IRQCount|=(V&0xF)<<8;break;
  case 0xb000:IRQCount&=0x0FFF;IRQCount|=(V&0xF)<<12;break;
  case 0xc000:IRQa=V&2;break;
- case 0xf000:ROM_BANK16(0x8000,V);break;
+ case 0xf000:ROM_BANK16(0x8000,V);
+             X6502_Rebase();break;
  }
 }
 

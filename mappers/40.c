@@ -27,7 +27,8 @@ static DECLFW(Mapper40_write)
  {
   case 0x8000:IRQa=0;IRQCount=0;break;
   case 0xa000:IRQa=1;break;
-  case 0xe000:ROM_BANK8(0xc000,V&7);break;
+  case 0xe000:ROM_BANK8(0xc000,V&7);
+              X6502_Rebase();break;
  }
 }
 
@@ -35,7 +36,7 @@ static void FP_FASTAPASS(1) Mapper40IRQ(int a)
 {
  if(IRQa)
  {
-        if(IRQCount<4096) 
+        if(IRQCount<4096)
 	 IRQCount+=a;
 	else
         {

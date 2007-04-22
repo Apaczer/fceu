@@ -64,11 +64,13 @@ static DECLFW(H2288Write)
  {
   case 0xa000:setmirror((V&1)^1);break;
   case 0x8000://  DumpMem("out",0x0000,0xFFFF);
-	      cmd=V;DoPRG();DoCHR();break;
+	      cmd=V;DoPRG();DoCHR();
+              X6502_Rebase();break;
   case 0x8001:regs[cmd&7]=V;
-	      if((cmd&7)==4 || (cmd&7)==5)
+	      if((cmd&7)==4 || (cmd&7)==5) {
 	       DoPRG();
-	      else
+               X6502_Rebase();
+	      } else
 	       DoCHR();
 	      break;
  }

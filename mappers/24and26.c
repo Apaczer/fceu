@@ -95,7 +95,8 @@ DECLFW(Mapper24_write)
 
         switch(A&0xF003)
 	{
-         case 0x8000:ROM_BANK16(0x8000,V);break;
+         case 0x8000:ROM_BANK16(0x8000,V);
+                     X6502_Rebase();break;
          case 0xB003:
 	   	 switch(V&0xF)
 	         {
@@ -105,7 +106,8 @@ DECLFW(Mapper24_write)
 	          case 0xC:onemir(1);break;
 	         }
 	         break;
-         case 0xC000:ROM_BANK8(0xC000,V);break;
+         case 0xC000:ROM_BANK8(0xC000,V);
+                     X6502_Rebase();break;
          case 0xD000:VROM_BANK1(0x0000,V);break;
          case 0xD001:VROM_BANK1(0x0400,V);break;
          case 0xD002:VROM_BANK1(0x0800,V);break;
@@ -135,7 +137,7 @@ static void DoSQV1(void)
     int V;
     int32 start,end;
 
-    start=CVBC[0];    
+    start=CVBC[0];
     end=(timestamp<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[0]=end;
@@ -150,7 +152,7 @@ static void DoSQV1(void)
      }
      else
      {
-      unsigned long dcycs;      
+      unsigned long dcycs;
       freq=(((VPSG[0x2]|((VPSG[0x3]&15)<<8))+1));
       inc=(long double)((unsigned long)((FSettings.SndRate OVERSAMPLE)<<12))/((long double)PSG_base/freq);
       switch(VPSG[0]&0x70)
@@ -183,7 +185,7 @@ static void DoSQV2(void)
     int32 start,end;
 
     start=CVBC[1];
-    end=(timestamp<<16)/soundtsinc;   
+    end=(timestamp<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[1]=end;
 
@@ -229,7 +231,7 @@ static void DoSawV(void)
     int32 start,end;
 
     start=CVBC[2];
-    end=(timestamp<<16)/soundtsinc;   
+    end=(timestamp<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[2]=end;
 
@@ -260,7 +262,7 @@ static void DoSawV(void)
        b3=0;
        phaseacc=0;
       }
-      if(saw1phaseacc<=0) 
+      if(saw1phaseacc<=0)
        goto rea;
       duff=(((phaseacc>>3)&0x1f)<<4);
       }
@@ -292,9 +294,9 @@ void VRC6SoundC(void)
   {
    for(x=000;x<0x1000;x+=4)
    {
-          SetWriteHandler(0x9000+x,0x9002+x,0); 
-          SetWriteHandler(0xa000+x,0xa002+x,0); 
-          SetWriteHandler(0xb000+x,0xb002+x,0); 
+          SetWriteHandler(0x9000+x,0x9002+x,0);
+          SetWriteHandler(0xa000+x,0xa002+x,0);
+          SetWriteHandler(0xb000+x,0xb002+x,0);
    }
   }
 }

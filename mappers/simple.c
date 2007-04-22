@@ -27,6 +27,7 @@ static DECLFW(Mapper2_write)
 {
 	latche=V;
         ROM_BANK16(0x8000,V);
+        X6502_Rebase();
 }
 
 void Mapper2_init(void)
@@ -52,6 +53,7 @@ DECLFW(Mapper7_write)
       ROM_BANK32(V&0xF);
       onemir((V>>4)&1);
       latche=V;
+      X6502_Rebase();
 }
 
 void Mapper7_init(void)
@@ -67,6 +69,7 @@ DECLFW(Mapper11_write)
         ROM_BANK32(V);
         VROM_BANK8(V>>4);
 	latche=V;
+        X6502_Rebase();
 }
 
 void Mapper11_init(void)
@@ -81,6 +84,7 @@ static DECLFW(Mapper13_write)
 	setchr4r(0x10,0x1000,V&3);
 	setprg32(0x8000,(V>>4)&3);
 	latche=V;
+	X6502_Rebase();
 }
 
 static void Mapper13_StateRestore(int version)
@@ -88,6 +92,7 @@ static void Mapper13_StateRestore(int version)
 	setchr4r(0x10,0x0000,0);
         setchr4r(0x10,0x1000,latche&3);
         setprg32(0x8000,(latche>>4)&3);
+	X6502_Rebase();
 }
 
 void Mapper13_init(void)
@@ -106,12 +111,16 @@ DECLFW(Mapper34_write)
 {
 switch(A)
  {
- case 0x7FFD:ROM_BANK32(V);break;
+ case 0x7FFD:ROM_BANK32(V);
+             X6502_Rebase();break;
  case 0x7FFE:VROM_BANK4(0x0000,V);break;
  case 0x7fff:VROM_BANK4(0x1000,V);break;
  }
-if(A>=0x8000)
- ROM_BANK32(V);
+ if(A>=0x8000)
+ {
+  ROM_BANK32(V);
+  X6502_Rebase();
+ }
 }
 
 void Mapper34_init(void)
@@ -124,6 +133,7 @@ DECLFW(Mapper66_write)
  VROM_BANK8(V&0xF);
  ROM_BANK32((V>>4));
  latche=V;
+ X6502_Rebase();
 }
 
 void Mapper66_init(void)
@@ -139,6 +149,7 @@ DECLFW(Mapper152_write)
  VROM_BANK8(V&0xF);
  onemir((V>>7)&1);	/* Saint Seiya...hmm. */
  latche=V;
+ X6502_Rebase();
 }
 
 void Mapper152_init(void)
@@ -153,6 +164,7 @@ static DECLFW(Mapper70_write)
  ROM_BANK16(0x8000,V>>4);
  VROM_BANK8(V&0xF);
  latche=V;
+ X6502_Rebase();
 }
 
 void Mapper70_init(void)
@@ -168,6 +180,7 @@ static DECLFW(Mapper78_write)
  VROM_BANK8(V>>4);
  onemir((V>>3)&1);
  latche=V;
+ X6502_Rebase();
 }
 
 void Mapper78_init(void)
@@ -193,6 +206,7 @@ DECLFW(Mapper93_write)
   ROM_BANK16(0x8000,V>>4);
   MIRROR_SET(V&1);
   latche=V;
+  X6502_Rebase();
 }
 
 void Mapper93_init(void)
@@ -206,6 +220,7 @@ DECLFW(Mapper94_write)
 {
  ROM_BANK16(0x8000,V>>2);
  latche=V;
+ X6502_Rebase();
 }
 
 void Mapper94_init(void)
@@ -226,6 +241,7 @@ static DECLFW(Mapper96_write)
  setprg32(0x8000,V&3);
  setchr4r(0x10,0x0000,(latche&4)|M96LA);
  setchr4r(0x10,0x1000,(latche&4)|3);
+ X6502_Rebase();
 }
 
 static void FP_FASTAPASS(1) M96Hook(uint32 A)
@@ -241,6 +257,7 @@ static void M96Sync()
  setprg32(0x8000,latche&3);
  setchr4r(0x10,0x0000,(latche&4)|M96LA);
  setchr4r(0x10,0x1000,(latche&4)|3);
+ X6502_Rebase();
 }
 
 void Mapper96_init(void)
@@ -259,6 +276,7 @@ static DECLFW(Mapper140_write)
 {
  VROM_BANK8(V&0xF);
  ROM_BANK32((V>>4)&0xF);
+ X6502_Rebase();
 }
 
 void Mapper140_init(void)

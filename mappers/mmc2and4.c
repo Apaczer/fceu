@@ -31,7 +31,7 @@ static void FP_FASTAPASS(1) latchcheck(uint32 VAddr)
 
      h=VAddr>>8;
 
-     if(h>=0x20 || ((h&0xF)!=0xF)) 
+     if(h>=0x20 || ((h&0xF)!=0xF))
       return;
 
      l=VAddr&0xF0;
@@ -67,11 +67,13 @@ static void FP_FASTAPASS(1) latchcheck(uint32 VAddr)
 DECLFW(Mapper9_write)	// $Axxx
 {
  ROM_BANK8(0x8000,V);
+ X6502_Rebase();
 }
 
 DECLFW(Mapper10_write)
 {
  ROM_BANK16(0x8000,V);
+ X6502_Rebase();
 }
 
 DECLFW(Mapper9and10_write)

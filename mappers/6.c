@@ -51,6 +51,7 @@ DECLFW(Mapper6_write)
         } else {
         ROM_BANK16(0x8000,V>>2);
         FVRAM_BANK8(0x0000,V&3);
+        X6502_Rebase();
         }
 }
 void Mapper6_StateRestore(int version)

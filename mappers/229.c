@@ -37,6 +37,7 @@ else
  ROM_BANK16(0xC000,A&0x1f);
  }
  VROM_BANK8(A);
+ X6502_Rebase();
 }
 
 }

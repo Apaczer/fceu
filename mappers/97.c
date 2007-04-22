@@ -25,6 +25,7 @@
 DECLFW(Mapper97_write)
 {
 ROM_BANK16(0xC000,V&15);
+X6502_Rebase();
 switch(V>>6)
  {
  case 0:break;

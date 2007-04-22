@@ -81,6 +81,12 @@ Current Features
 --------------------------------------------------------------------
 
 
+ver 0.4 (by notaz)
+
+          - Compatibility fixes for the asm core.
+          - Fixed an anligment problem in MMC5 mapper.
+
+
 ver 0.3 (by notaz)
 
           - Major improvement: added ARM asm CPU core from LJGP32,

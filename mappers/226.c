@@ -31,6 +31,7 @@ static void DoPRG(void)
   }
   else
    ROM_BANK32(b);
+  X6502_Rebase();
 }
 
 static DECLFW(Mapper226_write)

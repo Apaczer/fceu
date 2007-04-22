@@ -52,10 +52,14 @@ DECLFW(Mapper17_write)
         case 0x4501:IRQa=V&1;break;
         case 0x4502:IRQCount&=0xFF00;IRQCount|=V;break;
         case 0x4503:IRQCount&=0x00FF;IRQCount|=V<<8;IRQa=1;break;
-        case 0x4504: ROM_BANK8(0x8000,V);break;
-        case 0x4505: ROM_BANK8(0xA000,V);break;
-        case 0x4506: ROM_BANK8(0xC000,V);break;
-        case 0x4507: ROM_BANK8(0xE000,V);break;
+        case 0x4504: ROM_BANK8(0x8000,V);
+                     X6502_Rebase();break;
+        case 0x4505: ROM_BANK8(0xA000,V);
+                     X6502_Rebase();break;
+        case 0x4506: ROM_BANK8(0xC000,V);
+                     X6502_Rebase();break;
+        case 0x4507: ROM_BANK8(0xE000,V);
+                     X6502_Rebase();break;
         case 0x4510: VROM_BANK1(0x0000,V);break;
         case 0x4511: VROM_BANK1(0x0400,V);break;
         case 0x4512: VROM_BANK1(0x0800,V);break;

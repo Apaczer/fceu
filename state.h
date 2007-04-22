@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <stdio.h>
+
 void SaveState(void);
 void LoadState(void);
 int FCEUSS_LoadFP(FILE *st, int make_backup);

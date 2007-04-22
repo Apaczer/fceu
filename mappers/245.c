@@ -26,6 +26,7 @@ static void Synco(void)
  ROM_BANK8(0xA000,mapbyte2[1]);
  ROM_BANK8(0xc000,0x3e);
  ROM_BANK8(0xe000,0x3f);
+ X6502_Rebase();
 }
 static DECLFW(Mapper245_write)
 {

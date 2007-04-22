@@ -46,9 +46,12 @@ static DECLFW(Mapper82_write)
 	       MIRROR_SET2(V&1);
  	       DoCHR();
   	       break;
-   case 0x7efa:V>>=2;mapbyte2[0]=V;ROM_BANK8(0x8000,V);break;
-   case 0x7efb:V>>=2;mapbyte2[1]=V;ROM_BANK8(0xa000,V);break;
-   case 0x7efc:V>>=2;mapbyte2[2]=V;ROM_BANK8(0xc000,V);break;
+   case 0x7efa:V>>=2;mapbyte2[0]=V;ROM_BANK8(0x8000,V);
+               X6502_Rebase();break;
+   case 0x7efb:V>>=2;mapbyte2[1]=V;ROM_BANK8(0xa000,V);
+               X6502_Rebase();break;
+   case 0x7efc:V>>=2;mapbyte2[2]=V;ROM_BANK8(0xc000,V);
+               X6502_Rebase();break;
   }
 }
 

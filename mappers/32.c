@@ -31,14 +31,17 @@ static DECLFW(Mapper32_write)
 	   mapbyte1[1]=V;
            if(IREMCon) {ROM_BANK8(0xc000,V);ROM_BANK8(0x8000,~1);}
            else {ROM_BANK8(0x8000,V);ROM_BANK8(0xc000,~1);}
+           X6502_Rebase();
            break;
   case 0x9:MIRROR_SET2(V&1);
            IREMCon=(V>>1)&1;
            if(IREMCon) {ROM_BANK8(0xc000,mapbyte1[1]);ROM_BANK8(0x8000,~1);}
            else {ROM_BANK8(0x8000,mapbyte1[1]); ROM_BANK8(0xc000,~1);}
            MIRROR_SET(V&1);
+           X6502_Rebase();
            break;
   case 0xa:ROM_BANK8(0xA000,V);
+           X6502_Rebase();
            break;
  }
 

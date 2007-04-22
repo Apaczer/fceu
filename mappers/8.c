@@ -28,6 +28,7 @@ DECLFW(Mapper8_write)
 {
         ROM_BANK16(0x8000,V>>3);
         VROM_BANK8(V&7);
+        X6502_Rebase();
 }
 
 void Mapper8_init(void)

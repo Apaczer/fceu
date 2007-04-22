@@ -24,6 +24,7 @@ static void DoNovel(void)
 {
  setprg32(0x8000,GameMemBlock[0]&3);
  setchr8(GameMemBlock[0]&7);
+ X6502_Rebase();
 }
 
 static DECLFW(NovelWrite)
@@ -35,7 +36,7 @@ static DECLFW(NovelWrite)
 static void NovelReset(void)
 {
   SetWriteHandler(0x8000,0xFFFF,NovelWrite);
-  SetReadHandler(0x8000,0xFFFF,CartBR);  
+  SetReadHandler(0x8000,0xFFFF,CartBR);
   setprg32(0x8000,0);
   setchr8(0);
 }

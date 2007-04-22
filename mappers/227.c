@@ -51,6 +51,7 @@ static void DoSync(uint32 A)
   else
    ROM_BANK16(0xC000,(p<<1)&(~7));
  }
+ X6502_Rebase();
 }
 
 static DECLFW(Mapper227_write)

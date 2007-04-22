@@ -123,7 +123,7 @@ static INLINE void BANKSET(uint32 A, uint32 bank)
  bank&=NSFMaxBank;
  if(NSFHeader.SoundChip&4)
   memcpy(FDSMEM+(A-0x6000),NSFDATA+(bank<<12),4096);
- else 
+ else
   setprg4(A,bank);
 }
 
@@ -157,7 +157,7 @@ int NSFLoad(int fp)
   FCEU_fseek(fp,0x80,SEEK_SET);
   memset(NSFDATA,0x00,NSFMaxBank*4096);
   FCEU_fread(NSFDATA+(LoadAddr&0xfff),1,NSFSize,fp);
- 
+
   NSFMaxBank--;
 
   BSon=0;
@@ -189,7 +189,7 @@ int NSFLoad(int fp)
   for(x=0;x<32;x++)
   {
    double ta,no;
- 
+
    ta=sin(fruit)*7;
    ta+=modf(ta,&no);
    sinetable[x]=ta;
@@ -282,7 +282,7 @@ void NSF_init(void)
   SetReadHandler(0x4020,0x5fff,NSF_read);
 
 
-  if(NSFHeader.SoundChip&1) { 
+  if(NSFHeader.SoundChip&1) {
    VRC6_ESI(0);
   } else if (NSFHeader.SoundChip&2) {
    VRC7_ESI();
@@ -305,7 +305,7 @@ DECLFW(NSF_write)
 switch(A)
 {
  case 0x5FF2:if((X.PC&0xF000)==0x3000) DoUpdateStuff=V;break;
- 
+
  case 0x5FF6:
  case 0x5FF7:if(!(NSFHeader.SoundChip&4)) return;
  case 0x5FF8:
@@ -318,6 +318,7 @@ switch(A)
  case 0x5FFF:if(!BSon) return;
              A&=0xF;
              BANKSET((A*4096),V);
+             X6502_Rebase();
 	     break;
 }
 }
@@ -343,12 +344,13 @@ DECLFR(NSF_read)
 	     BWrite[0x4011](0x4011,0x40);
              BWrite[0x4015](0x4015,0xF);
 	     BWrite[0x4017](0x4017,0x40);
-	     if(NSFHeader.SoundChip&4) 
+	     if(NSFHeader.SoundChip&4)
 	      BWrite[0x4089](0x4089,0x80);
              if(BSon)
              {
               for(x=0;x<8;x++)
 	       BANKSET(0x8000+x*4096,NSFHeader.BankSwitch[x]);
+              X6502_Rebase();
              }
              return (CurrentSong-1);
  	     }
@@ -397,7 +399,7 @@ void DrawNSF(uint8 *XBuf)
 }
 
 void NSFControl(int z)
-{ 
+{
  if(z==1)
  {
   if(CurrentSong<NSFHeader.TotalSongs) CurrentSong++;

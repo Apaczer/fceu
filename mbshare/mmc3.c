@@ -65,7 +65,7 @@ static DECLFW(MMC3_IRQWrite)
 		     resetmode=1;
                      break;
          case 0xE001:IRQa=1;
-		     if(latched) 
+		     if(latched)
 		      IRQCount=IRQLatch;
                      break;
         }
@@ -85,6 +85,7 @@ static INLINE void FixMMC3PRG(int V)
           }
 	  pwrap(0xA000,DRegBuf[7]);
 	  pwrap(0xE000,~0);
+          X6502_Rebase();
 }
 
 static INLINE void FixMMC3CHR(int V)
@@ -148,8 +149,10 @@ static DECLFW(Mapper4_write)
                   case 5: cwrap(cbase^0x1C00,V); break;
                   case 6: if (MMC3_cmd&0x40) pwrap(0xC000,V);
                           else pwrap(0x8000,V);
+                          X6502_Rebase();
                           break;
                   case 7: pwrap(0xA000,V);
+                          X6502_Rebase();
                           break;
                  }
                 }
@@ -213,8 +216,8 @@ static void GENNOMWRAP(uint8 V)
  A000B=V;
 }
 
-static void genmmc3ii(void (*PW)(uint32 A, uint8 V), 
-		      void (*CW)(uint32 A, uint8 V), 
+static void genmmc3ii(void (*PW)(uint32 A, uint8 V),
+		      void (*CW)(uint32 A, uint8 V),
 		      void (*MW)(uint8 V))
 {
  pwrap=GENPWRAP;
@@ -262,7 +265,7 @@ static DECLFW(M47Write)
 {
  PIRREGS[0]=V&1;
  FixMMC3PRG(MMC3_cmd);
- FixMMC3CHR(MMC3_cmd); 
+ FixMMC3CHR(MMC3_cmd);
 }
 
 void Mapper47_init(void)
@@ -324,7 +327,7 @@ static void M52CW(uint32 A, uint8 V)
 
 static DECLFW(Mapper52_write)
 {
- if(PIRREGS[1]) 
+ if(PIRREGS[1])
  {
   (WRAM-0x6000)[A]=V;
   return;
@@ -338,7 +341,7 @@ static DECLFW(Mapper52_write)
 static void M52Reset(void)
 {
  PIRREGS[0]=PIRREGS[1]=0;
- MMC3RegReset(); 
+ MMC3RegReset();
 }
 
 void Mapper52_init(void)
@@ -397,7 +400,10 @@ static void M49PW(uint32 A, uint8 V)
   setprg8(A,V);
  }
  else
+ {
   setprg32(0x8000,(PIRREGS[0]>>4)&3);
+  X6502_Rebase();
+ }
 }
 
 static void M49CW(uint32 A, uint8 V)
@@ -459,7 +465,7 @@ static void FP_FASTAPASS(1) TKSPPU(uint32 A)
  //if(scanline>=140 && scanline<=200) {setmirror(MI_1);return;}
  //if(scanline>=140 && scanline<=200)
  // if(scanline>=190 && scanline<=200) {setmirror(MI_1);return;}
- // setmirror(MI_1); 
+ // setmirror(MI_1);
  //printf("$%04x\n",A);
 
  A>>=10;
