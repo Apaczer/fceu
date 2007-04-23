@@ -2807,6 +2807,7 @@ reset_cpu:
 @@@
 
 read_rom_byte:
+#ifndef DEBUG_ASM_6502
 	ldr	r0, =CartBR
 	ldr	r2, =ARead
 	mov	r1, #0xff00
@@ -2819,6 +2820,7 @@ read_rom_byte:
 	ldr	r2, [r2, r1, lsl #2]
 	ldrb	r0, [r2, REG_ADDR]
 	bx	lr
+#endif
 
 
 read_ppu_reg:
@@ -2838,13 +2840,12 @@ read_save_ram:
 	mov	lr, pc
 	ldr	pc, [r2, r0, lsl #2]
 #else
-	ldr	r1, =cpu_lastval
-	ldr     r0, [r1]
-	tst	r0, #0x20000
-	orreq	r0, r0, #0x20000
-	streq	r0, [r1]
-	movne	r0, r0, lsr #8
-	and	r0, r0, #0xff
+	ldr	r2, =dread_count_a
+	ldr	r0, =dreads
+	ldr	r1, [r2]
+	ldrb	r0, [r0, r1]
+	add	r1, r1, #1
+	str	r1, [r2]
 #endif
 
 	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
@@ -2881,6 +2882,16 @@ write_rom_byte:
 	ldr     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	ldr     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
+#else
+	ldr	r1, =dwrite_count_a
+	ldr	r2, =dwrites_a
+	ldr	r1, [r1]
+	and	r0, r0, #0xff
+	orr	r0, r0, REG_ADDR, lsl #8
+	str	r0, [r2, r1, lsl #2]
+	ldr	r2, =dwrite_count_a
+	add	r1, r1, #1
+	str	r1, [r2]
 #endif
 	bx	lr
 

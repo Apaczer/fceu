@@ -53,11 +53,6 @@
 #define Pal     (PALRAM)
 
 
-#ifdef DEBUG_ASM_6502
-extern int cpu_repeat;
-extern int cpu_lastval;
-#endif
-
 static void (*RefreshLine)(uint8 *P, uint32 vofs) = NULL;
 static void PRefreshLine(void);
 
@@ -316,15 +311,9 @@ static DECLFR(ARAMH)
 static DECLFR(A2002)
 {
                         uint8 ret;
-#ifdef DEBUG_ASM_6502
-	if (cpu_repeat) return cpu_lastval;
-#endif
                         ret = PPU_status;
                         vtoggle=0;
                         PPU_status&=0x7F;
-#ifdef DEBUG_ASM_6502
-//	cpu_lastval=ret|(PPUGenLatch&0x1F);
-#endif
                         return ret|(PPUGenLatch&0x1F);
 }
 
@@ -337,9 +326,6 @@ static DECLFR(A2007)
 {
                         uint8 ret;
 			uint32 tmp=RefreshAddr&0x3FFF;
-#ifdef DEBUG_ASM_6502
-	if (cpu_repeat) return cpu_lastval;
-#endif
 
                         PPUGenLatch=ret=VRAMBuffer;
 			if(PPU_hook) PPU_hook(tmp);
@@ -355,9 +341,6 @@ static DECLFR(A2007)
                         if (INC32) RefreshAddr+=32;
                         else RefreshAddr++;
 			if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
-#ifdef DEBUG_ASM_6502
-//	cpu_lastval=ret;
-#endif
                         return ret;
 }
 

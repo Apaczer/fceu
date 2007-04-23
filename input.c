@@ -30,11 +30,6 @@
 #include "input.h"
 #include "movie.h"
 
-#ifdef DEBUG_ASM_6502
-extern int cpu_repeat;
-extern int cpu_lastval;
-#endif
-
 extern INPUTC *FCEU_InitZapper(int w);
 extern INPUTC *FCEU_InitPowerpad(int w);
 extern INPUTC *FCEU_InitArkanoid(int w);
@@ -102,9 +97,6 @@ static DECLFR(JPRead)
 {
 	uint8 ret=0;
 
-#ifdef DEBUG_ASM_6502
-	if (cpu_repeat) return cpu_lastval;
-#endif
 	if(JPorts[A&1]->Read)
 	 ret|=JPorts[A&1]->Read(A&1);
 
@@ -113,9 +105,6 @@ static DECLFR(JPRead)
 	  ret=FCExp->Read(A&1,ret);
 
 	ret|=X.DB&0xC0;
-#ifdef DEBUG_ASM_6502
-//	cpu_lastval=ret;
-#endif
 	return(ret);
 }
 

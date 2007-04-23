@@ -12,22 +12,23 @@ extern uint8  nes_internal_ram[0x800];
 uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
 int32  g_cnt = 0;
 
-int cpu_repeat;
-int cpu_lastval;
 static int pending_add_cycles = 0, pending_rebase = 0;
+
+uint8  dreads[4];
+uint32 dwrites_c[2], dwrites_a[2];
+int dread_count_c, dread_count_a, dwrite_count_c, dwrite_count_a;
 
 static void leave(void)
 {
 	printf("\nA: %02x, X: %02x, Y: %02x, S: %02x\n", X.A, X.X, X.Y, X.S);
 	printf("PC = %04lx, OP=%02lX\n", PC_prev, OP_prev);
-	printf("cpu_lastval = %02x\n", cpu_lastval);
 	exit(1);
 }
 
 static void compare_state(void)
 {
 	uint8 nes_flags;
-	int fail = 0;
+	int i, fail = 0;
 
 	if ((nes_registers[0] >> 24) != X.A) {
 		printf("A: %02lx vs %02x\n", nes_registers[0] >> 24, X.A);
@@ -74,6 +75,22 @@ static void compare_state(void)
 		printf("cycles: %li vs %li\n", (int32)nes_registers[7], X.count);
 		fail = 1;
 	}
+
+	if (dread_count_a != dread_count_c) {
+		printf("dread_count: %i vs %i\n", dread_count_a, dread_count_c);
+		fail = 1;
+	}
+
+	if (dwrite_count_a != dwrite_count_c) {
+		printf("dwrite_count: %i vs %i\n", dwrite_count_a, dwrite_count_c);
+		fail = 1;
+	}
+
+	for (i = dwrite_count_a - 1; !fail && i >= 0; i--)
+		if (dwrites_a[i] != dwrites_c[i]) {
+			printf("dwrites[%i]: %06lx vs %06lx\n", dwrite_count_a, dwrites_a[i], dwrites_c[i]);
+			fail = 1;
+		}
 
 	if (fail) leave();
 }
@@ -133,11 +150,9 @@ void X6502_Run_d(int32 c)
 		nes_registers[7]=1;
 		X.count=1;
 
-		cpu_lastval = 0;
-		cpu_repeat = 0;
+		dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
 		X6502_Run_c();
 
-		cpu_repeat = 1;
 		X6502_Run_a();
 
 		compare_state();
@@ -170,6 +185,7 @@ void X6502_Power_d(void)
 {
 	printf("-- power\n");
 	if (nes_internal_ram == RAM) printf("nes_internal_ram == RAM!!\n");
+	dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
 
 	X6502_Power_c();
 	X6502_Power_a();

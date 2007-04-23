@@ -27,8 +27,15 @@
 #include "cart.h"
 
 #ifdef DEBUG_ASM_6502
+#include <stdio.h>
+#include <stdlib.h>
 extern uint32 PC_prev, OP_prev;
-extern int cpu_lastval;
+extern uint8  dreads[4];
+extern uint32 dwrites_c[2];
+extern int dread_count_c, dwrite_count_c;
+#define DummyRdMem(...)
+#else
+#define DummyRdMem RdMem
 #endif
 
 X6502 X;
@@ -66,12 +73,11 @@ static INLINE uint8 RdMem(unsigned int A)
 #endif
  _DB=ARead[A](A);
 #ifdef DEBUG_ASM_6502
- // TODO: read counter, not 0x10000..
- if (cpu_lastval)
-  cpu_lastval|=_DB<<8;
- else
-  cpu_lastval=_DB|0x10000;
- printf("read [%04x] %02x, cpu_lastval=%02x\n", A, _DB, cpu_lastval);
+ //printf("a == %x, pc == %x\n", A, _PC);
+ if (A >= 0x2000 && A != _PC && A != _PC - 1 && A != _PC + 1) {
+  dreads[dread_count_c++] = _DB;
+  if (dread_count_c > 4) { printf("dread_count out of range\n"); exit(1); }
+ }
 #endif
  return _DB;
 }
@@ -83,6 +89,10 @@ static INLINE void WrMem(unsigned int A, uint8 V)
   return;
  }
  BWrite[A](A,V);
+#ifdef DEBUG_ASM_6502
+ dwrites_c[dwrite_count_c++] = (A<<8)|V;
+ if (dwrite_count_c > 2) { printf("dwrite_count_c out of range\n"); exit(1); }
+#endif
 }
 
 static INLINE uint8 RdRAM(unsigned int A)
@@ -255,7 +265,7 @@ static uint8 ZNTable[256] = {
  if((target^tmp)&0x100)	\
  {	\
   target&=0xFFFF;	\
-  RdMem(target^0x100);	\
+  DummyRdMem(target^0x100);	\
   ADDCYC(1);	\
  }	\
 }
@@ -268,7 +278,7 @@ static uint8 ZNTable[256] = {
  target=rt;	\
  target+=i;	\
  target&=0xFFFF;	\
- RdMem((target&0x00FF)|(rt&0xFF00));	\
+ DummyRdMem((target&0x00FF)|(rt&0xFF00));	\
 }
 
 /* Zero Page */
@@ -306,7 +316,7 @@ static uint8 ZNTable[256] = {
  if((target^rt)&0x100)	\
  {	\
   target&=0xFFFF;	\
-  RdMem(target^0x100);	\
+  DummyRdMem(target^0x100);	\
   ADDCYC(1);	\
  }	\
 }
@@ -321,7 +331,7 @@ static uint8 ZNTable[256] = {
  rt|=RdRAM(tmp)<<8;	\
  target=rt;	\
  target+=_Y;	\
- RdMem((target&0x00FF)|(rt&0xFF00));	\
+ DummyRdMem((target&0x00FF)|(rt&0xFF00));	\
 }
 
 /* Now come the macros to wrap up all of the above stuff addressing mode functions
@@ -528,7 +538,6 @@ void X6502_Run_c(void/*int32 cycles*/)
 #ifdef DEBUG_ASM_6502
 	 PC_prev = _PC;
 	 OP_prev = b1;
-	 cpu_lastval = 0;
 #endif
 	  //printf("$%04x:$%02x\n",_PC,b1);
 	 //_PC++;
