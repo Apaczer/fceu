@@ -12,7 +12,7 @@ extern uint8  nes_internal_ram[0x800];
 uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
 int32  g_cnt = 0;
 
-static int pending_add_cycles = 0, pending_rebase = 0;
+static int pending_add_cycles = 0, pending_rebase = 0, pending_irq = 0;
 
 uint8  dreads[4];
 uint32 dwrites_c[2], dwrites_a[2];
@@ -117,9 +117,7 @@ static void compare_ram(void)
 void TriggerIRQ_d(void)
 {
 	printf("-- irq\n");
-	TriggerIRQ_c();
-	TriggerIRQ_a();
-	compare_state();
+	pending_irq |= 0x100;
 }
 
 void TriggerNMI_d(void)
@@ -147,6 +145,20 @@ void X6502_Run_d(int32 c)
 
 	while (g_cnt > 0)
 	{
+		if (pending_irq) {
+			if (pending_irq & 0x100) {
+				TriggerIRQ_c();
+				TriggerIRQ_a();
+			}
+			if (pending_irq & 0xff) {
+				TriggerIRQ_c();
+				TriggerIRQ_a();
+				X6502_IRQBegin_c(pending_irq & 0xff);
+				X6502_IRQBegin_a(pending_irq & 0xff);
+			}
+			pending_irq = 0;
+		}
+
 		nes_registers[7]=1;
 		X.count=1;
 
@@ -158,8 +170,6 @@ void X6502_Run_d(int32 c)
 		compare_state();
 		g_cnt -= 1 - X.count;
 		if (pending_add_cycles) {
-			//X6502_AddCycles_c(pending_add_cycles);
-			//X6502_AddCycles_a(pending_add_cycles);
 			g_cnt -= pending_add_cycles*48;
 			pending_add_cycles = 0;
 		}
@@ -208,8 +218,9 @@ void X6502_IRQBegin_d(int w)
 {
 	printf("-- IRQBegin(%02x)\n", w);
 
-	X6502_IRQBegin_c(w);
-	X6502_IRQBegin_a(w);
+	// X6502_IRQBegin_c(w);
+	// X6502_IRQBegin_a(w);
+	pending_irq |= w;
 }
 
 void X6502_IRQEnd_d(int w)

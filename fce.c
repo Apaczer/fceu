@@ -1190,9 +1190,15 @@ void EmLoop(void)
   else if(VBlankON)
    TriggerNMI();
 
-  X6502_Run(256+85-12);
-  for(scanline=242+1;scanline<scanlines_per_frame;scanline++)
-    X6502_Run(256+85);
+  // Note: this is needed for asm core
+  // Warning: using 'scanline' var here breaks Castlevania III
+  {
+   int lines;
+   X6502_Run(256+85-12);
+   for (lines=scanlines_per_frame-242-1;lines;lines--)
+     X6502_Run(256+85);
+  }
+  // X6502_Run((scanlines_per_frame-242)*(256+85)-12);
 
   PPU_status&=0x1f;
 
