@@ -17,11 +17,13 @@ static int pending_add_cycles = 0, pending_rebase = 0, pending_irq = 0;
 uint8  dreads[4];
 uint32 dwrites_c[2], dwrites_a[2];
 int dread_count_c, dread_count_a, dwrite_count_c, dwrite_count_a;
+int mapirq_cyc_c, mapirq_cyc_a;
 
 static void leave(void)
 {
 	printf("\nA: %02x, X: %02x, Y: %02x, S: %02x\n", X.A, X.X, X.Y, X.S);
 	printf("PC = %04lx, OP=%02lX\n", PC_prev, OP_prev);
+	printf("rest = %08lx\n", nes_registers[4]);
 	exit(1);
 }
 
@@ -91,6 +93,11 @@ static void compare_state(void)
 			printf("dwrites[%i]: %06lx vs %06lx\n", dwrite_count_a, dwrites_a[i], dwrites_c[i]);
 			fail = 1;
 		}
+
+	if (mapirq_cyc_a != mapirq_cyc_c) {
+		printf("mapirq_cyc: %i vs %i\n", mapirq_cyc_a, mapirq_cyc_c);
+		fail = 1;
+	}
 
 	if (fail) leave();
 }
@@ -163,6 +170,7 @@ void X6502_Run_d(int32 c)
 		X.count=1;
 
 		dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
+		mapirq_cyc_a = mapirq_cyc_c = 0;
 		X6502_Run_c();
 
 		X6502_Run_a();
@@ -196,6 +204,7 @@ void X6502_Power_d(void)
 	printf("-- power\n");
 	if (nes_internal_ram == RAM) printf("nes_internal_ram == RAM!!\n");
 	dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
+	mapirq_cyc_c = mapirq_cyc_a = 0;
 
 	X6502_Power_c();
 	X6502_Power_a();

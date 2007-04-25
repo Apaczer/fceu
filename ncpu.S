@@ -16,6 +16,7 @@
 #define OTOFFS_NES_REGS  (nes_registers    - cpu_exec_table)
 #define OTOFFS_PC_BASE   (pc_base          - cpu_exec_table)
 #define OTOFFS_IRQ_HOOK  (MapIRQHook       - cpu_exec_table)
+#define OTOFFS_IRQH_CYC  (MapIRQHookCyc    - cpu_exec_table)
 #define OTOFFS_X         (X_               - cpu_exec_table)
 
 @ fceu
@@ -30,11 +31,12 @@
 	SECTION_TEXT
 	ALIGN
 
+/*
 bbbb:
 .ascii "rebase: %04x"
 .byte 0x0a,0
 .align 4
-
+*/
 
 @@@
 @@@ r0	=  Address (unbased)
@@ -71,14 +73,15 @@ bbbb:
 @@@
 @@@ なんか名前が変だな(どーでもいーけどー
 @@@
-.macro	CYCLE_NEXT	n
+.macro	CYCLE_NEXT	n, hook_check=1
 	@@DEBUG_INFO
 
 	subs	REG_CYCLE, REG_CYCLE, #\n*48
 	ble	cpu_exec_end
+.if \hook_check
 	tst	REG_P_REST, #1<<16
-	movne	r0, #\n
 	blne	do_irq_hook
+.endif
 	ldrb	r0, [REG_PC], #1
 	tst	REG_P_REST, #0xff<<8
 	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
@@ -2761,7 +2764,18 @@ do_int:
 	subne	REG_ADDR, REG_ADDR, #NMI_VECTOR
 	READ_WORD
 	REBASE_PC
-	CYCLE_NEXT	7
+@	CYCLE_NEXT	7
+
+	subs	REG_CYCLE, REG_CYCLE, #7*48
+	ble	cpu_exec_end
+	ldrb	r0, [REG_PC], #1
+	tst	REG_P_REST, #0xff<<8
+	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
+
+	tst	REG_P_REST, #P_REST_I_FLAG
+	ldrne	pc, [REG_OP_TABLE, r0, lsl #2]
+	b	do_int
+
 
 @@@
 @@@ リセットの処理
@@ -2916,9 +2930,15 @@ cpu_exec:
 
 @	ldr   REG_OP_TABLE, = cpu_exec_table @ set on init
 
-	CYCLE_NEXT	0
+	tst	REG_P_REST, #1<<16
+	strne	REG_CYCLE, [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
+
+	CYCLE_NEXT	0, 0
 
 cpu_exec_end:
+	tst	REG_P_REST, #1<<16
+	blne	do_irq_hook
+
 	ldr     r0, =nes_registers
 	stmia	r0, {r4-r12}
 
@@ -3000,6 +3020,8 @@ nes_stack:
 pc_base:
 	.long	0
 MapIRQHook:
+	.long	0
+MapIRQHookCyc:
 	.long	0
 timestamp:
 	.long	0
@@ -3117,11 +3139,11 @@ op9E:	@ SHX $nnnn, Y
 	ALIGN
 	.globl	nes_registers @ TODO: hide?
 	.globl	pc_base
+	.globl	MapIRQHook @ (int a)
 #ifndef DEBUG_ASM_6502
 	.globl	X
 	.globl	RAM
 	.globl	timestamp
-	.globl	MapIRQHook @ (int a)
 #else
 	.globl	nes_internal_ram
 #endif
@@ -3214,7 +3236,17 @@ X6502_Rebase_a:
 
 
 @ the nasty MapIRQHook thing from FCE..
+@ test Gradius 2 (J) if you change this
 do_irq_hook:
+	@ ((cycles >> 4) * 43) >> 7; // aproximating /= 48
+	ldr	r1,        [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
+	str	REG_CYCLE, [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
+	mov	r0, #43
+	sub	r1, r1, REG_CYCLE
+	mul	r0, r1, r0
+	mov	r0, r0, lsr #11
+
+#ifndef DEBUG_ASM_6502
 	@ I have reviewed all MapIRQHook functions, they only seem to cause IRQs, not messing cycles or something
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	mov	REG_P_REST, lr			@ r8
@@ -3226,6 +3258,11 @@ do_irq_hook:
 	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
 	mov	lr, REG_P_REST
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
+#else
+	ldr	r1, =mapirq_cyc_a
+	str	r0, [r1]
+	mov	r1, r0
+#endif
 	bx	lr
 
 

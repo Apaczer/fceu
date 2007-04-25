@@ -33,14 +33,16 @@ extern uint32 PC_prev, OP_prev;
 extern uint8  dreads[4];
 extern uint32 dwrites_c[2];
 extern int dread_count_c, dwrite_count_c;
+extern int mapirq_cyc_c;
+extern void (*MapIRQHook)(int a);
 #define DummyRdMem(...)
 #else
 #define DummyRdMem RdMem
+void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #endif
 
 X6502 X;
 uint32 timestamp;
-void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 
 #define _PC              X.PC
 #define _A               X.A
@@ -107,7 +109,7 @@ static INLINE void WrRAM(unsigned int A, uint8 V)
 
 static INLINE void ADDCYC(int x)
 {
- //_tcount+=x;
+ _tcount+=x;
  _count-=x*48;
  timestamp+=x;
 }
@@ -499,17 +501,20 @@ void X6502_Run_c(void/*int32 cycles*/)
 	   TriggerIRQReal();
 
 	  _IRQlow&=~(FCEU_IQTEMP|FCEU_IQNMI);
-	  if(_count<=0) {_PI=_P;return;} /* Should increase accuracy without a */
- 	                                   /* major speed hit. */
+	  if(_count<=0)
+	  {
+#ifdef DEBUG_ASM_6502
+	   if(MapIRQHook) mapirq_cyc_c = _tcount;
+	   _tcount=0;
+#endif
+	   _PI=_P;
+	   return; /* Should increase accuracy without a major speed hit. */
+	  }
 	 }
 	 _PI=_P;
 	 b1=RdMem(_PC);
-	 temp=CycTable[b1];
-	 ADDCYC(temp);
-	 //temp=_tcount;
-	 //_tcount=0;
-
-	 if(MapIRQHook) MapIRQHook(temp);
+	 ADDCYC(CycTable[b1]);
+	 temp=_tcount;
 
 	 temp*=48;
 
@@ -547,6 +552,16 @@ void X6502_Run_c(void/*int32 cycles*/)
          {
           #include "ops.h"
          }
+
+	 temp=_tcount; /* Gradius II (J) glitches if _tcount is not used */
+	 _tcount=0;
+
+	 if(MapIRQHook) {
+#ifdef DEBUG_ASM_6502
+	  mapirq_cyc_c = temp;
+#endif
+	  MapIRQHook(temp);
+	 }
 
 #ifdef DEBUG_ASM_6502
 	 _PI=_P;

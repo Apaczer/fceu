@@ -16,7 +16,7 @@ LDRIVER	+= -O3 # -pg
 endif
 
 asm_6502=1
-debug_asm_6502=1
+#debug_asm_6502=1
 
 all:		fceu
 
