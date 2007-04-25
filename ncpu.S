@@ -264,18 +264,7 @@ bbbb:
 	strb	r0, [REG_ADDR]
 .endm
 
-.macro	READ_WRITE_3
-	.long	read_rom_byte
-	.long	read_rom_byte
-	.long	read_rom_byte
-	.long	read_rom_byte
-	.long	read_save_ram
-	.long	read_high_reg
-	.long	read_ppu_reg
-9999:
-.endm
-
-.macro	READ_WRITE_4
+.macro	READ_WRITE_W
 	adr	lr, 1f
 	ldr	pc, [pc, r3, lsl #2]
 	nop
@@ -288,6 +277,22 @@ bbbb:
 	.long	write_rom_byte
 	.long	write_rom_byte
 1:
+.endm
+
+.macro	READ_WRITE_3
+	.long	read_rom_byte
+	.long	read_rom_byte
+	.long	read_rom_byte
+	.long	read_rom_byte
+	.long	read_save_ram
+	.long	read_high_reg
+	.long	read_ppu_reg
+9999:
+	READ_WRITE_W		@ rmw first writes unmodified data
+.endm
+
+.macro	READ_WRITE_4
+	READ_WRITE_W		@ and only then modified (Blaster Master)
 .endm
 
 @@@
@@ -2877,12 +2882,13 @@ write_high_reg:
 write_save_ram:
 write_rom_byte:
 #ifndef DEBUG_ASM_6502
-	@ must preserve r3 for the callers too
+	@ must preserve r0 (data) and r3 for the callers
 	str     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	str     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
 	mov     REG_PC, lr			@ r7
 	mov	REG_P_REST, r3			@ r8
+	mov	REG_CYCLE, r0			@ r11
 
 	ldr	r2, =BWrite
 	mov	r1, r0
@@ -2893,6 +2899,7 @@ write_rom_byte:
 	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
 	mov	lr, REG_PC
 	mov	r3, REG_P_REST
+	mov	r0, REG_CYCLE
 	ldr     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 	ldr     REG_CYCLE,  [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x1c)]	@ might get used
