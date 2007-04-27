@@ -104,7 +104,7 @@ static int RWWrap=0;
 static void asmcpu_update(int32 cycles)
 {
  // timestamp..
- timestamp += ((cycles >> 4) * 43) >> 7; // aproximating /= 48
+ //timestamp += ((cycles >> 4) * 43) >> 7; // aproximating /= 48
 
  // some code from x6502.c
  fhcnt-=cycles;
@@ -140,7 +140,7 @@ void asmcpu_unpack(void)
 	X6502_Rebase_a();
 	nes_registers[4] = X.S << 24;
 	nes_registers[4]|= X.IRQlow << 8;
-	nes_registers[7] = (uint32)X.count;
+	nes_registers[7] = (uint32)X.count << 16;
 
 	// NVUB DIZC
 	nes_registers[4]|= X.P & 0x5d;
@@ -156,7 +156,7 @@ void asmcpu_pack(void)
 	X.PC= nes_registers[3] - pc_base;
 	X.S = nes_registers[4] >> 24;
 	X.IRQlow = nes_registers[4] >> 8;
-	X.count = (int32) nes_registers[7];
+	X.count = (int32) nes_registers[7] >> 16;
 
 	// NVUB DIZC
 	X.P = nes_registers[4] & 0x5d;

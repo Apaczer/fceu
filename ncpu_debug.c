@@ -9,6 +9,7 @@
 extern uint32 nes_registers[0x10];
 extern uint32 pc_base;
 extern uint8  nes_internal_ram[0x800];
+extern uint32 timestamp_a;
 uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
 int32  g_cnt = 0;
 
@@ -73,8 +74,8 @@ static void compare_state(void)
 		fail = 1;
 	}
 
-	if ((int32)nes_registers[7] != X.count) {
-		printf("cycles: %li vs %li\n", (int32)nes_registers[7], X.count);
+	if (((int32)nes_registers[7] >> 16) != X.count) {
+		printf("cycles: %li vs %li\n", (int32)nes_registers[7] >> 16, X.count);
 		fail = 1;
 	}
 
@@ -96,6 +97,11 @@ static void compare_state(void)
 
 	if (mapirq_cyc_a != mapirq_cyc_c) {
 		printf("mapirq_cyc: %i vs %i\n", mapirq_cyc_a, mapirq_cyc_c);
+		fail = 1;
+	}
+
+	if (timestamp_a != timestamp) {
+		printf("timestamp: %lu vs %lu\n", timestamp_a, timestamp);
 		fail = 1;
 	}
 
@@ -166,11 +172,13 @@ void X6502_Run_d(int32 c)
 			pending_irq = 0;
 		}
 
-		nes_registers[7]=1;
+		nes_registers[7]=1<<16;
 		X.count=1;
 
 		dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
 		mapirq_cyc_a = mapirq_cyc_c = 0;
+		timestamp_a = timestamp;
+
 		X6502_Run_c();
 
 		X6502_Run_a();

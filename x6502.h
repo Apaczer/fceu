@@ -84,11 +84,11 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 { \
  int32 cycles = (c) << 4; /* *16 */ \
  if (PAL) cycles -= (c);  /* *15 */ \
- nes_registers[7]+=cycles; \
- if (nes_registers[7] > 0) { \
-   cycles = (int32)nes_registers[7]; \
+ nes_registers[7]+=cycles<<16; \
+ cycles=(int32)nes_registers[7]>>16; \
+ if (cycles > 0) { \
    X6502_Run_a(); \
-   cycles -= (int32)nes_registers[7]; \
+   cycles -= (int32)nes_registers[7]>>16; \
    asmcpu_update(cycles); \
  } \
 }

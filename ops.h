@@ -22,7 +22,8 @@ case 0x00:  /* BRK */
             _PC++;
             PUSH(_PC>>8);
             PUSH(_PC);
-            PUSH(_P|U_FLAG|B_FLAG);
+	    _P|=B_FLAG;
+            PUSH(_P|U_FLAG);
 	    _P|=I_FLAG;
             _PC=RdMem(0xFFFE);
             _PC|=RdMem(0xFFFF)<<8;

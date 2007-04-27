@@ -16,7 +16,7 @@
 #define OTOFFS_NES_REGS  (nes_registers    - cpu_exec_table)
 #define OTOFFS_PC_BASE   (pc_base          - cpu_exec_table)
 #define OTOFFS_IRQ_HOOK  (MapIRQHook       - cpu_exec_table)
-#define OTOFFS_IRQH_CYC  (MapIRQHookCyc    - cpu_exec_table)
+#define OTOFFS_TIMESTAMP (timestamp        - cpu_exec_table)
 #define OTOFFS_X         (X_               - cpu_exec_table)
 
 @ fceu
@@ -33,9 +33,14 @@
 
 /*
 bbbb:
-.ascii "rebase: %04x"
+.ascii "lsr_a: %02x"
 .byte 0x0a,0
 .align 4
+stmfd sp!,{r0-r3,r12,lr}
+mov r1,r0
+ldr r0,=bbbb
+bl printf
+ldmfd sp!,{r0-r3,r12,lr}
 */
 
 @@@
@@ -62,6 +67,16 @@ bbbb:
 .endm
 
 
+@ updates fceu "timestamp" variable
+@ loads cycles to reg, reg!=r1, trashes r1
+.macro	FLUSH_TIMESTAMP reg
+	ldr	r1, [REG_OP_TABLE, #OTOFFS_TIMESTAMP]
+	and	\reg, REG_CYCLE, #0xff
+	add	r1, r1, \reg
+	bic	REG_CYCLE, REG_CYCLE, #0xff
+	str	r1, [REG_OP_TABLE, #OTOFFS_TIMESTAMP]
+.endm
+
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -76,7 +91,8 @@ bbbb:
 .macro	CYCLE_NEXT	n, hook_check=1
 	@@DEBUG_INFO
 
-	subs	REG_CYCLE, REG_CYCLE, #\n*48
+	add	REG_CYCLE, REG_CYCLE, #\n
+	subs	REG_CYCLE, REG_CYCLE, #\n*48<<16
 	ble	cpu_exec_end
 .if \hook_check
 	tst	REG_P_REST, #1<<16
@@ -107,11 +123,6 @@ bbbb:
 @@@ CLI・PHPなどフラグを変更した場合はこれ
 @@@
 .macro	CYCLE_NEXT_INT	n
-@	@@DEBUG_INFO
-@
-@	subs	REG_CYCLE, REG_CYCLE, #\n*48
-@	bgt	cpu_exec_check_int
-@	RETURN_FROM_CPU_EXEC
 	CYCLE_NEXT	\n
 .endm
 
@@ -445,7 +456,8 @@ bbbb:
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
 	cmp	REG_Y,r0
-	subgt	REG_CYCLE,REG_CYCLE,#1*48
+	addgt	REG_CYCLE, REG_CYCLE, #1
+	subgt	REG_CYCLE, REG_CYCLE, #1*48<<16
 .endm
 
 @ Indirect Indexed (for writes and rmws)
@@ -482,7 +494,8 @@ bbbb:
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
 	cmp	REG_X,r0
-	subgt	REG_CYCLE,REG_CYCLE,#1*48
+	addgt	REG_CYCLE, REG_CYCLE, #1
+	subgt	REG_CYCLE, REG_CYCLE, #1*48<<16
 .endm
 
 @ Absolute Indexed (for writes and rmws)
@@ -500,7 +513,8 @@ bbbb:
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
 	cmp	REG_Y,r0
-	subgt	REG_CYCLE,REG_CYCLE,#1*48
+	addgt	REG_CYCLE, REG_CYCLE, #1
+	subgt	REG_CYCLE, REG_CYCLE, #1*48<<16
 .endm
 
 @ Absolute Indexed (for writes and rmws)
@@ -1906,14 +1920,16 @@ op7E:	@ ROR $nnnn, X
 	and	r1,r1,#0xff
 	add	r1,r3,r1
 	tst	r1,#0x100
-	subne	REG_CYCLE,REG_CYCLE, #1*48
+	addne	REG_CYCLE, REG_CYCLE, #1
+	subne	REG_CYCLE, REG_CYCLE, #1*48<<16
 .endm
 
 .macro	BRANCH_EQ
 	ldreqsb	r1, [REG_PC], #1
 	movne	r1, #1
 	add	REG_PC, REG_PC, r1
-	subeq	REG_CYCLE, REG_CYCLE, #1*48
+	addeq	REG_CYCLE, REG_CYCLE, #1
+	subeq	REG_CYCLE, REG_CYCLE, #1*48<<16
 	bne	1f
 	HAD_BRANCH
 1:
@@ -1923,7 +1939,8 @@ op7E:	@ ROR $nnnn, X
 	ldrnesb	r1, [REG_PC], #1
 	moveq	r1, #1
 	add	REG_PC, REG_PC, r1
-	subne	REG_CYCLE, REG_CYCLE, #1*48
+	addne	REG_CYCLE, REG_CYCLE, #1
+	subne	REG_CYCLE, REG_CYCLE, #1*48<<16
 	beq	1f
 	HAD_BRANCH
 1:
@@ -2771,7 +2788,8 @@ do_int:
 	REBASE_PC
 @	CYCLE_NEXT	7
 
-	subs	REG_CYCLE, REG_CYCLE, #7*48
+	add	REG_CYCLE, REG_CYCLE, #7
+	subs	REG_CYCLE, REG_CYCLE, #7*48<<16
 	ble	cpu_exec_end
 	ldrb	r0, [REG_PC], #1
 	tst	REG_P_REST, #0xff<<8
@@ -2881,6 +2899,7 @@ write_ppu_reg:
 write_high_reg:
 write_save_ram:
 write_rom_byte:
+	FLUSH_TIMESTAMP r2			@ Blaster Master, more...
 #ifndef DEBUG_ASM_6502
 	@ must preserve r0 (data) and r3 for the callers
 	str     REG_PC,     [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x0c)]	@ might get rebased
@@ -2913,6 +2932,7 @@ write_rom_byte:
 	ldr	r2, =dwrite_count_a
 	add	r1, r1, #1
 	str	r1, [r2]
+	and	r0, r0, #0xff
 #endif
 	bx	lr
 
@@ -2937,14 +2957,13 @@ cpu_exec:
 
 @	ldr   REG_OP_TABLE, = cpu_exec_table @ set on init
 
-	tst	REG_P_REST, #1<<16
-	strne	REG_CYCLE, [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
-
 	CYCLE_NEXT	0, 0
 
 cpu_exec_end:
+	FLUSH_TIMESTAMP r0
+
 	tst	REG_P_REST, #1<<16
-	blne	do_irq_hook
+	blne	do_irq_hook_noflushts
 
 	ldr     r0, =nes_registers
 	stmia	r0, {r4-r12}
@@ -3028,9 +3047,8 @@ pc_base:
 	.long	0
 MapIRQHook:
 	.long	0
-MapIRQHookCyc:
-	.long	0
 timestamp:
+timestamp_a:
 	.long	0
 #ifndef DEBUG_ASM_6502
 X:
@@ -3153,6 +3171,7 @@ op9E:	@ SHX $nnnn, Y
 	.globl	timestamp
 #else
 	.globl	nes_internal_ram
+	.globl	timestamp_a
 #endif
 	.globl	X6502_Reset_a @ (void);
 	.globl	X6502_Power_a @ (void);
@@ -3221,10 +3240,10 @@ TriggerNMINSF_a:
 
 X6502_AddCycles_a:
 	ldr	r2, =nes_registers
-	ldr	r1, [r2, #0x1c]
+	ldrsh	r1, [r2, #0x1e]
 	mvn	r3, #47			@ r3=-48
 	mla	r0, r3, r0, r1
-	str	r0, [r2, #0x1c]
+	strh	r0, [r2, #0x1e]
 	bx	lr
 
 
@@ -3245,14 +3264,9 @@ X6502_Rebase_a:
 @ the nasty MapIRQHook thing from FCE..
 @ test Gradius 2 (J) if you change this
 do_irq_hook:
-	@ ((cycles >> 4) * 43) >> 7; // aproximating /= 48
-	ldr	r1,        [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
-	str	REG_CYCLE, [REG_OP_TABLE, #OTOFFS_IRQH_CYC]
-	mov	r0, #43
-	sub	r1, r1, REG_CYCLE
-	mul	r0, r1, r0
-	mov	r0, r0, lsr #11
+	FLUSH_TIMESTAMP r0
 
+do_irq_hook_noflushts:
 #ifndef DEBUG_ASM_6502
 	@ I have reviewed all MapIRQHook functions, they only seem to cause IRQs, not messing cycles or something
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
