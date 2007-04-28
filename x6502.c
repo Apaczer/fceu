@@ -86,6 +86,7 @@ static INLINE uint8 RdMem(unsigned int A)
 
 static INLINE void WrMem(unsigned int A, uint8 V)
 {
+ //printf("w [%04x] %02x\n", A, V);
  if ((A&0xe000) == 0) { // RAM area (always 0-0x1fff)
   RAM[A&0x7FF] = V;
   return;
