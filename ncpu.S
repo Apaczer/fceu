@@ -3002,7 +3002,11 @@ TriggerNMINSF_a:
 
 
 X6502_AddCycles_a:
+	ldr	r3, =timestamp
 	ldr	r2, =nes_registers
+	ldr	r1, [r3]
+	add	r1, r1, r0
+	str	r1, [r3]
 	ldrsh	r1, [r2, #0x1e]
 	mvn	r3, #47			@ r3=-48
 	mla	r0, r3, r0, r1
