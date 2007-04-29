@@ -525,7 +525,7 @@ static void Do5PCM(void)
    int32 start,end;
 
    start=C5BC[2];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    C5BC[2]=end;
 
@@ -571,7 +571,7 @@ void Do5SQ(int P)
     int32 freq;
 
     start=C5BC[P];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     C5BC[P]=end;
 

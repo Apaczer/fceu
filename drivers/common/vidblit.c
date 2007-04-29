@@ -30,7 +30,7 @@ static int Bpp;	// BYTES per pixel
 int InitBlitToHigh(int b, uint32 rmask, uint32 gmask, uint32 bmask)
 {
  Bpp=b;
- 
+
  if(Bpp<=1 || Bpp>4)
   return(0);
 
@@ -53,7 +53,7 @@ void KillBlitToHigh(void)
 }
 
 void SetPaletteBlitToHigh(uint8 *src)
-{ 
+{
              int cshiftr[3];
              int cshiftl[3];
              int a,x,z,y;
@@ -115,7 +115,7 @@ void Blit8To8(uint8 *src, uint8 *dest, int xr, int yr, int pitch, int xscale, in
  {
   if(efx)
   {
-   for(y=yr;y;y--,/*dest+=pinc,*/src+=272-xr)
+   for(y=yr;y;y--,/*dest+=pinc,*/src+=320-xr)
    {
     int doo=yscale-(yscale>>1);
     do
@@ -141,7 +141,7 @@ void Blit8To8(uint8 *src, uint8 *dest, int xr, int yr, int pitch, int xscale, in
   }
   else
   {
-   for(y=yr;y;y--,/*dest+=pinc,*/src+=272-xr)
+   for(y=yr;y;y--,/*dest+=pinc,*/src+=320-xr)
    {
     int doo=yscale;
     do
@@ -161,11 +161,11 @@ void Blit8To8(uint8 *src, uint8 *dest, int xr, int yr, int pitch, int xscale, in
     src+=xr;
    }
  }
- 
+
  }
  else
  {
-  for(y=yr;y;y--,dest+=pinc,src+=272-xr)
+  for(y=yr;y;y--,dest+=pinc,src+=320-xr)
    for(x=xr;x;x-=4,dest+=4,src+=4)
     *(uint32 *)dest=*(uint32 *)src;
  }

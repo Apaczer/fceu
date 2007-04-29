@@ -30,6 +30,8 @@
 #include "input.h"
 #include "movie.h"
 
+#include "dprintf.h"
+
 extern INPUTC *FCEU_InitZapper(int w);
 extern INPUTC *FCEU_InitPowerpad(int w);
 extern INPUTC *FCEU_InitArkanoid(int w);
@@ -105,6 +107,7 @@ static DECLFR(JPRead)
 	  ret=FCExp->Read(A&1,ret);
 
 	ret|=X.DB&0xC0;
+	dprintf("JPRead %02x", ret);
 	return(ret);
 }
 

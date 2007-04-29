@@ -138,7 +138,7 @@ static void DoSQV1(void)
     int32 start,end;
 
     start=CVBC[0];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[0]=end;
 
@@ -185,7 +185,7 @@ static void DoSQV2(void)
     int32 start,end;
 
     start=CVBC[1];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[1]=end;
 
@@ -231,7 +231,7 @@ static void DoSawV(void)
     int32 start,end;
 
     start=CVBC[2];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     CVBC[2]=end;
 

@@ -32,7 +32,7 @@ static void InitOPL(void);
 
 void OPL2_setreg(uint8 A, uint8 V)
 {
- if(fmob) 
+ if(fmob)
   OPLWrite(fmob,A,V);
 }
 
@@ -45,11 +45,11 @@ void LoadOPL(void)
  for(x=y=0;x<0x40;x++)
   y|=MapperExRAM[x];
  if(y)
- { 
-  InitOPL(); 
+ {
+  InitOPL();
   for(x=0;x<6;x++)
   {
-   VRC7_LoadInstrument(x); 
+   VRC7_LoadInstrument(x);
    vrc7translate(0x10+x,VRC7Chan[0][x]);
   }
  }
@@ -61,7 +61,7 @@ void VRC7Update(void)
 {
  int32 z,a;
 
- z=((timestamp<<16)/soundtsinc)>>4;  
+ z=((SOUNDTS<<16)/soundtsinc)>>4;
  a=z-dwave;
 
  if(a && fmob)
@@ -73,7 +73,7 @@ void UpdateOPL(int Count)
 {
  int32 z,a;
 
- z=((timestamp<<16)/soundtsinc)>>4;
+ z=((SOUNDTS<<16)/soundtsinc)>>4;
  a=z-dwave;
 
  if(fmob && a)
@@ -93,7 +93,7 @@ static void InitOPL(void)
         int x;
 
 	if(!fmob)
-	{	
+	{
          if(!( fmob=OPLCreate(OPL_TYPE_WAVESEL,1789772*2,FSettings.SndRate)))
 	  return;
 	}
@@ -136,13 +136,13 @@ static void VRC7_LoadInstrument(uint8 Chan)
 	uint8 *i;
 	uint8 x = InstTrans[Chan];
 	uint8 y = (VRC7Chan[2][Chan] >> 4) & 0xF;
-	
+
 	i=VRC7Instrument[y];
 
 	OPL2_setreg((0x20+x),i[0]);
 	OPL2_setreg((0x23+x),i[1]);
 	OPL2_setreg((0x40+x),i[2]);
-	OPL2_setreg((0x43+x),((i[3] & 0xC0) 
+	OPL2_setreg((0x43+x),((i[3] & 0xC0)
 		| ((VRC7Chan[2][Chan] << 2) & 0x3C)));	// quiet
 	OPL2_setreg(0xe0+x,(i[3] >> 3) & 0x01);
 	OPL2_setreg(0xe3+x,(i[3] >> 4) & 0x01);

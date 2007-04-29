@@ -26,6 +26,8 @@
 #include "sound.h"
 #include "cart.h"
 
+#include "dprintf.h"
+
 #ifdef DEBUG_ASM_6502
 #include <stdio.h>
 #include <stdlib.h>
@@ -426,6 +428,7 @@ static void TriggerNMIReal(void)
 {
  if(!_jammed)
  {
+  dprintf("NMI");
   ADDCYC(7);
   PUSH(_PC>>8);
   PUSH(_PC);
@@ -444,6 +447,7 @@ void TriggerIRQReal(void)
 {
  if(!(_PI&I_FLAG) && !_jammed)
  {
+  dprintf("IRQ");
   ADDCYC(7);
   PUSH(_PC>>8);
   PUSH(_PC);

@@ -59,6 +59,8 @@ static int32 count[5];
 static int64 sqacc[2]={0,0};
 uint8 sqnon=0;
 
+uint32 soundtsoffs=0;
+
 #undef printf
 uint16 nreg;
 
@@ -194,7 +196,7 @@ static uint8 DutyCount[2]={0,0};
 static DECLFW(Write_PSG)
 {
  //if((A>=0x4004 && A<=0x4007) || A==0x4015)
-  //printf("$%04x:$%02x, %d\n",A,V,timestamp);
+  //printf("$%04x:$%02x, %d\n",A,V,SOUNDTS);
  A&=0x1f;
  switch(A)
  {
@@ -569,7 +571,7 @@ static void RDoPCM(void)
    uint32 out=PSG[0x11]<<3;
 
    start=ChannelBC[4];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[4]=end;
 
@@ -649,7 +651,7 @@ static void RDoSQ1(void)
 
    CalcRectAmp(0);
    start=ChannelBC[0];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[0]=end;
 
@@ -692,7 +694,7 @@ static void RDoSQ2(void)
 
    CalcRectAmp(1);
    start=ChannelBC[1];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[1]=end;
 
@@ -737,7 +739,7 @@ static void RDoTriangle(void)
    int64 freq=(((PSG[0xa]|((PSG[0xb]&7)<<8))+1));
 
    start=ChannelBC[2];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[2]=end;
 
@@ -789,7 +791,7 @@ static void RDoNoise(void)
    int32 start,end;
 
    start=ChannelBC[3];
-   end=(timestamp<<16)/soundtsinc;
+   end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[3]=end;
 
@@ -917,9 +919,8 @@ static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
 
 int FlushEmulateSound(void)
 {
-  uint32 end;
   int x;
-
+  uint32 end;
 
   if(!timestamp) return(0);
 
@@ -929,7 +930,7 @@ int FlushEmulateSound(void)
    goto nosoundo;
   }
 
-  end=(timestamp<<16)/soundtsinc;
+  end=(SOUNDTS<<16)/soundtsinc;
   DoSQ1();
   DoSQ2();
   DoTriangle();
@@ -960,9 +961,7 @@ int FlushEmulateSound(void)
   nosoundo:
   for(x=0;x<5;x++)
    ChannelBC[x]=end&0xF;
-  timestampbase+=timestamp;
-  timestamp=(soundtsinc*(end&0xF))>>16;
-  timestampbase-=timestamp;
+  soundtsoffs=(soundtsinc*(end&0xF))>>16;
   return(end>>4);
 }
 
@@ -984,6 +983,7 @@ void PowerSound(void)
         fhcnt=fhinc;
         fcnt=0;
         nreg=1;
+        soundtsoffs=0;
 }
 
 void ResetSound(void)

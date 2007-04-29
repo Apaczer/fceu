@@ -22,9 +22,18 @@
 #ifndef __FCEU_TYPES
 #define __FCEU_TYPES
 
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned long  uint32;
+#include <inttypes.h>
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+
+//typedef unsigned char uint8;
+//typedef unsigned short uint16;
+//typedef unsigned long  uint32;
 
 #ifdef __GNUC__
  typedef unsigned long long uint64;
@@ -42,9 +51,9 @@ typedef unsigned long  uint32;
 					   other than Windows/DOS targets?
 					*/
 #endif
-typedef signed char int8;
-typedef signed short int16;
-typedef signed long int32;
+//typedef signed char int8;
+//typedef signed short int16;
+//typedef signed long int32;
 #define byte uint8
 #define word uint16
 
@@ -53,8 +62,8 @@ typedef signed long int32;
   #define FASTAPASS(x) __attribute__((regparm(x)))
   #define FP_FASTAPASS FASTAPASS
  #else
-  #define FASTAPASS(x)	
-  #define FP_FASTAPASS(x)	
+  #define FASTAPASS(x)
+  #define FP_FASTAPASS(x)
  #endif
 #else
  #define FP_FASTAPASS(x)

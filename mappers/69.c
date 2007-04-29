@@ -126,7 +126,7 @@ static void DoAYSQ(int x)
     int32 start,end;
 
     start=CAYBC[x];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     CAYBC[x]=end;
 
@@ -158,7 +158,7 @@ static void DoAYNoise(void)
     int32 start,end;
 
     start=CAYBC[3];
-    end=(timestamp<<16)/soundtsinc;
+    end=(SOUNDTS<<16)/soundtsinc;
     if(end<=start) return;
     CAYBC[3]=end;
 

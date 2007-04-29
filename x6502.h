@@ -64,6 +64,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_IRQBegin X6502_IRQBegin_d
 #define X6502_IRQEnd X6502_IRQEnd_d
 #define X6502_Rebase X6502_Rebase_d
+#define X6502_GetCycleCount() 0
 #define X6502_C
 #define X6502_A
 #define X6502_D
@@ -78,6 +79,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_IRQBegin X6502_IRQBegin_a
 #define X6502_IRQEnd X6502_IRQEnd_a
 #define X6502_Rebase X6502_Rebase_a
+#define X6502_GetCycleCount() ((int32)nes_registers[7]>>16)
 #define X6502_A
 
 #define X6502_Run(c) \
@@ -103,6 +105,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_IRQBegin X6502_IRQBegin_c
 #define X6502_IRQEnd X6502_IRQEnd_c
 #define X6502_Rebase(...)
+#define X6502_GetCycleCount() X.count
 #define X6502_C
 
 #define X6502_Run(c) \

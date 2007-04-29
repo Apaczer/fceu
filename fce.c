@@ -50,6 +50,8 @@
 
 #include        "movie.h"
 
+#include        "dprintf.h"
+
 #define Pal     (PALRAM)
 
 
@@ -60,6 +62,9 @@ static void ResetPPU(void);
 static void PowerPPU(void);
 
 uint64 timestampbase=0;
+
+static int ppudead=1;
+static int kook=0;
 
 int MMC5Hack;
 uint32 MMC5HackVROMMask;
@@ -103,9 +108,6 @@ static int RWWrap=0;
 #ifdef ASM_6502
 static void asmcpu_update(int32 cycles)
 {
- // timestamp..
- //timestamp += ((cycles >> 4) * 43) >> 7; // aproximating /= 48
-
  // some code from x6502.c
  fhcnt-=cycles;
  if(fhcnt<=0)
@@ -287,6 +289,38 @@ uint8 PAL=0;
 #define MMC5BGVRAMADR(V)      &MMC5BGVPage[(V)>>10][(V)]
 #define	VRAMADR(V)	&VPage[(V)>>10][(V)]
 
+static int linestartts;
+static int tofix=0;
+
+static void ResetRL(void)
+{
+ linestartts=timestamp*48+X6502_GetCycleCount();
+ tofix=1;
+}
+
+static INLINE void Fixit1(void);
+
+static void TryFixit1(void)
+{
+ #define TOFIXNUM (272-0x4)
+ int lastpixel;
+
+ if (scanline < 240 && tofix)
+ {
+  lastpixel = (timestamp*48-linestartts)>>4;
+  if (PAL) lastpixel += lastpixel>>4;
+
+  //printf("lastpixel: %i\n", lastpixel);
+
+  if(lastpixel>=TOFIXNUM)
+  {
+   Fixit1();
+   tofix=0;
+  }
+ }
+}
+
+
 static DECLFW(BRAML)
 {
         RAM[A]=V;
@@ -310,25 +344,38 @@ static DECLFR(ARAMH)
 
 static DECLFR(A2002)
 {
+	/* merged */
                         uint8 ret;
+
+			TryFixit1();
                         ret = PPU_status;
+                        ret|=PPUGenLatch&0x1F;
                         vtoggle=0;
                         PPU_status&=0x7F;
-                        return ret|(PPUGenLatch&0x1F);
+			 PPUGenLatch=ret;
+			dprintf("r [2002] %02x",ret);
+                        return ret;
 }
 
 static DECLFR(A200x)
 {
+	/* merged */
+			TryFixit1();
                         return PPUGenLatch;
 }
 
 static DECLFR(A2007)
 {
+	/* merged */
                         uint8 ret;
 			uint32 tmp=RefreshAddr&0x3FFF;
 
-                        PPUGenLatch=ret=VRAMBuffer;
+			TryFixit1();
+
+                        ret=VRAMBuffer;
+
 			if(PPU_hook) PPU_hook(tmp);
+			PPUGenLatch=VRAMBuffer;
                         if(tmp<0x2000)
 			{
 			 VRAMBuffer=VPage[tmp>>10][tmp];
@@ -341,11 +388,14 @@ static DECLFR(A2007)
                         if (INC32) RefreshAddr+=32;
                         else RefreshAddr++;
 			if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
+			dprintf("r [2007] %02x",ret);
                         return ret;
 }
 
 static DECLFW(B2000)
 {
+	/* NMI2? */
+		TryFixit1();
                 PPUGenLatch=V;
                 PPU[0]=V;
 		TempAddr&=0xF3FF;
@@ -354,6 +404,8 @@ static DECLFW(B2000)
 
 static DECLFW(B2001)
 {
+	/* merged */
+		  TryFixit1();
                   PPUGenLatch=V;
  	          PPU[1]=V;
 		  if(V&0xE0)
@@ -363,11 +415,13 @@ static DECLFW(B2001)
 
 static DECLFW(B2002)
 {
+	/* merged */
                  PPUGenLatch=V;
 }
 
 static DECLFW(B2003)
 {
+	/* merged */
                 PPUGenLatch=V;
                 PPU[3]=V;
 		PPUSPL=V&0x7;
@@ -375,9 +429,9 @@ static DECLFW(B2003)
 
 static DECLFW(B2004)
 {
+	/* merged */
                 PPUGenLatch=V;
-                //SPRAM[PPU[3]++]=V;
-		if(PPUSPL&8)
+		if(PPUSPL>=8)
 		{
 		 if(PPU[3]>=8)
   		  SPRAM[PPU[3]]=V;
@@ -386,16 +440,17 @@ static DECLFW(B2004)
 		{
 		 //printf("$%02x:$%02x\n",PPUSPL,V);
 		 SPRAM[PPUSPL]=V;
-		 PPUSPL++;
 		}
 		PPU[3]++;
+		PPUSPL++;
 
 }
 
 static DECLFW(B2005)
 {
+	/* merged */
 		uint32 tmp=TempAddr;
-
+		TryFixit1();
 		PPUGenLatch=V;
 		if (!vtoggle)
                 {
@@ -416,6 +471,9 @@ static DECLFW(B2005)
 
 static DECLFW(B2006)
 {
+	/* merged */
+		       TryFixit1();
+
                        PPUGenLatch=V;
                        if(!vtoggle)
                        {
@@ -426,8 +484,8 @@ static DECLFW(B2006)
                        {
 			TempAddr&=0xFF00;
 		        TempAddr|=V;
-                        RefreshAddr=TempAddr;
 
+                        RefreshAddr=TempAddr;
 			if(PPU_hook)
 			 PPU_hook(RefreshAddr);
                        }
@@ -436,16 +494,15 @@ static DECLFW(B2006)
 
 static DECLFW(B2007)
 {
+	/* merged */
 			uint32 tmp=RefreshAddr&0x3FFF;
-
                         PPUGenLatch=V;
                         if(tmp>=0x3F00)
                         {
-                        // hmmm....
-                        if(!(tmp&0xf))
-                         PALRAM[0x00]=PALRAM[0x04]=PALRAM[0x08]=PALRAM[0x0C]=
-                         PALRAM[0x10]=PALRAM[0x14]=PALRAM[0x18]=PALRAM[0x1c]=V&0x3f;
-                        else if(tmp&3) PALRAM[(tmp&0x1f)]=V&0x3f;
+                         // hmmm....
+                         if(!(tmp&0xf))
+                          PALRAM[0x00]=PALRAM[0x04]=PALRAM[0x08]=PALRAM[0x0C]=V&0x3f;
+                         else if(tmp&3) PALRAM[(tmp&0x1f)]=V&0x3f;
                         }
                         else if(tmp<0x2000)
                         {
@@ -466,6 +523,7 @@ static DECLFW(B4014)
 {
 	uint32 t=V<<8;
 	int x;
+
 	for(x=0;x<256;x++)
 	 B2004(0x2004,X.DB=ARead[t+x](t+x));
 	X6502_AddCycles(512);
@@ -853,7 +911,7 @@ static void SetRefreshLine(void)
         }
 }
 
-//static INLINE
+static INLINE
 void Fixit2(void)
 {
    if(ScreenON || SpriteON)
@@ -866,7 +924,7 @@ void Fixit2(void)
    }
 }
 
-//static INLINE
+static INLINE
 void Fixit1(void)
 {
    if(ScreenON || SpriteON)
@@ -895,32 +953,32 @@ void Fixit1(void)
    }
 }
 
-//#define NEW_TRY
 
 /*      This is called at the beginning of all h-blanks on visible lines. */
-#ifndef NEW_TRY
 static void DoHBlank(void)
 {
  if(ScreenON || SpriteON)
   FetchSpriteData();
  if(GameHBIRQHook && (ScreenON || SpriteON))
  {
-  X6502_Run(12);
-  GameHBIRQHook();
-  X6502_Run(25-12);
+  X6502_Run(6);
   Fixit2();
-  X6502_Run(85-25);
+  X6502_Run(4);
+  GameHBIRQHook();
+  X6502_Run(85-16-10);
  }
  else
  {
-  X6502_Run(25);	// Tried 65, caused problems with Slalom(maybe others)
+  X6502_Run(6);  // Tried 65, caused problems with Slalom(maybe others)
   Fixit2();
-  X6502_Run(85-25);
+  X6502_Run(85-6-16);
  }
  //PPU_hook(0,-1);
  //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
+ scanline++;
+ ResetRL();
+ X6502_Run(16);
 }
-#endif
 
 
 // ============================//
@@ -1126,54 +1184,46 @@ int FCEUI_Initialize(void)
         return 1;
 }
 
-#define harko 0xe //0x9
 static INLINE void Thingo(void)
 {
    Loop6502();
-#ifndef NEW_TRY
 
+   // check: Battletoads & Double Dragon
    if(tosprite>=256)
    {
-    X6502_Run(256-harko);
-    Fixit1();
-    X6502_Run(harko);
+    X6502_Run(256);
    }
    else
    {
-    if(tosprite<=240)
-    {
+     // sky glitches in SMB1 if done wrong
      X6502_Run(tosprite);
      PPU[2]|=0x40;
-     X6502_Run(256-tosprite-harko);
-     Fixit1();
-     X6502_Run(harko);
-    }
-    else
-    {
-     X6502_Run(256-harko);
-     Fixit1();
-     X6502_Run(tosprite-(256-harko));
-     PPU[2]|=0x40;
      X6502_Run(256-tosprite);
-    }
-    tosprite=256;
+     tosprite = 256;
    }
+   TryFixit1();
    DoHBlank();
-#else
-   X6502_Run_scanline();
-#endif
 }
-#undef harko
 
 void EmLoop(void)
 {
  for(;;)
  {
   uint32 scanlines_per_frame = PAL ? 312 : 262;
+  UpdateInput();
+  ApplyPeriodicCheats();
+
+  // FCEUPPU_Loop:
+  if(ppudead) /* Needed for Knight Rider, possibly others. */
+  {
+   memset(XBuf, 0x80, 256*240);
+   X6502_Run(scanlines_per_frame*(256+85));
+   ppudead--;
+   goto update;
+  }
 	//extern int asdc;
 	//printf("asdc: %i\n", asdc);
 	//asdc=0;
-  ApplyPeriodicCheats();
   X6502_Run(256+85);
 
   PPU[2]|=0x80;
@@ -1204,20 +1254,23 @@ void EmLoop(void)
 
   X6502_Run(256);
   {
-   static int kook=0;
    if(ScreenON || SpriteON)
     if(GameHBIRQHook)
      GameHBIRQHook();
 
-   X6502_Run(85-kook);
-   kook=(kook+1)&1;
+   X6502_Run(85-16);
+
+   if(ScreenON || SpriteON)
+   {
+    RefreshAddr=TempAddr;
+    if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
+   }
+   ResetRL();
+
+   X6502_Run(16-kook);
+   kook ^= 1;
   }
 
-  if(ScreenON || SpriteON)
-  {
-   RefreshAddr=TempAddr;
-   if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
-  }
   if(FCEUGameInfo.type==GIT_NSF)
   {
    X6502_Run((256+85)*240);
@@ -1228,7 +1281,7 @@ void EmLoop(void)
 
    deemp=PPU[1]>>5;
    SetRefreshLine();
-   for(scanline=0;scanline<240;scanline++)
+   for(scanline=0;scanline<240;)       // scanline is incremented in  DoLine.  Evil. :/
    {
     deempcnt[deemp]++;
     Thingo();
@@ -1247,10 +1300,14 @@ void EmLoop(void)
    SetNESDeemph(maxref,0);
   }
 
+update:
   {
    int ssize;
 
    ssize=FlushEmulateSound();
+
+   timestampbase += timestamp;
+   timestamp = 0;
 
    #ifdef FRAMESKIP
    if(FSkip)
@@ -1265,7 +1322,6 @@ void EmLoop(void)
     FCEU_PutImage();
     FCEUD_Update(XBuf+8,WaveFinalMono,ssize);
    }
-   UpdateInput();
   }
 
   if(Exit)
@@ -1274,7 +1330,7 @@ void EmLoop(void)
    break;
   }
 
- }
+ } // for
 }
 
 #ifdef FPS
@@ -1321,6 +1377,8 @@ static void ResetPPU(void)
 	PPUGenLatch=0;
         RefreshAddr=TempAddr=0;
         vtoggle = 0;
+        ppudead = 2;
+	kook = 0;
 }
 
 static void PowerPPU(void)

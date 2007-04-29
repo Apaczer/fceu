@@ -69,6 +69,10 @@ extern int32 WaveFinal[2048];
 extern int16 WaveFinalMono[2048];
 extern uint32 soundtsinc;
 
+extern uint32 soundtsoffs;
+#define SOUNDTS (timestamp + soundtsoffs)
+
 void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
+

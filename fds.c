@@ -112,7 +112,7 @@ void FDSGI(int h)
 }
 
 static void FDSStateRestore(int version)
-{ 
+{
  setmirror(((mapbyte1[5]&8)>>3)^1);
 }
 
@@ -141,7 +141,7 @@ static void FDSInit(void)
  SetReadHandler(0x4032,0x4032,FDSRead4032);
  SetReadHandler(0x4033,0x4033,FDSRead4033);
 
- SetWriteHandler(0x4020,0x4020,FDSWrite4020); 
+ SetWriteHandler(0x4020,0x4020,FDSWrite4020);
  SetWriteHandler(0x4021,0x4021,FDSWrite4021);
  SetWriteHandler(0x4022,0x4022,FDSWrite4022);
  SetWriteHandler(0x4023,0x4023,FDSWrite4023);
@@ -206,7 +206,7 @@ static void FP_FASTAPASS(1) FDSFix(int a)
    X6502_IRQBegin(FCEU_IQEXT);
   }
  }
- if(DiskSeekIRQ>0) 
+ if(DiskSeekIRQ>0)
  {
   DiskSeekIRQ-=a;
   if(DiskSeekIRQ<=0)
@@ -344,14 +344,14 @@ static DECLFW(FDSSWrite)
  A-=0x4080;
  switch(A)
  {
-  case 0x0: 
+  case 0x0:
   case 0x4:
 	    if(!(V&0x80))
 	    {
  	      // if(V&0x40) amplitude[(A&0xF)>>2]=0;
 	      // else amplitude[(A&0xF)>>2]=0x3F;
 	    }
-	    else 
+	    else
 	     amplitude[(A&0xF)>>2]=V&0x3F;
 	    break;
   case 0x7: b17latch76=0;SPSG[0x5]=0;break;
@@ -431,7 +431,7 @@ static INLINE void ClockRise(void)
  }
  else
  {
-  b19shiftreg60<<=1;  
+  b19shiftreg60<<=1;
   b8shiftreg88>>=1;
  }
  b24adder66=(b24latch68+b19shiftreg60)&0xFFFFFF;
@@ -479,7 +479,7 @@ static void RenderSound(void)
  int32 x;
 
  start=FBC;
- end=(timestamp<<16)/soundtsinc;
+ end=(SOUNDTS<<16)/soundtsinc;
  if(end<=start)
   return;
  FBC=end;
@@ -601,11 +601,11 @@ int FDSLoad(char *name, int fp)
  FCEU_fseek(fp,0,SEEK_SET);
  FCEU_fread(header,16,1,fp);
 
- if(memcmp(header,"FDS\x1a",4)) 
+ if(memcmp(header,"FDS\x1a",4))
  {
   if(!(memcmp(header+1,"*NINTENDO-HVC*",14)))
   {
-   long t;   
+   long t;
    t=FCEU_fgetsize(fp);
    if(t<65500)
     t=65500;
@@ -614,15 +614,15 @@ int FDSLoad(char *name, int fp)
    FCEU_fseek(fp,0,SEEK_SET);
   }
   else
-   return 0; 
- } 
+   return 0;
+ }
 
  if(header[4]>4) header[4]=4;
  if(!header[4]) header[4]|=1;
  for(x=0;x<header[4];x++)
  {
   diskdata[x]=FCEU_malloc(65500);
-  if(!diskdata[x]) 
+  if(!diskdata[x])
   {
    int zol;
    for(zol=0;zol<x;zol++)
@@ -632,7 +632,7 @@ int FDSLoad(char *name, int fp)
   FCEU_fread(diskdata[x],1,65500,fp);
  }
 
- if(!(zp=fopen(FCEU_MakeFName(FCEUMKF_FDSROM,0,0),"rb"))) 
+ if(!(zp=fopen(FCEU_MakeFName(FCEUMKF_FDSROM,0,0),"rb")))
  {
   FCEU_PrintError("FDS BIOS ROM image missing!");
   FreeFDSMemory();
@@ -696,7 +696,7 @@ void FDSClose(void)
 
   for(x=0;x<header[4];x++)
   {
-   if(FCEU_fwrite(diskdata[x],1,65500,fp)!=65500) 
+   if(FCEU_fwrite(diskdata[x],1,65500,fp)!=65500)
    {
     fdswerr:
     FCEU_PrintError("Error writing FDS image \"%s\"!",FDSSaveName);
