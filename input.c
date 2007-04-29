@@ -28,6 +28,7 @@
 #include "svga.h"
 
 #include "input.h"
+#include "state.h"
 #include "movie.h"
 
 #include "dprintf.h"
@@ -40,7 +41,8 @@ extern INPUTCFC *FCEU_InitArkanoidFC(void);
 extern INPUTCFC *FCEU_InitSpaceShadow(void);
 extern INPUTCFC *FCEU_InitFKB(void);
 static uint8 joy_readbit[2];
-static uint16 joy[4]={0,0,0,0};
+static uint8 joy[4]={0,0,0,0};
+static uint8 LastStrobe;
 
 extern int coinon;
 
@@ -122,7 +124,7 @@ static DECLFW(B4016)
         if(JPorts[1]->Write)
          JPorts[1]->Write(V&1);
 
-        if((PSG[0x16]&1) && (!(V&1)))
+        if((LastStrobe&1) && (!(V&1)))
         {
 	 /* This strobe code is just for convenience.  If it were
 	    with the code in input / *.c, it would more accurately represent
@@ -137,7 +139,7 @@ static DECLFW(B4016)
 	  if(FCExp->Strobe)
 	   FCExp->Strobe();
 	 }
-         PSG[0x16]=V;
+         LastStrobe=V&1;
 }
 
 static void FP_FASTAPASS(1) StrobeGP(int w)
@@ -298,6 +300,7 @@ void InitializeInput(void)
 {
 	memset(joy_readbit,0,sizeof(joy_readbit));
 	memset(joy,0,sizeof(joy));
+        LastStrobe=0;
 
         if(FCEUGameInfo.type==GIT_VSUNI)
         {
@@ -333,3 +336,38 @@ void FCEUI_SetInputFC(int type, void *ptr, int attrib)
  InputDataPtrFC=ptr;
  SetInputStuffFC();
 }
+
+// quick paste
+#define FCEUNPCMD_RESET   0x01
+#define FCEUNPCMD_POWER   0x02
+
+#define FCEUNPCMD_VSUNICOIN     0x07
+#define FCEUNPCMD_VSUNIDIP0     0x08
+#define FCEUNPCMD_FDSINSERT     0x18
+#define FCEUNPCMD_FDSSELECT     0x1A
+
+
+void FCEU_DoSimpleCommand(int cmd)
+{
+ switch(cmd)
+ {
+//   case FCEUNPCMD_FDSINSERT: FCEU_FDSInsert();break;
+//   case FCEUNPCMD_FDSSELECT: FCEU_FDSSelect();break;
+//   case FCEUNPCMD_FDSEJECT: FCEU_FDSEject();break;
+//   case FCEUNPCMD_VSUNICOIN: FCEU_VSUniCoin(); break;
+//   case FCEUNPCMD_VSUNIDIP0 ... (FCEUNPCMD_VSUNIDIP0 + 7): FCEU_VSUniToggleDIP(cmd - FCEUNPCMD_VSUNIDIP0);break;
+   case FCEUNPCMD_POWER: PowerNES();break;
+   case FCEUNPCMD_RESET: ResetNES();break;
+   default: printf("FCEU_DoSimpleCommand: can't handle cmd %i\n", cmd); break;
+ }
+}
+
+
+SFORMAT FCEUCTRL_STATEINFO[]={
+ { joy_readbit, 2, "JYRB"},
+ { joy, 4, "JOYS"},
+ { &LastStrobe, 1, "LSTS"},
+ { 0 }
+};
+
+

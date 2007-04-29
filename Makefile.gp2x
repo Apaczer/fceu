@@ -41,7 +41,7 @@ else
 OBJDRIVER += x6502.o
 endif
 
-x6502.o: x6502.c x6502.h ops.h fce.h sound.h
+x6502.o: x6502.c x6502.h ops.h fce.h sound.h dprintf.h
 
 ncpu.o: ncpu.S ncpu.h
 	$(CC) $(TFLAGS) -c $< -o $@

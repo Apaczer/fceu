@@ -47,7 +47,7 @@ typedef struct
 
 // backwards compat
 static void FCEUI_LoadMovie_v1(char *fname, int _read_only);
-static int FCEUI_MovieGetInfo_v1(const char* fname, MOVIE_INFO* info);
+//static int FCEUI_MovieGetInfo_v1(const char* fname, MOVIE_INFO* info);
 
 extern char FileBase[];
 
@@ -87,10 +87,10 @@ static uint32 savestate_offset = 0;
 static uint32 rerecord_count = 0;
 /*static*/ int movie_readonly = 1;
 int frame_display = 0;
-static uint32 last_frame_display = ~0;
+//static uint32 last_frame_display = ~0;
 int input_display = 0;
 static uint32 cur_input_display = 0;
-static uint32 last_input_display = ~0;
+//static uint32 last_input_display = ~0;
 
 int resetDMCacc=0;
 
@@ -112,11 +112,11 @@ SFORMAT FCEUMOV_STATEINFO[]={
 };
 
 static int CurrentMovie = 1;
-static int MovieShow = 0;
+//static int MovieShow = 0;
 
 static int MovieStatus[10];
 
-static void DoEncode(int joy, int button, int);
+//static void DoEncode(int joy, int button, int);
 
 int FCEUMOV_IsPlaying(void)
 {
@@ -716,9 +716,9 @@ static void DoEncode(int joy, int button, int dummy)
 // TODO: make this function legible! (what are all these magic numbers and weirdly named variables and crazy unexplained loops?)
 void FCEUMOV_AddJoy(uint8 *js)
 {
- int x,y;
+// int x,y;
 
-// if(!current) return;   // Not playback nor recording.
+ if(!current) return;   // Not playback nor recording.
 
  if(current < 0)    // Playback
  {
@@ -732,10 +732,7 @@ void FCEUMOV_AddJoy(uint8 *js)
     if(nextd&0x80)
     {
     //puts("Egads");
-     // TODO?
-#if 0
      FCEU_DoSimpleCommand(nextd&0x1F);
-#endif
     }
     else
      joop[(nextd >> 3)&0x3] ^= 1 << (nextd&0x7);

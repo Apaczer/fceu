@@ -21,3 +21,6 @@ void UpdateInput(void);
 void InitializeInput(void);
 extern void (*PStrobe[2])(void);
 extern void (*InputScanlineHook)(uint8 *buf, int line);
+
+void FCEU_DoSimpleCommand(int cmd);
+

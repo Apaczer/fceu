@@ -47,55 +47,38 @@ static SFORMAT SFMDATA[64];
 static int SFEXINDEX;
 static int stateversion;
 
-#define RLSB 		0x80000000
+extern SFORMAT FCEUPPU_STATEINFO[];  // 3
+extern SFORMAT FCEUCTRL_STATEINFO[]; // 4
 
-#define SFCPUELEMENTS 7
-
-SFORMAT SFCPU[SFCPUELEMENTS]={
+SFORMAT SFCPU[]={ // 1
  { &X.PC, 2|RLSB, "PC\0"},
  { &X.A, 1, "A\0\0"},
  { &X.P, 1, "P\0\0"},
  { &X.X, 1, "X\0\0"},
  { &X.Y, 1, "Y\0\0"},
  { &X.S, 1, "S\0\0"},
- { RAM, 0x800, "RAM"}
+ { RAM, 0x800, "RAM"},
+ { 0, }
 };
 
-#define SFCPUCELEMENTS 6
-SFORMAT SFCPUC[SFCPUCELEMENTS]={
+SFORMAT SFCPUC[]={ // 2
  { &X.jammed, 1, "JAMM"},
  { &X.IRQlow, 1, "IRQL"},
  { &X.tcount, 4|RLSB, "ICoa"},
  { &X.count,  4|RLSB, "ICou"},
  { &timestamp, 4|RLSB, "TIME"},
- { &timestampbase, 8|RLSB, "TMEB"}
+ { &timestampbase, 8|RLSB, "TMEB"},
+ // from 0.98.15
+ { &timestampbase, sizeof(timestampbase) | RLSB, "TSBS"}, // size seems to match?
+ { &X.mooPI, 1, "MooP"}, // alternative to the "quick and dirty hack"
+ // TODO: IQLB?
+ { 0, }
 };
 
-static uint16 TempAddrT,RefreshAddrT;
+extern uint16 TempAddrT,RefreshAddrT;
 
-#define SFPPUELEMENTS 10
-SFORMAT SFPPU[SFPPUELEMENTS]={
- { NTARAM, 0x800, "NTAR"},
- { PALRAM, 0x20, "PRAM"},
- { SPRAM, 0x100, "SPRA"},
- { PPU, 0x4, "PPUR"},
- { &XOffset, 1, "XOFF"},
- { &vtoggle, 1, "VTOG"},
- { &RefreshAddrT, 2|RLSB, "RADD"},
- { &TempAddrT, 2|RLSB, "TADD"},
- { &VRAMBuffer, 1, "VBUF"},
- { &PPUGenLatch, 1, "PGEN"},
-};
 
-// Is this chunk necessary?  I'll fix it later.
-//#define SFCTLRELEMENTS 2
-//SFORMAT SFCTLR[SFCTLRELEMENTS]={
-// { &joy_readbit, 1, "J1RB"},
-// { &joy2_readbit, 1, "J2RB"}
-//};
-
-#define SFSNDELEMENTS 18
-SFORMAT SFSND[SFSNDELEMENTS]={
+SFORMAT SFSND[]={
  { &fhcnt, 4|RLSB,"FHCN"},
  { &fcnt, 1, "FCNT"},
  { PSG, 14, "PSG"},
@@ -113,14 +96,19 @@ SFORMAT SFSND[SFSNDELEMENTS]={
  { DecCountTo1, 3,"DCT1"},
  { &PCMBitIndex, 1,"PBIN"},
  { &PCMAddressIndex, 4|RLSB, "PAIN"},
- { &PCMSizeIndex, 4|RLSB, "PSIN"}
+ { &PCMSizeIndex, 4|RLSB, "PSIN"},
+ { 0, }
 };
 
 
-int WriteStateChunk(FILE *st, int type, SFORMAT *sf, int count)
+
+int WriteStateChunk(FILE *st, int type, SFORMAT *sf)
 {
- int bsize;
+ int bsize, count;
  int x;
+
+ count = x = 0;
+ while (sf[x++].v) count++;
 
  fputc(type,st);
 
@@ -152,11 +140,15 @@ int WriteStateChunk(FILE *st, int type, SFORMAT *sf, int count)
  return (bsize+5);
 }
 
-int ReadStateChunk(FILE *st, SFORMAT *sf, int count, int size)
+int ReadStateChunk(FILE *st, SFORMAT *sf, int size)
 {
  uint8 tmpyo[16];
- int bsize;
+ int bsize, count;
  int x;
+
+ // recalculate count ourselves
+ count = x = 0;
+ while (sf[x++].v) count++;
 
  for(x=bsize=0;x<count;x++)
   bsize+=sf[x].s&(~RLSB);
@@ -193,7 +185,10 @@ int ReadStateChunk(FILE *st, SFORMAT *sf, int count, int size)
     if(!memcmp(toa,sf[x].desc,4))
     {
      if(tsize!=(sf[x].s&(~RLSB)))
+     {
+      printf("ReadStateChunk: sect \"%c%c%c%c\" has wrong size\n", toa[0], toa[1], toa[2], toa[3]);
       goto nkayo;
+     }
      #ifndef LSB_FIRST
      if(sf[x].s&RLSB)
      {
@@ -209,6 +204,7 @@ int ReadStateChunk(FILE *st, SFORMAT *sf, int count, int size)
      goto bloo;
     }
    }
+  printf("ReadStateChunk: sect \"%c%c%c%c\" not handled\n", toa[0], toa[1], toa[2], toa[3]);
   nkayo:
   fseek(st,tsize,SEEK_CUR);
   bloo:;
@@ -245,7 +241,7 @@ int ReadStateChunk(FILE *st, SFORMAT *sf, int count, int size)
  return 1;
 }
 
-int ReadStateChunks(FILE *st)
+static int ReadStateChunks(FILE *st)
 {
  int t;
  uint32 size;
@@ -256,24 +252,27 @@ for(;;)
   t=fgetc(st);
   if(t==EOF) break;
   if(!read32(&size,st)) break;
+
+  // printf("ReadStateChunks: chunk %i\n", t);
   switch(t)
   {
-   case 1:if(!ReadStateChunk(st,SFCPU,SFCPUELEMENTS,size)) ret=0;
+   case 1:if(!ReadStateChunk(st,SFCPU,size)) ret=0;
 #ifdef ASM_6502
           asmcpu_unpack();
 #endif
 	  break;
-   case 2:if(!ReadStateChunk(st,SFCPUC,SFCPUCELEMENTS,size)) ret=0;
+   case 2:if(!ReadStateChunk(st,SFCPUC,size)) ret=0;
           else
 	  {
 	   X.mooPI=X.P;	// Quick and dirty hack.
 	  }
 	  break;
-   case 3:if(!ReadStateChunk(st,SFPPU,SFPPUELEMENTS,size)) ret=0;break;
-//   case 4:if(!ReadStateChunk(st,SFCTLR,SFCTLRELEMENTS,size)) ret=0;break;
-   case 5:if(!ReadStateChunk(st,SFSND,SFSNDELEMENTS,size)) ret=0;break;
-   case 0x10:if(!ReadStateChunk(st,SFMDATA,SFEXINDEX,size)) ret=0;break;
-   default: if(fseek(st,size,SEEK_CUR)<0) goto endo;break;
+   case 3:if(!ReadStateChunk(st,FCEUPPU_STATEINFO,size)) ret=0;break;
+   case 4:if(!ReadStateChunk(st,FCEUCTRL_STATEINFO,size)) ret=0;break;
+   case 5:if(!ReadStateChunk(st,SFSND,size)) ret=0;break;
+   case 0x10:if(!ReadStateChunk(st,SFMDATA,size)) ret=0;break;
+   default:printf("ReadStateChunks: unknown chunk: %i\n", t);
+           if(fseek(st,size,SEEK_CUR)<0) goto endo;break;
   }
  }
  endo:
@@ -309,12 +308,12 @@ void SaveState(void)
 #ifdef ASM_6502
           asmcpu_pack();
 #endif
-	  totalsize=WriteStateChunk(st,1,SFCPU,SFCPUELEMENTS);
-	  totalsize+=WriteStateChunk(st,2,SFCPUC,SFCPUCELEMENTS);
-	  totalsize+=WriteStateChunk(st,3,SFPPU,SFPPUELEMENTS);
-	//  totalsize+=WriteStateChunk(st,4,SFCTLR,SFCTLRELEMENTS);
-	  totalsize+=WriteStateChunk(st,5,SFSND,SFSNDELEMENTS);
-	  totalsize+=WriteStateChunk(st,0x10,SFMDATA,SFEXINDEX);
+	  totalsize=WriteStateChunk(st,1,SFCPU);
+	  totalsize+=WriteStateChunk(st,2,SFCPUC);
+	  totalsize+=WriteStateChunk(st,3,FCEUPPU_STATEINFO);
+	  totalsize+=WriteStateChunk(st,4,FCEUCTRL_STATEINFO);
+	  totalsize+=WriteStateChunk(st,5,SFSND);
+	  totalsize+=WriteStateChunk(st,0x10,SFMDATA);
 
 	  fseek(st,4,SEEK_SET);
 	  write32(totalsize,st);
@@ -505,6 +504,8 @@ static int LoadStateOld(FILE *st)
 	int32 nada;
         uint8 version;
 	nada=0;
+
+	printf("LoadStateOld\n");
 
 	StateBuffer=FCEU_malloc(59999);
 	if(StateBuffer==NULL)

@@ -501,7 +501,7 @@ int iNESLoad(char *name, int fp)
 	iNESGameCRC32=CalcCRC32(0,ROM,ROM_size<<14);
 	if(VROM_size)
 	 iNESGameCRC32=CalcCRC32(iNESGameCRC32,VROM,VROM_size<<13);
-        printf("\n PRG ROM:  %3d x 16k\n CHR ROM:  %3d x  8k\n ROM CRC32:  %08lx\n Mapper:  %d\n Mirroring: %s\n",head.ROM_size,head.VROM_size,iNESGameCRC32,MapperNo,Mirroring==2?"None(Four-screen)":Mirroring?"Vertical":"Horizontal");
+        printf("\n PRG ROM:  %3d x 16k\n CHR ROM:  %3d x  8k\n ROM CRC32:  %08x\n Mapper:  %d\n Mirroring: %s\n",head.ROM_size,head.VROM_size,iNESGameCRC32,MapperNo,Mirroring==2?"None(Four-screen)":Mirroring?"Vertical":"Horizontal");
         if(head.ROM_type&2) puts(" Battery-backed.");
         if(head.ROM_type&4) puts(" Trained.");
 	puts("");

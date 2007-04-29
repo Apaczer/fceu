@@ -3,30 +3,30 @@ static void DrawDips(void)
   uint32 *dest;
   int y,x;
 
-  dest=(uint32 *)(XBuf+272*12+164);
-  for(y=24;y;y--,dest+=(272-72)>>2)
+  dest=(uint32 *)(XBuf+320*12+164);
+  for(y=24;y;y--,dest+=(320-72)>>2)
   {
    for(x=72>>2;x;x--,dest++)
     *dest=0x80808080;
   }
 
-  dest=(uint32 *)(XBuf+272*(12+4)+164+6 );
-  for(y=16;y;y--,dest+=(272>>2)-16)
+  dest=(uint32 *)(XBuf+320*(12+4)+164+6 );
+  for(y=16;y;y--,dest+=(320>>2)-16)
    for(x=8;x;x--)
    {
     *dest=0x81818181;
     dest+=2;
    }
 
-  dest=(uint32 *)(XBuf+272*(12+4)+164+6 );
+  dest=(uint32 *)(XBuf+320*(12+4)+164+6 );
   for(x=0;x<8;x++,dest+=2)
   {
-   uint32 *da=dest+(272>>2);
+   uint32 *da=dest+(320>>2);
 
    if(!((vsdip>>x)&1))
-    da+=(272>>2)*10;
+    da+=(320>>2)*10;
 
-   for(y=4;y;y--,da+=272>>2)
+   for(y=4;y;y--,da+=320>>2)
     *da=0x80808080;
 
   }
@@ -75,7 +75,7 @@ static void DrawState(void)
  uint8 *XBaf;
  int x,y,z;
 
- XBaf=XBuf+4+(FSettings.LastSLine-44)*272;
+ XBaf=XBuf+4+(FSettings.LastSLine-44)*320;
 
  if(XBaf>=XBuf)
  for(z=1;z<11;z++)
@@ -84,12 +84,12 @@ static void DrawState(void)
    {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
-           XBaf[y*272+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];
+           XBaf[y*320+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];
    } else {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
             if(sstat[y*21+x+(z-1)*21*12]!=0x83)
-             XBaf[y*272+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];
+             XBaf[y*320+x+z*21+z]=sstat[y*21+x+(z-1)*21*12];
    }
   if(CurrentState==z%10)
    {
@@ -97,8 +97,8 @@ static void DrawState(void)
      XBaf[x+z*21+z*1]=132;
     for(x=1;x<12;x++)
      {
-     XBaf[272*x+z*21+z*1]=
-     XBaf[272*x+z*21+z*1+20]=132;
+     XBaf[320*x+z*21+z*1]=
+     XBaf[320*x+z*21+z*1+20]=132;
      }
     for(x=0;x<21;x++)
      XBaf[3264+x+z*21+z*1]=132;
@@ -128,27 +128,27 @@ void DrawBars(void)
 
  if(controlselect==1)
  {
-  DrawTextTrans(XBuf+128-12+180*272, 272, (uint8 *)"Hue", 0x85);
+  DrawTextTrans(XBuf+128-12+180*320, 320, (uint8 *)"Hue", 0x85);
   which=ntschue<<1;
  }
  else if(controlselect==2)
  {
-  DrawTextTrans(XBuf+128-16+180*272, 272, (uint8 *)"Tint", 0x85);
+  DrawTextTrans(XBuf+128-16+180*320, 320, (uint8 *)"Tint", 0x85);
   which=ntsctint<<1;
  }
 
- XBaf=XBuf+200*272;
+ XBaf=XBuf+200*320;
  for(x=0;x<which;x+=2)
  {
   for(x2=6;x2>=-6;x2--)
   {
-   XBaf[x-272*x2]=0x85;
+   XBaf[x-320*x2]=0x85;
   }
  }
  for(;x<256;x+=2)
  {
   for(x2=2;x2>=-2;x2--)
-   XBaf[x-272*x2]=0x85;
+   XBaf[x-320*x2]=0x85;
  }
 
 }

@@ -40,3 +40,5 @@ typedef struct {
 void ResetExState(void);
 void AddExState(void *v, uint32 s, int type, char *desc);
 
+#define RLSB 		0x80000000
+

@@ -1416,3 +1416,26 @@ void PowerNES(void)
 	X6502_Power();
 }
 
+
+/* savestate stuff */
+uint16 TempAddrT,RefreshAddrT;
+
+SFORMAT FCEUPPU_STATEINFO[]={
+ { NTARAM, 0x800, "NTAR"},
+ { PALRAM, 0x20, "PRAM"},
+ { SPRAM, 0x100, "SPRA"},
+ { PPU, 0x4, "PPUR"},
+ { &XOffset, 1, "XOFF"},
+ { &vtoggle, 1, "VTOG"},
+ { &RefreshAddrT, 2|RLSB, "RADD"},
+ { &TempAddrT, 2|RLSB, "TADD"},
+ { &VRAMBuffer, 1, "VBUF"},
+ { &PPUGenLatch, 1, "PGEN"},
+ // from 0.98.15
+ { &kook, 1, "KOOK"},
+ { &ppudead, 1, "DEAD"},
+ { &PPUSPL, 1, "PSPL"},
+ { 0 }
+ };
+
+
