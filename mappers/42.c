@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,13 @@
 
 static DECLFW(Mapper42_write)
 {
+// FCEU_printf("%04x:%04x\n",A,V);
  switch(A&0xe003)
  {
-  case 0xe000:mapbyte1[0]=V;ROM_BANK8(0x6000,V&0xF);
-              X6502_Rebase();break;
+  case 0x8000:VROM_BANK8(V);break;
+  case 0xe000:mapbyte1[0]=V;ROM_BANK8(0x6000,V&0xF);break;
   case 0xe001:MIRROR_SET((V>>3)&1);break;
-  case 0xe002:IRQa=V&2;if(!IRQa) IRQCount=0;break;
+  case 0xe002:IRQa=V&2;if(!IRQa) IRQCount=0;X6502_IRQEnd(FCEU_IQEXT);break;
  }
 }
 
@@ -36,13 +37,12 @@ static void FP_FASTAPASS(1) Mapper42IRQ(int a)
 {
  if(IRQa)
  {
-        if(IRQCount<24576)
-         IRQCount+=a;
+        IRQCount+=a;
+        if(IRQCount>=32768) IRQCount-=32768;
+        if(IRQCount>=24576)
+         X6502_IRQBegin(FCEU_IQEXT);
         else
-        {
-         IRQa=0;
-         TriggerIRQ();
-        }
+         X6502_IRQEnd(FCEU_IQEXT);
  }
 }
 
@@ -56,7 +56,7 @@ void Mapper42_init(void)
 {
   ROM_BANK8(0x6000,0);
   ROM_BANK32(~0);
-  SetWriteHandler(0xe000,0xffff,Mapper42_write);
+  SetWriteHandler(0x6000,0xffff,Mapper42_write);
   SetReadHandler(0x6000,0x7fff,CartBR);
   MapStateRestore=Mapper42_StateRestore;
   MapIRQHook=Mapper42IRQ;

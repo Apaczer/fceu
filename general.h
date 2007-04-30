@@ -12,3 +12,5 @@ char *FCEU_MakeFName(int type, int id1, char *cd1);
 #define FCEUMKF_FDSROM	5
 #define FCEUMKF_PALETTE	6
 #define FCEUMKF_GGROM	7
+#define FCEUMKF_IPS	8
+#define FCEUMKF_FDS	9

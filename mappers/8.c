@@ -1,8 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,21 +18,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-
 #include "mapinc.h"
 
-
-
-DECLFW(Mapper8_write)
+static DECLFW(Mapper8_write)
 {
         ROM_BANK16(0x8000,V>>3);
         VROM_BANK8(V&7);
-        X6502_Rebase();
 }
 
 void Mapper8_init(void)
 {
-	ROM_BANK32(0);
+        ROM_BANK32(0);
         SetWriteHandler(0x8000,0xFFFF,Mapper8_write);
 }
 

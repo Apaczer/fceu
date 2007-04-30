@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,33 +20,81 @@
 
 #include "mapinc.h"
 
+static uint32 lastA;
+static int isfu;
+static uint8 CCache[8];
 
-
-DECLFW(Mapper80_write)
+static void FP_FASTAPASS(1) Fudou_PPU(uint32 A)
 {
-switch(A)
- {
-  case 0x7ef0: VROM_BANK1(0x000,V);VROM_BANK1(0x400,(V+1));break;
-  case 0x7ef1: VROM_BANK1(0x800,V);VROM_BANK1(0xC00,(V+1));break;
+ static int last=-1;
+ static uint8 z;
+  
+ if(A>=0x2000) return;
 
-  case 0x7ef2: VROM_BANK1(0x1000,V);break;
-  case 0x7ef3: VROM_BANK1(0x1400,V);break;
-  case 0x7ef4: VROM_BANK1(0x1800,V);break;
-  case 0x7ef5: VROM_BANK1(0x1c00,V);break;
-  case 0x7efa:
-  case 0x7efb: ROM_BANK8(0x8000,V);
-               X6502_Rebase();break;
-  case 0x7efd:
-  case 0x7efc: ROM_BANK8(0xA000,V);
-               X6502_Rebase();break;
-  case 0x7efe:
-  case 0x7eff: ROM_BANK8(0xC000,V);
-               X6502_Rebase();break;
+ A>>=10;
+ lastA=A;
+
+ z=CCache[A];
+ if(z!=last)
+ {
+  onemir(z);
+  last=z;
  }
+}
+
+static void mira()
+{
+ if(isfu)
+ {
+  int x;
+  CCache[0]=CCache[1]=mapbyte2[0]>>7;
+  CCache[2]=CCache[3]=mapbyte2[1]>>7;
+
+  for(x=0;x<4;x++)
+   CCache[4+x]=mapbyte2[2+x]>>7;
+
+  onemir(CCache[lastA]);
+ }
+ else
+  MIRROR_SET2(mapbyte1[0]&1);
+}
+
+static DECLFW(Mapper80_write)
+{
+ switch(A)
+ {
+  case 0x7ef0: mapbyte2[0]=V;VROM_BANK2(0x0000,(V>>1)&0x3F);mira();break;
+  case 0x7ef1: mapbyte2[1]=V;VROM_BANK2(0x0800,(V>>1)&0x3f);mira();break;
+
+  case 0x7ef2: mapbyte2[2]=V;VROM_BANK1(0x1000,V);mira();break;
+  case 0x7ef3: mapbyte2[3]=V;VROM_BANK1(0x1400,V);mira();break;
+  case 0x7ef4: mapbyte2[4]=V;VROM_BANK1(0x1800,V);mira();break;
+  case 0x7ef5: mapbyte2[5]=V;VROM_BANK1(0x1c00,V);mira();break;
+  case 0x7ef6: mapbyte1[0]=V;mira();break;
+  case 0x7efa:
+  case 0x7efb: ROM_BANK8(0x8000,V);break;
+  case 0x7efd:
+  case 0x7efc: ROM_BANK8(0xA000,V);break;
+  case 0x7efe:
+  case 0x7eff: ROM_BANK8(0xC000,V);break;
+ }
+}
+
+static void booga(int version)
+{
+ mira();
 }
 
 void Mapper80_init(void)
 {
-SetWriteHandler(0x4020,0x7fff,Mapper80_write);
+ SetWriteHandler(0x4020,0x7fff,Mapper80_write);
+ MapStateRestore=booga;
+ isfu=0;
 }
 
+void Mapper207_init(void)
+{
+ Mapper80_init();
+ isfu=1;
+ PPU_hook=Fudou_PPU;
+}

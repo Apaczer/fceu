@@ -1,11 +1,11 @@
 CFLAGS  = -Wall  ${TFLAGS}
-OBJECTS = fce.o video.o general.o endian.o svga.o sound.o nsf.o fds.o netplay.o ines.o state.o unif.o input.o file.o cart.o crc32.o memory.o cheat.o debug.o
+OBJECTS = fce.o video.o general.o endian.o svga.o sound.o nsf.o fds.o netplay.o ines.o state.o unif.o input.o file.o cart.o crc32.o memory.o cheat.o debug.o md5.o vsuni.o
 # x6502.o
 
 fceu: 		fceu2
 include	mappers/Makefile
 include boards/Makefile
-include mbshare/Makefile
+#include mbshare/Makefile
 include input/Makefile
 
 fceu2:	        ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER}

@@ -37,8 +37,9 @@ typedef struct {
 	   char *desc;
 } SFORMAT;
 
-void ResetExState(void);
+void ResetExState(void (*PreSave)(void), void (*PostSave)(void));
 void AddExState(void *v, uint32 s, int type, char *desc);
 
 #define RLSB 		0x80000000
+#define FCEUSTATE_RLSB RLSB
 

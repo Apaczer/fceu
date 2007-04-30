@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ DECLFW(Mapper79_write)
  if(A<0x8000 && ((A^0x4100)==0))
  {
   ROM_BANK32((V>>3)&1);
-  X6502_Rebase();
  }
  VROM_BANK8(V);
 }

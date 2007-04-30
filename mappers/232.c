@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,15 @@ static void DoIt(void)
 {
   ROM_BANK16(0x8000,(mapbyte1[1]&3) | ((mapbyte1[0]&0x18)>>1));
   ROM_BANK16(0xc000,3|(((mapbyte1[0])&0x18)>>1));
-  X6502_Rebase();
 }
 
 DECLFW(Mapper232_write)
 {
-	if(A<=0x9FFF)
-	 mapbyte1[0]=V;
-	else
-	 mapbyte1[1]=V;
-	DoIt();
+        if(A<=0x9FFF)
+         mapbyte1[0]=V;
+        else
+         mapbyte1[1]=V;
+        DoIt();
 }
 
 static void QuattroReset(void)

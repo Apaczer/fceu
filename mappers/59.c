@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,33 +20,28 @@
 
 #include "mapinc.h"
 
-static void Synco(void)
+static int ay;
+static DECLFW(Mapper59_write)
 {
- ROM_BANK8(0x8000,mapbyte2[0]);
- ROM_BANK8(0xA000,mapbyte2[1]);
- ROM_BANK8(0xc000,0x3e);
- ROM_BANK8(0xe000,0x3f);
- X6502_Rebase();
-}
-static DECLFW(Mapper245_write)
-{
- switch(A&0xe001)
- {
-  case 0xa000:mapbyte1[1]=V;Synco();break;
-  case 0x8000:mapbyte1[0]=V;break;
-  case 0x8001:switch(mapbyte1[0]&7)
-		{
-//		 default:printf("ark\n");break;
-		 case 6:mapbyte2[0]=V;Synco();break;
-		 case 7:mapbyte2[1]=V;Synco();break;
-		}break;
-  //case 0xa001:MIRROR_SET2(V>>7);break;
- }
-// printf("$%04x:$%02x\n",A,V);
+ //printf("$%04x:$%02x\n",A,V);
+ setprg32(0x8000,(A&0x70)>>4);
+ setchr8(A&0x7);
+ //if(A&0x100)
+ // setprg32r(0x10,0x8000,0);
+ ay=A;
+ MIRROR_SET2((A&0x8)>>3);
 }
 
-void Mapper245_init(void)
+static DECLFR(m59rd)
 {
-  SetWriteHandler(0x8000,0xffff,Mapper245_write);
+ if(ay&0x100) return(0);
+ else
+  return(CartBR(A));
 }
 
+void Mapper59_init(void)
+{
+ setprg32(0x8000,0);
+ SetReadHandler(0x8000,0xffff,m59rd);
+ SetWriteHandler(0x8000,0xffff,Mapper59_write);
+}

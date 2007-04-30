@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,43 +22,55 @@
 
 
 
-DECLFW(Mapper43_write)
+static DECLFW(Mapper43_write)
 {
-  uint32 m;
-  int z;
-
-  if(A&0x400)
-   onemir(0);
+ //printf("$%04x:$%02x\n",A,V);
+ if((A&0x8122)==0x8122)
+ {
+  X6502_IRQEnd(FCEU_IQEXT);
+  if(V&2) IRQa=1;
   else
-   MIRROR_SET((A>>13)&1);
-  m=A&0x1f;
-
-  z=(A>>8)&3;
-
-  switch(CHRmask8[0])
-  {
-   default:
-   case 0xFF:
-             if(z&2)
-              m|=0x20;
-             break;
-   case 0x1FF:
-             m|=z<<5;
-             break;
-  }
-
-   if(A&0x800)
-   {
-    ROM_BANK16(0x8000,(m<<1)|((A&0x1000)>>12));
-    ROM_BANK16(0xC000,(m<<1)|((A&0x1000)>>12));
-   }
-   else
-    ROM_BANK32(m);
-   X6502_Rebase();
+   IRQCount=IRQa=0;
+ }
 }
+
+static DECLFW(M43Low)
+{
+// int transo[8]={4,3,4,4,4,7,5,6};
+ int transo[8]={4,3,2,3,4,7,5,6};
+ A&=0xF0FF;
+ if(A==0x4022)
+  setprg8(0x6000,transo[V&7]);
+ //printf("$%04x:$%02x\n",A,V);
+}
+
+static void FP_FASTAPASS(1) M43Ho(int a)
+{
+ IRQCount+=a;
+ if(IRQa)
+  if(IRQCount>=4096)
+  {
+   X6502_IRQBegin(FCEU_IQEXT);
+  }
+}
+
+//static DECLFR(boo)
+//{
+// printf("$%04x\n",A);
+// return( ROM[0x2000*8 +0x1000 +(A-0x5000)]);
+//}
 
 void Mapper43_init(void)
 {
- ROM_BANK32(0);
+ setprg4(0x5000,16);
+ setprg8(0x6000,2);
+ setprg8(0x8000,1);
+ setprg8(0xa000,0);
+ setprg8(0xc000,4);
+ setprg8(0xe000,9);
  SetWriteHandler(0x8000,0xffff,Mapper43_write);
+ SetWriteHandler(0x4020,0x7fff,M43Low);
+ //SetReadHandler(0x5000,0x5fff,boo);
+ SetReadHandler(0x6000,0xffff,CartBR);
+ MapIRQHook=M43Ho;
 }

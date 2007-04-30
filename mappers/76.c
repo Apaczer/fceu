@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,9 @@
  */
 
 #include "mapinc.h"
+static uint8 MMC3_cmd;
 
-
-
-DECLFW(Mapper76_write)
+static DECLFW(Mapper76_write)
 {
         switch(A&0xE001){
         case 0x8000:
@@ -35,12 +34,10 @@ DECLFW(Mapper76_write)
                 case 4: VROM_BANK2(0x1000,V);break;
                 case 5: VROM_BANK2(0x1800,V);break;
                 case 6:
-                        if (MMC3_cmd&0x40) ROM_BANK8(0xC000,V);
+                        if(MMC3_cmd&0x40) ROM_BANK8(0xC000,V);
                         else ROM_BANK8(0x8000,V);
-                        X6502_Rebase();
                         break;
                 case 7: ROM_BANK8(0xA000,V);
-                        X6502_Rebase();
                         break;
                }
                break;

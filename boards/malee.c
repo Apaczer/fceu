@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,10 +20,7 @@
 
 #include "mapinc.h"
 
-DECLFW(MWrite)
-{
- (GameMemBlock-0x7000)[A]=V;
-}
+static uint8 WRAM[2048];
 
 static void MALEEReset(void)
 {
@@ -31,15 +28,14 @@ static void MALEEReset(void)
   SetReadHandler(0x8000,0xFFFF,CartBR);
   SetReadHandler(0x6000,0x67ff,CartBR);
   SetReadHandler(0x7000,0x77FF,CartBR);
-  SetWriteHandler(0x7000,0x77FF,MWrite);
   setprg2r(1,0x6000,0);
   setprg32(0x8000,0);
   setchr8(0);
 }
 
-void MALEE_Init(void)
+void MALEE_Init(CartInfo *info)
 {
-  AddExState(GameMemBlock, 2048, 0,"RAM");
-  SetupCartPRGMapping(0x10,GameMemBlock,2048,1);
-  BoardPower=MALEEReset;
+  info->Power=MALEEReset;
+  SetupCartPRGMapping(0x10, WRAM, 2048, 1);
+  AddExState(WRAM, 2048, 0,"RAM");
 }

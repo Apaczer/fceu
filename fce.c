@@ -97,7 +97,7 @@ void (*GameInterface)(int h);
 void FP_FASTAPASS(1) (*PPU_hook)(uint32 A);
 
 void (*GameStateRestore)(int version);
-void (*GameHBIRQHook)(void);
+void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
 
 readfunc ARead[0x10000];
 writefunc BWrite[0x10000];
@@ -973,6 +973,8 @@ static void DoHBlank(void)
   Fixit2();
   X6502_Run(85-6-16);
  }
+ if(GameHBIRQHook2 && (ScreenON || SpriteON))
+  GameHBIRQHook2();
  //PPU_hook(0,-1);
  //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
  scanline++;
@@ -1044,7 +1046,7 @@ void ResetGameLoaded(void)
         if(GameLoaded) CloseGame();
         GameStateRestore=0;
         PPU_hook=0;
-        GameHBIRQHook=0;
+        GameHBIRQHook=GameHBIRQHook2=0;
 	GameExpSound.Fill=0;
 	GameExpSound.RChange=0;
         if(GameExpSound.Kill)
@@ -1063,6 +1065,10 @@ void ResetGameLoaded(void)
 }
 
 char lastLoadedGameName [2048];
+int UNIFLoad(const char *name, int fp);
+int iNESLoad(const char *name, int fp);
+int FDSLoad(const char *name, int fp);
+int NSFLoad(int fp);
 
 FCEUGI *FCEUI_LoadGame(char *name)
 {
@@ -1255,8 +1261,12 @@ void EmLoop(void)
   X6502_Run(256);
   {
    if(ScreenON || SpriteON)
+   {
     if(GameHBIRQHook)
      GameHBIRQHook();
+    if(GameHBIRQHook2)
+     GameHBIRQHook2();
+   }
 
    X6502_Run(85-16);
 

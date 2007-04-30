@@ -31,6 +31,8 @@
 #include "state.h"
 #include "movie.h"
 
+#include "fds.h"
+#include "vsuni.h"
 #include "dprintf.h"
 
 extern INPUTC *FCEU_InitZapper(int w);
@@ -60,6 +62,14 @@ void (*InputScanlineHook)(uint8 *buf, int line);
 static INPUTC DummyJPort={0,0,0,0,0};
 static INPUTC *JPorts[2]={&DummyJPort,&DummyJPort};
 static INPUTCFC *FCExp=0;
+
+/* This function is a quick hack to get the NSF player to use emulated gamepad
+   input.
+*/
+uint8 FCEU_GetJoyJoy(void)
+{
+ return(joy[0]|joy[1]|joy[2]|joy[3]);
+}
 
 static uint8 FP_FASTAPASS(1) ReadGPVS(int w)
 {
@@ -195,7 +205,7 @@ void UpdateInput(void)
 	if(netplay) NetplayUpdate(&joy[0],&joy[1]);
 	#endif
 	if (current < 0) FCEUMOV_AddJoy(joy);
-	FlushCommandQueue();
+	//FlushCommandQueue();
 }
 
 static DECLFR(VSUNIRead0)
@@ -255,7 +265,7 @@ static void FASTAPASS(1) SetInputStuff(int x)
 	  break;
 	  case SI_ARKANOID:JPorts[x]=FCEU_InitArkanoid(x);break;
 	  case SI_ZAPPER:JPorts[x]=FCEU_InitZapper(x);break;
-          case SI_POWERPAD:JPorts[x]=FCEU_InitPowerpad(x);break;
+          case SI_POWERPADA:JPorts[x]=FCEU_InitPowerpad(x);break;
 	  case SI_NONE:JPorts[x]=&DummyJPort;break;
          }
 
@@ -351,16 +361,73 @@ void FCEU_DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-//   case FCEUNPCMD_FDSINSERT: FCEU_FDSInsert();break;
-//   case FCEUNPCMD_FDSSELECT: FCEU_FDSSelect();break;
+   case FCEUNPCMD_FDSINSERT: FCEU_FDSInsert();break;
+   case FCEUNPCMD_FDSSELECT: FCEU_FDSSelect();break;
 //   case FCEUNPCMD_FDSEJECT: FCEU_FDSEject();break;
-//   case FCEUNPCMD_VSUNICOIN: FCEU_VSUniCoin(); break;
-//   case FCEUNPCMD_VSUNIDIP0 ... (FCEUNPCMD_VSUNIDIP0 + 7): FCEU_VSUniToggleDIP(cmd - FCEUNPCMD_VSUNIDIP0);break;
+   case FCEUNPCMD_VSUNICOIN: FCEU_VSUniCoin(); break;
+   case FCEUNPCMD_VSUNIDIP0 ... (FCEUNPCMD_VSUNIDIP0 + 7): FCEU_VSUniToggleDIP(cmd - FCEUNPCMD_VSUNIDIP0);break;
    case FCEUNPCMD_POWER: PowerNES();break;
    case FCEUNPCMD_RESET: ResetNES();break;
    default: printf("FCEU_DoSimpleCommand: can't handle cmd %i\n", cmd); break;
  }
 }
+
+void FCEU_QSimpleCommand(int cmd)
+{
+// if(FCEUnetplay)
+//  FCEUNET_SendCommand(cmd, 0);
+// else
+ {
+  // totally wrong:
+//  if(!FCEUMOV_IsPlaying())
+//   FCEU_DoSimpleCommand(cmd);
+//  else
+//   FCEUMOV_AddCommand(cmd);
+
+  FCEU_DoSimpleCommand(cmd);
+//  if(FCEUMOV_IsRecording())
+//   FCEUMOV_AddCommand(cmd);
+ }
+}
+
+void FCEUI_FDSSelect(void)
+{
+ FCEU_QSimpleCommand(FCEUNPCMD_FDSSELECT);
+}
+
+int FCEUI_FDSInsert(void)
+{
+ FCEU_QSimpleCommand(FCEUNPCMD_FDSINSERT);
+ return(1);
+}
+
+/*
+int FCEUI_FDSEject(void)
+{
+    FCEU_QSimpleCommand(FCEUNPCMD_FDSEJECT);
+    return(1);
+}
+*/
+void FCEUI_VSUniToggleDIP(int w)
+{
+ FCEU_QSimpleCommand(FCEUNPCMD_VSUNIDIP0 + w);
+}
+
+void FCEUI_VSUniCoin(void)
+{
+ FCEU_QSimpleCommand(FCEUNPCMD_VSUNICOIN);
+}
+
+void FCEUI_ResetNES(void)
+{
+	FCEU_QSimpleCommand(FCEUNPCMD_RESET);
+}
+
+void FCEUI_PowerNES(void)
+{
+        FCEU_QSimpleCommand(FCEUNPCMD_POWER);
+}
+
 
 
 SFORMAT FCEUCTRL_STATEINFO[]={

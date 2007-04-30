@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,22 +32,16 @@ typedef struct {
                 uint8 SongName[32];
                 uint8 Artist[32];
                 uint8 Copyright[32];
-                uint8 NTSCspeed[2];              // Unused
+                uint8 NTSCspeed[2];        // Unused
                 uint8 BankSwitch[8];
-                uint8 PALspeed[2];               // Unused
+                uint8 PALspeed[2];         // Unused
                 uint8 VideoSystem;
                 uint8 SoundChip;
                 uint8 Expansion[4];
                 uint8 reserve[8];
         } NSF_HEADER;
-int NSFLoad(int fp);
-DECLFW(NSF_write);
-DECLFR(NSF_read);
 void NSF_init(void);
-extern uint8 CurrentSong;
-extern uint8 SongReload;
 void DrawNSF(uint8 *XBuf);
-void NSFControl(int z);
-extern NSF_HEADER NSFHeader;
 void NSFDealloc(void);
 void NSFDodo(void);
+void DoNSFFrame(void);

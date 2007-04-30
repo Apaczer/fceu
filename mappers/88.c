@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,39 +20,43 @@
 
 #include "mapinc.h"
 
+static int mn;
 static DECLFW(Mapper88_write)
 {
  //if(A>=0x8002 || A<0x8000)
  //if(A==0xc000)
  // printf("$%04x:$%02x\n",A,V);
- switch(A) //&0xc001)
+ switch(A&0x8001) //&0xc001)
  {
-  	      //case 0xc000:
-	      //MIRROR_SET((V&0x40)>>6);
-	      //onemir((V&0x40)>>6);
-	      //break;
-  case 0x8000:mapbyte1[0]=V;break;
+  case 0x8000:mapbyte1[0]=V;
+              if(mn)
+               onemir((V>>6)&1);
+              break;
   case 0x8001:
-	      switch(mapbyte1[0]&7)
-	      {
-	       case 0:VROM_BANK2(0,V>>1);break;
-	       case 1:VROM_BANK2(0x800,V>>1);break;
-	       case 2:VROM_BANK1(0x1000,V|0x40);break;
-	       case 3:VROM_BANK1(0x1400,V|0x40);break;
-	       case 4:VROM_BANK1(0x1800,V|0x40);break;
-	       case 5:VROM_BANK1(0x1c00,V|0x40);break;
-	       case 6:ROM_BANK8(0x8000,V);
-                      X6502_Rebase();break;
-	       case 7:ROM_BANK8(0xA000,V);
-                      X6502_Rebase();break;
-	      }
-	      break;
+              switch(mapbyte1[0]&7)
+              {
+               case 0:VROM_BANK2(0,V>>1);break;
+               case 1:VROM_BANK2(0x800,V>>1);break;
+               case 2:VROM_BANK1(0x1000,V|0x40);break;
+               case 3:VROM_BANK1(0x1400,V|0x40);break;
+               case 4:VROM_BANK1(0x1800,V|0x40);break;
+               case 5:VROM_BANK1(0x1c00,V|0x40);break;
+               case 6:ROM_BANK8(0x8000,V);break;
+               case 7:ROM_BANK8(0xA000,V);break;
+              }
+              break;
 
  }
 }
 
 void Mapper88_init(void)
 {
+  mn=0;
   SetWriteHandler(0x8000,0xffff,Mapper88_write);
 }
 
+void Mapper154_init(void)
+{
+ mn=1;
+ SetWriteHandler(0x8000,0xffff,Mapper88_write);
+}

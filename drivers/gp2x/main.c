@@ -193,7 +193,7 @@ static void DoArgs(int argc, char *argv[])
 {
         static char *cortab[5]={"none","gamepad","zapper","powerpad","arkanoid"};
         static int cortabi[5]={SI_NONE,SI_GAMEPAD,
-                               SI_ZAPPER,SI_POWERPAD,SI_ARKANOID};
+                               SI_ZAPPER,SI_POWERPADA,SI_ARKANOID};
 	static char *fccortab[5]={"none","arkanoid","shadow","4player","fkb"};
 	static int fccortabi[5]={SIFC_NONE,SIFC_ARKANOID,SIFC_SHADOW,
 			         SIFC_4PLAYER,SIFC_FKB};

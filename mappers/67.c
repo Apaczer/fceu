@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 #define suntoggle mapbyte1[0]
 
-DECLFW(Mapper67_write)
+static DECLFW(Mapper67_write)
 {
  A&=0xF800;
  if((A&0x800) && A<=0xb800)
@@ -34,11 +34,18 @@ DECLFW(Mapper67_write)
  {
   case 0xc800:
   case 0xc000:if(!suntoggle)
-              {IRQCount&=0xFF;IRQCount|=V<<8;}
-              else{IRQCount&=0xFF00;IRQCount|=V;}
+              {
+               IRQCount&=0xFF;
+               IRQCount|=V<<8;
+              }
+              else
+              {
+               IRQCount&=0xFF00;
+               IRQCount|=V;
+              }
               suntoggle^=1;
               break;
-  case 0xd800:suntoggle=0;IRQa=V&0x10;break;
+  case 0xd800:suntoggle=0;IRQa=V&0x10;X6502_IRQEnd(FCEU_IQEXT);break;
 
   case 0xe800:switch(V&3)
               {
@@ -48,8 +55,7 @@ DECLFW(Mapper67_write)
                case 3:onemir(1);break;
               }
               break;
-  case 0xf800:ROM_BANK16(0x8000,V);
-              X6502_Rebase();break;
+  case 0xf800:ROM_BANK16(0x8000,V);break;
  }
 }
 static void FP_FASTAPASS(1) SunIRQHook(int a)
@@ -58,7 +64,11 @@ static void FP_FASTAPASS(1) SunIRQHook(int a)
   {
    IRQCount-=a;
    if(IRQCount<=0)
-   {TriggerIRQ();IRQa=0;IRQCount=0xFFFF;}
+   {
+    X6502_IRQBegin(FCEU_IQEXT);
+    IRQa=0;
+    IRQCount=0xFFFF;
+   }
   }
 }
 void Mapper67_init(void)

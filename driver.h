@@ -59,18 +59,34 @@ void FCEUI_DisableFourScore(int s);
 
 #include "version.h"
 
-#define SI_NONE     0
-#define SI_GAMEPAD  1
-#define SI_ZAPPER   2
-#define SI_POWERPAD 3
-#define SI_ARKANOID 4
+#define SI_NONE      0
+#define SI_GAMEPAD   1
+#define SI_ZAPPER    2
+#define SI_POWERPADA  3
+#define SI_POWERPADB  4
+#define SI_ARKANOID   5
 
-#define SIFC_NONE	0
-#define SIFC_ARKANOID	1
-#define SIFC_SHADOW	2
+#define SIFC_NONE      0
+#define SIFC_ARKANOID  1
+#define SIFC_SHADOW      2
 #define SIFC_4PLAYER    3
-#define SIFC_FKB	4
-#define SIFC_OEKA	5
+#define SIFC_FKB      4
+#define SIFC_SUBORKB    5
+#define SIFC_HYPERSHOT  6
+#define SIFC_MAHJONG  7
+#define SIFC_QUIZKING  8
+#define SIFC_FTRAINERA  9
+#define SIFC_FTRAINERB  10
+#define SIFC_OEKAKIDS  11
+#define SIFC_BWORLD      12
+#define SIFC_TOPRIDER  13
+
+#define SIS_NONE  0
+#define SIS_DATACH  1
+#define SIS_NWC    2
+#define SIS_VSUNISYSTEM  3
+#define SIS_NSF    4
+
 
 /* New interface functions */
 

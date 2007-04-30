@@ -43,7 +43,11 @@
 #include "memory.h"
 #include "ppu.h"
 
-static SFORMAT SFMDATA[64];
+static void (*SPreSave)(void) = 0;
+static void (*SPostSave)(void) = 0;
+
+#define SFMDATA_SIZE (64)
+static SFORMAT SFMDATA[SFMDATA_SIZE];
 static int SFEXINDEX;
 static int stateversion;
 
@@ -313,7 +317,11 @@ void SaveState(void)
 	  totalsize+=WriteStateChunk(st,3,FCEUPPU_STATEINFO);
 	  totalsize+=WriteStateChunk(st,4,FCEUCTRL_STATEINFO);
 	  totalsize+=WriteStateChunk(st,5,SFSND);
+
+
+	  if(SPreSave) SPreSave();
 	  totalsize+=WriteStateChunk(st,0x10,SFMDATA);
+	  if(SPostSave) SPostSave();
 
 	  fseek(st,4,SEEK_SET);
 	  write32(totalsize,st);
@@ -418,26 +426,47 @@ void SaveStateRefresh(void)
  SaveStateStatus[0]=-1;
 }
 
-void ResetExState(void)
+void ResetExState(void (*PreSave)(void), void (*PostSave)(void))
 {
  int x;
  for(x=0;x<SFEXINDEX;x++)
-  free(SFMDATA[x].desc);
+ {
+  if(SFMDATA[x].desc)
+   free(SFMDATA[x].desc);
+ }
+ SPreSave = PreSave;
+ SPostSave = PostSave;
  SFEXINDEX=0;
 }
 
+
 void AddExState(void *v, uint32 s, int type, char *desc)
 {
- SFMDATA[SFEXINDEX].desc=FCEU_malloc(5);
- if(SFMDATA[SFEXINDEX].desc)
+ if(desc)
  {
+  SFMDATA[SFEXINDEX].desc=(char *)FCEU_malloc(5);
   strcpy(SFMDATA[SFEXINDEX].desc,desc);
-  SFMDATA[SFEXINDEX].v=v;
-  SFMDATA[SFEXINDEX].s=s;
-  if(type) SFMDATA[SFEXINDEX].s|=RLSB;
-  if(SFEXINDEX<63) SFEXINDEX++;
  }
+ else
+//  SFMDATA[SFEXINDEX].desc=0;
+  return; // do not support recursive save structures
+ SFMDATA[SFEXINDEX].v=v;
+ SFMDATA[SFEXINDEX].s=s;
+ if(type) SFMDATA[SFEXINDEX].s|=RLSB;
+ if(SFEXINDEX<SFMDATA_SIZE-1)
+	 SFEXINDEX++;
+ else
+ {
+	 static int once=1;
+	 if(once)
+	 {
+		 once=0;
+		 FCEU_PrintError("Error in AddExState: SFEXINDEX overflow.\nSomebody made SFMDATA_SIZE too small.");
+	 }
+ }
+ SFMDATA[SFEXINDEX].v=0;		// End marker.
 }
+
 
 /* Old state loading code follows */
 

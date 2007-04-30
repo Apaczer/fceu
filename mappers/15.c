@@ -1,8 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 1998 BERO
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2003 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,71 +20,54 @@
 
 #include "mapinc.h"
 
-
-
-
-DECLFW(Mapper15_write)
+static void Sync(void)
 {
-switch(A)
- {
-  case 0x8000:
-        if(V&0x80)
+        int x;
+
+        setmirror(((mapbyte1[0]>>6)&1)^1);
+        switch(mapbyte1[1]&0x3)
         {
-        ROM_BANK8(0x8000,(V<<1)+1);
-        ROM_BANK8(0xA000,(V<<1));
-        ROM_BANK8(0xC000,(V<<1)+2);
-        ROM_BANK8(0xE000,(V<<1)+1);
+         case 0x0:
+          for(x=0;x<4;x++)
+           setprg8(0x8000+x*8192,(((mapbyte1[0]&0x7F)<<1)+x)^(mapbyte1[0]>>7));
+          break;
+         case 0x2:
+          for(x=0;x<4;x++)
+           setprg8(0x8000+x*8192,((mapbyte1[0]&0x7F)<<1)+(mapbyte1[0]>>7));
+          break;
+         case 0x1:
+         case 0x3:
+          for(x=0;x<4;x++)
+          {
+           unsigned int b;
+
+           b=mapbyte1[0]&0x7F;
+           if(x>=2 && !(mapbyte1[1]&0x2))
+            b=0x7F;
+           setprg8(0x8000+x*8192,(x&1)+((b<<1)^(mapbyte1[0]>>7)));
+          }
+          break;
         }
-        else
-        {
-        ROM_BANK16(0x8000,V);
-        ROM_BANK16(0xC000,V+1);
-        }
-        MIRROR_SET((V>>6)&1);
-        X6502_Rebase();
-        break;
-  case 0x8001:
-        MIRROR_SET(0);
-        ROM_BANK16(0x8000,V);
-        ROM_BANK16(0xc000,~0);
-        X6502_Rebase();
-        break;
-  case 0x8002:
-        if(V&0x80)
-        {
-         ROM_BANK8(0x8000,((V<<1)+1));
-         ROM_BANK8(0xA000,((V<<1)+1));
-         ROM_BANK8(0xC000,((V<<1)+1));
-         ROM_BANK8(0xE000,((V<<1)+1));
-        }
-        else
-        {
-         ROM_BANK8(0x8000,(V<<1));
-         ROM_BANK8(0xA000,(V<<1));
-         ROM_BANK8(0xC000,(V<<1));
-         ROM_BANK8(0xE000,(V<<1));
-        }
-        X6502_Rebase();
-        break;
-  case 0x8003:
-        MIRROR_SET((V>>6)&1);
-        if(V&0x80)
-        {
-         ROM_BANK8(0xC000,(V<<1)+1);
-         ROM_BANK8(0xE000,(V<<1));
-        }
-        else
-        {
-         ROM_BANK16(0xC000,V);
-        }
-        X6502_Rebase();
-        break;
- }
+}
+
+
+static DECLFW(Mapper15_write)
+{
+ mapbyte1[0]=V;
+ mapbyte1[1]=A&3;
+ Sync();
+}
+
+static void StateRestore(int version)
+{
+ Sync();
 }
 
 void Mapper15_init(void)
 {
-        ROM_BANK32(0);
-	SetWriteHandler(0x8000,0xFFFF,Mapper15_write);
+        mapbyte1[0]=mapbyte1[1]=0;
+        Sync();
+        GameStateRestore=StateRestore;
+        SetWriteHandler(0x8000,0xFFFF,Mapper15_write);
 }
 

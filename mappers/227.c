@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,11 +30,11 @@ static void DoSync(uint32 A)
  rg[1]=A>>8;
 
  MIRROR_SET((A>>1)&1);
- if(A&1)	//32 KB
+ if(A&1)        //32 KB
  {
   ROM_BANK32(p);
  }
- else		//16 KB
+ else                //16 KB
  {
   ROM_BANK16(0x8000,(p<<1)|((A&4)>>2));
   ROM_BANK16(0xc000,(p<<1)|((A&4)>>2));
@@ -51,7 +51,6 @@ static void DoSync(uint32 A)
   else
    ROM_BANK16(0xC000,(p<<1)&(~7));
  }
- X6502_Rebase();
 }
 
 static DECLFW(Mapper227_write)
@@ -73,7 +72,7 @@ static void M227Restore(int version)
 
 void Mapper227_init(void)
 {
-  SetWriteHandler(0x8000,0xffff,Mapper227_write);
+  SetWriteHandler(0x6000,0xffff,Mapper227_write);
   MapperReset=M227Reset;
   GameStateRestore=M227Restore;
   M227Reset();

@@ -24,3 +24,10 @@ extern void (*InputScanlineHook)(uint8 *buf, int line);
 
 void FCEU_DoSimpleCommand(int cmd);
 
+void FCEUI_FDSSelect(void);
+int FCEUI_FDSInsert(void);
+void FCEUI_VSUniToggleDIP(int w);
+void FCEUI_VSUniCoin(void);
+void FCEUI_ResetNES(void);
+void FCEUI_PowerNES(void);
+

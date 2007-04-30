@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,16 +28,31 @@
 DECLFW(Mapper113_write)
 {
         ROM_BANK32((V>>3)&7);
-        VROM_BANK8(V&7);
-        X6502_Rebase();
+        VROM_BANK8(((V>>3)&8)|(V&7));
+        //printf("$%04x:$%02x\n",A,V);
 }
 
 
 /*      Deathbots */
 DECLFW(Mapper113_writeh)
 {
-        ROM_BANK32(V&0xF);
-        X6502_Rebase();
+        //printf("$%04x:$%02x\n",A,V);
+ //       ROM_BANK32(V&0x7);
+        //VROM_BANK8((V>>4)&0x7);
+        switch(A) {
+                case        0x8008:
+                case        0x8009:
+                        ROM_BANK32(V>>3);
+                        VROM_BANK8(((V>>3)&0x08)+(V&0x07) );
+                        break;
+                case        0x8E66:
+                case        0x8E67:
+                        VROM_BANK8( (V&0x07)?0:1 );
+                        break;
+                case        0xE00A:
+                        MIRROR_SET2( 2 );
+                        break;
+        }
 }
 
 

@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +20,20 @@
 
 #include "mapinc.h"
 
-void FP_FASTAPASS(1) m83IRQHook(int a)
+
+/*void Mapper83_init(void)
+{             
+ 
+} 
+*/
+static void FP_FASTAPASS(1) m83IRQHook(int a)
 {
   if(IRQa)
   {
    IRQCount-=a;
    if(IRQCount<0)
    {
-    TriggerIRQ();
+    X6502_IRQBegin(FCEU_IQEXT);
     IRQa=0;
     IRQCount=0xFFFF;
    }
@@ -46,9 +52,8 @@ static DECLFR(rdlow)
 
 static void m83prg(void)
 {
-  ROM_BANK16(0x8000,mapbyte1[0]&0x3F);
+  ROM_BANK16(0x8000,(mapbyte1[0]&0x3F)); 
   ROM_BANK16(0xC000,(mapbyte1[0]&0x30)|0xF);
-  X6502_Rebase();
 }
 
 static void m83chr(void)
@@ -82,11 +87,11 @@ static DECLFW(Mapper83_write)
               case 0x03:onemir(1);break;
               }
               break;
-  case 0x8200:IRQCount&=0xFF00;IRQCount|=V;break;
+  case 0x8200:IRQCount&=0xFF00;IRQCount|=V;X6502_IRQEnd(FCEU_IQEXT);break;
   case 0x8201:IRQa=1;IRQCount&=0xFF;IRQCount|=V<<8;break;
-  //case 0x8300:ROM_BANK8(0x8000,V);break;
-  //case 0x8301:ROM_BANK8(0xA000,V);break;
-  //case 0x8302:ROM_BANK8(0xC000,V);break;
+  case 0x8300:ROM_BANK8(0x8000,V);break;
+  case 0x8301:ROM_BANK8(0xA000,V);break;
+  case 0x8302:ROM_BANK8(0xC000,V);break;
   case 0x8310:mapbyte2[0]=V;m83chr();break;
   case 0x8311:mapbyte2[1]=V;m83chr();break;
   case 0x8312:mapbyte2[2]=V;m83chr();break;
@@ -95,14 +100,14 @@ static DECLFW(Mapper83_write)
   case 0x8315:mapbyte2[5]=V;m83chr();break;
   case 0x8316:mapbyte2[6]=V;m83chr();break;
   case 0x8317:mapbyte2[7]=V;m83chr();break;
+  case 0x8318:mapbyte1[1]=V;m83prg();break;
  }
 // printf("$%04x:$%02x, $%04x\n",A,V,X.PC.W);
-
+ 
 }
 
 void Mapper83_init(void)
 {
-
  ROM_BANK8(0xc000,0x1e);
  ROM_BANK8(0xe000,0x1f);
 
@@ -111,4 +116,5 @@ void Mapper83_init(void)
  SetReadHandler(0x5100,0x5103,rdlow);
  SetWriteHandler(0x5100,0x5103,wrlow);
  SetWriteHandler(0x8000,0xffff,Mapper83_write);
+ mapbyte1[1]=0xF;
 }

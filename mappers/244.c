@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2003 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,27 +20,19 @@
 
 #include "mapinc.h"
 
-uint8 doh;
-
-static DECLFW(Mapper249_write)
+static DECLFW(Mapper244_write_1)
 {
- switch(A&0xe001)
- {
-  case 0x8000:doh=V;break;
-  case 0x8001:switch(doh&7)
-		{
-		 case 0:VROM_BANK2(0x0000,V>>1);break;
-		 case 1:VROM_BANK2(0x0800,V>>1);break;
-		 case 2:VROM_BANK1(0x1000,V);break;
-//		 case 6:ROM_BANK8(0xa000,V);break;
-//		 case 2:ROM_BANK8(0x8000,V);break;
-		}
- }
-// printf("$%04x:$%02x\n",A,V);
+  ROM_BANK32((A-0x8065)&0x03);
 }
 
-void Mapper249_init(void)
+static DECLFW(Mapper244_write_2)
 {
-  SetWriteHandler(0x8000,0xffff,Mapper249_write);
+  VROM_BANK8((A-0x80A5)&0x07);
 }
 
+void Mapper244_init(void)
+{
+  ROM_BANK32(0);
+  SetWriteHandler(0x8065,0x80a4,Mapper244_write_1);
+  SetWriteHandler(0x80a5,0x80e4,Mapper244_write_2);
+}

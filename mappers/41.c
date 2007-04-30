@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,24 +28,29 @@ DECLFW(Mapper41_write)
 {
  if(A<0x8000)
  {
- ROM_BANK32(A&7);
- X6502_Rebase();
- MIRROR_SET((A>>5)&1);
- calreg=A;
- calchr&=0x3;
- calchr|=(A>>1)&0xC;
- VROM_BANK8(calchr);
+  ROM_BANK32(A&7);
+  MIRROR_SET((A>>5)&1);
+  calreg=A;
+  calchr&=0x3;
+  calchr|=(A>>1)&0xC;
+  VROM_BANK8(calchr);
  }
  else if(calreg&0x4)
  {
- calchr&=0xC;
- calchr|=A&3;
- VROM_BANK8(calchr);
+  calchr&=0xC;
+  calchr|=A&3;
+  VROM_BANK8(calchr);
  }
+}
+
+static void M41Reset(void)
+{
+ calreg=calchr=0;
 }
 
 void Mapper41_init(void)
 {
+ MapperReset=M41Reset;
  ROM_BANK32(0);
  SetWriteHandler(0x8000,0xffff,Mapper41_write);
  SetWriteHandler(0x6000,0x67ff,Mapper41_write);

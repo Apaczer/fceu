@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@
 #define K4buf mapbyte2
 #define K4IRQ mapbyte1[1]
 #define K4sel mapbyte1[0]
-
-DECLFW(Mapper23_write)
+static int acount=0;
+static DECLFW(Mapper23_write)
 {
  if((A&0xF000)==0x8000)
  {
@@ -32,13 +32,9 @@ DECLFW(Mapper23_write)
    ROM_BANK8(0xC000,V);
   else
    ROM_BANK8(0x8000,V);
-  X6502_Rebase();
- }
-  else if((A&0xF000)==0xA000)
-  {
-   ROM_BANK8(0xA000,V);
-   X6502_Rebase();
   }
+  else if((A&0xF000)==0xA000)
+   ROM_BANK8(0xA000,V);
   else
   {
    A|=((A>>2)&0x3)|((A>>4)&0x3)|((A>>6)&0x3);
@@ -56,7 +52,7 @@ DECLFW(Mapper23_write)
     {
      case 0xf000:X6502_IRQEnd(FCEU_IQEXT);IRQLatch&=0xF0;IRQLatch|=V&0xF;break;
      case 0xf001:X6502_IRQEnd(FCEU_IQEXT);IRQLatch&=0x0F;IRQLatch|=V<<4;break;
-     case 0xf002:X6502_IRQEnd(FCEU_IQEXT);IRQCount=IRQLatch;IRQa=V&2;K4IRQ=V&1;break;
+     case 0xf002:X6502_IRQEnd(FCEU_IQEXT);acount=0;IRQCount=IRQLatch;IRQa=V&2;K4IRQ=V&1;break;
      case 0xf003:X6502_IRQEnd(FCEU_IQEXT);IRQa=K4IRQ;break;
      case 0x9001:
      case 0x9002:
@@ -67,34 +63,34 @@ DECLFW(Mapper23_write)
                   swa=PRGBankList[0];
                   ROM_BANK8(0x8000,PRGBankList[2]);
                   ROM_BANK8(0xc000,swa);
-                  X6502_Rebase();
                  }
                  K4sel=V;
                  break;
      case 0x9000:
-     		switch(V&0x3)
-	        {
+            if(V!=0xFF)
+                     switch(V&0x3)
+                {
                  case 0:MIRROR_SET(0);break;
-	         case 1:MIRROR_SET(1);break;
-        	 case 2:onemir(0);break;
-	         case 3:onemir(1);break;
-        	}
-	        break;
+                      case 1:MIRROR_SET(1);break;
+                     case 2:onemir(0);break;
+                     case 3:onemir(1);break;
+                }
+                break;
   }
  }
 }
 
 void FP_FASTAPASS(1) KonamiIRQHook2(int a)
 {
-  static int acount=0;
+  #define LCYCS 341
   if(IRQa)
-   {
-    acount+=(a<<1)+a;
-    if(acount>=342)
+  {
+   acount+=a*3;
+    if(acount>=LCYCS)
     {
-     doagainbub:acount-=342;IRQCount++;
+     doagainbub:acount-=LCYCS;IRQCount++;
      if(IRQCount&0x100) {X6502_IRQBegin(FCEU_IQEXT);IRQCount=IRQLatch;}
-     if(acount>=342) goto doagainbub;
+     if(acount>=LCYCS) goto doagainbub;
     }
  }
 }

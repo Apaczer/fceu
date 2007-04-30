@@ -139,8 +139,8 @@ static uint8 StateShow=0;
 uint8 Exit=0;
 
 uint8 DIPS=0;
-uint8 vsdip=0;
-int coinon=0;
+//uint8 vsdip=0;
+//int coinon=0;
 
 uint8 pale=0;
 uint8 CommandQueue=0;
@@ -249,11 +249,11 @@ void DriverInterface(int w, void *d)
   case DES_FDSINSERT:if(netplay!=2) CommandQueue=2;break;
   case DES_FDSEJECT:if(netplay!=2) CommandQueue=3;break;
   case DES_FDSSELECT:if(netplay!=2) CommandQueue=1;break;
-
+/*
   case DES_NSFINC:NSFControl(1);break;
   case DES_NSFDEC:NSFControl(2);break;
   case DES_NSFRES:NSFControl(0);break;
-
+*/
   case DES_VSUNIDIPSET:CommandQueue=10+(int)d;break;
   case DES_VSUNITOGGLEDIPVIEW:CommandQueue=10;break;
   case DES_VSUNICOIN:CommandQueue=19;break;
@@ -538,6 +538,7 @@ void WritePalette(void)
     }
 }
 
+#if 0
 void FlushCommandQueue(void)
 {
   if(!netplay && CommandQueue) {DoCommand(CommandQueue);CommandQueue=0;}
@@ -569,3 +570,5 @@ void DoCommand(uint8 c)
   case 50: case 51:StateShow=180;CurrentState=c-42;CheckStates();break;
  }
 }
+#endif
+

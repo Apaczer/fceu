@@ -2,7 +2,7 @@
  *
  * Copyright notice for this file:
  *  Copyright (C) 1998 BERO
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,48 +22,63 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef GP2X
-#include <unistd.h>
-#endif
 
 #include "types.h"
 #include "x6502.h"
 #include "fce.h"
+#include "cart.h"
+#include "ppu.h"
+
 #define INESPRIV
 #include "ines.h"
-#include "version.h"
-#include "svga.h"
+#include "unif.h"
 #include "general.h"
 #include "state.h"
 #include "file.h"
 #include "memory.h"
-#include "cart.h"
 #include "crc32.h"
+#include "md5.h"
 #include "cheat.h"
+#include "vsuni.h"
 
-static DECLFR(VSRead);
+#include "driver.h"
+#include "svga.h"
+
+extern SFORMAT FCEUVSUNI_STATEINFO[];
 
 static uint8 *trainerpoo=0;
 static uint8 *ROM=NULL;
+//static
 uint8 *VROM=NULL;
 
+static CartInfo iNESCart;
 
-static uint32 ROM_size;
-uint32 VROM_size;
+uint8 iNESMirroring=0;
+uint16 iNESCHRBankList[8]={0,0,0,0,0,0,0,0};
+int32 iNESIRQLatch=0,iNESIRQCount=0;
+uint8 iNESIRQa=0;
 
-static void CheckVSUni(void);
-static int MMC_init(int type);
+uint32 ROM_size=0;
+uint32 VROM_size=0;
+
+static void iNESPower(void);
+static int NewiNES_Init(int num);
+
 void (*MapClose)(void);
 void (*MapperReset)(void);
 
-static int MapperNo;
-static int SaveGame=0;
+static int MapperNo=0;
 
 static iNES_HEADER head;
 
 /*  MapperReset() is called when the NES is reset(with the reset button).
     Mapperxxx_init is called when the NES has been powered on.
 */
+
+static DECLFR(TrainerRead)
+{
+ return(trainerpoo[A&0x1FF]);
+}
 
 static void iNESGI(int h)
 {
@@ -72,86 +87,49 @@ static void iNESGI(int h)
   case GI_RESETM2:
 		if(MapperReset)
 		 MapperReset();
+		if(iNESCart.Reset)
+		 iNESCart.Reset();
 		break;
   case GI_POWER:
-		SetReadHandler(0x8000,0xFFFF,CartBR);
-                MMC_init(MapperNo);
+                if(iNESCart.Power)
+                 iNESCart.Power();
+		if(trainerpoo)
+		{
+		 int x;
+		 for(x=0;x<512;x++)
+		 {
+		  //X6502_DMW(0x7000+x,trainerpoo[x]);
+		  //if(X6502_DMR(0x7000+x)!=trainerpoo[x])
+		  unsigned int A=0x7000+x;
+		  BWrite[A](A,trainerpoo[x]);
+		  if(ARead[A](A)!=trainerpoo[x])
+		  {
+                    SetReadHandler(0x7000,0x71FF,TrainerRead);
+		    break;
+		  }
+		 }
+		}
 		break;
   case GI_CLOSE:
 		{
-	         FILE *sp;
+                 FCEU_SaveGameSave(&iNESCart);
 
+		 if(iNESCart.Close) iNESCart.Close();
 	 	 if(ROM) {free(ROM);ROM=0;}
 		 if(VROM) {free(VROM);VROM=0;}
-
-        	 if(SaveGame)
-        	 {
-	 	  char *soot;
-	          SaveGame=0;
-	          soot=FCEU_MakeFName(FCEUMKF_SAV,0,"sav");
-	          sp=fopen(soot,"wb");
-	          if (sp==NULL)
- 	           FCEU_PrintError("WRAM file \"%s\" cannot be written to.\n",soot);
-	          else
-	          {
-		   void *ptr;
-		   uint32 amount;
-		   ptr=WRAM;
-		   amount=8192;
-
-	           if(MapperNo==1)
-         	   {
-	             extern uint8 MMC1WRAMsize;
-         	     if(MMC1WRAMsize==2) ptr=WRAM+8192;
-	           }
-	           else if(MapperNo==5)
-        	   {
-	            extern uint8 MMC5WRAMsize;
-        	    if(MMC5WRAMsize==4)
-	             amount=32768;
-        	   }
-
-		   fwrite(ptr,1,amount,sp);
-	           fclose(sp);
-#ifdef GP2X
-		   sync();
-#endif
-	          }
-        	 }
 	         if(MapClose) MapClose();
-		 if(trainerpoo) {free(trainerpoo);trainerpoo=0;}
+		 if(trainerpoo) {FCEU_gfree(trainerpoo);trainerpoo=0;}
 	        }
         	break;
      }
 }
 
-uint32 iNESGameCRC32;
+uint32 iNESGameCRC32=0;
 
-struct CRCMATCH	{
+struct CRCMATCH  {
 	uint32 crc;
 	char *name;
 };
-
-static void CheckBad(void)
-{
- int x;
- #define CRCNT	7
- struct CRCMATCH tab[CRCNT]={
-	{0x28d183ac,"Antarctic Adventure"},
-	{0x7095ac65,"Akumajo Densetsu"},
-	{0x1bd7ed5a,"Gradius 2"},
-	{0x81c3aa66,"Crisis Force"},
-	{0xfe3088df,"Fire Emblem Gaiden"},
-	{0xfa8339a5,"Bucky O'Hare"},
-	{0x3c539d78,"Ganbare Goemon 2"},
-	};
-  for(x=0;x<CRCNT;x++)
-   if(tab[x].crc == iNESGameCRC32)
-   {
-    FCEU_PrintError("The copy of the game you have loaded, %s, is a bad dump, has been hacked, or both.  It will not work correctly on FCE Ultra.  Use a good copy of the ROM image instead.",tab[x].name);
-    break;
-   }
-}
 
 struct INPSEL {
 	uint32 crc32;
@@ -165,27 +143,82 @@ static void SetInput(void)
 {
  static struct INPSEL moo[]=
 	{
-	 {0xad9c63e2,SI_GAMEPAD,-1,SIFC_SHADOW},	/* Space Shadow */
-	 {0x24598791,-1,SI_ZAPPER,0},	/* Duck Hunt */
+         {0x3a1694f9,SI_GAMEPAD,SI_GAMEPAD,SIFC_4PLAYER},       /* Nekketsu Kakutou Densetsu */
+
+#if 0
+   {0xc3c0811d,SI_GAMEPAD,SI_GAMEPAD,SIFC_OEKAKIDS},  /* The two "Oeka Kids" games */
+   {0x9d048ea4,SI_GAMEPAD,SI_GAMEPAD,SIFC_OEKAKIDS},  /*           */
+
+   {0xaf4010ea,SI_GAMEPAD,SI_POWERPADB,-1},  /* World Class Track Meet */
+   {0xd74b2719,SI_GAMEPAD,SI_POWERPADB,-1},  /* Super Team Games */
+   {0x61d86167,SI_GAMEPAD,SI_POWERPADB,-1},  /* Street Cop */
+   {0x6435c095,SI_GAMEPAD,SI_POWERPADB,-1},      /* Short Order/Eggsplode */
+
+
+   {0x47232739,SI_GAMEPAD,SI_GAMEPAD,SIFC_TOPRIDER},  /* Top Rider */
+
+	 {0x48ca0ee1,SI_GAMEPAD,SI_GAMEPAD,SIFC_BWORLD},    /* Barcode World */
+	 {0x9f8f200a,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERA}, /* Super Mogura Tataki!! - Pokkun Moguraa */
+	 {0x9044550e,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERA}, /* Rairai Kyonshizu */
+	 {0x2f128512,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERA}, /* Jogging Race */
+	 {0x60ad090a,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERA}, /* Athletic World */
+
+	 {0x8a12a7d9,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB}, /* Totsugeki Fuuun Takeshi Jou */
+	 {0xea90f3e2,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB}, /* Running Stadium */
+	 {0x370ceb65,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB}, /* Meiro Dai Sakusen */
+	 // Bad dump? {0x69ffb014,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB}, /* Fuun Takeshi Jou 2 */
+	 {0x6cca1c1f,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB}, /* Dai Undoukai */
+	 {0x29de87af,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB},  /* Aerobics Studio */
+         {0xbba58be5,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB},  /* Family Trainer: Manhattan Police */
+	 {0xea90f3e2,SI_GAMEPAD,SI_GAMEPAD,SIFC_FTRAINERB},  /* Family Trainer:  Running Stadium */
+
+	 {0xd9f45be9,SI_GAMEPAD,SI_GAMEPAD,SIFC_QUIZKING},  /* Gimme a Break ... */
+	 {0x1545bd13,SI_GAMEPAD,SI_GAMEPAD,SIFC_QUIZKING},  /* Gimme a Break ... 2 */
+
+	 {0x7b44fb2a,SI_GAMEPAD,SI_GAMEPAD,SIFC_MAHJONG},  /* Ide Yousuke Meijin no Jissen Mahjong 2 */
+	 {0x9fae4d46,SI_GAMEPAD,SI_GAMEPAD,SIFC_MAHJONG},  /* Ide Yousuke Meijin no Jissen Mahjong */
+
+	 {0x980be936,SI_GAMEPAD,SI_GAMEPAD,SIFC_HYPERSHOT}, /* Hyper Olympic */
+	 {0x21f85681,SI_GAMEPAD,SI_GAMEPAD,SIFC_HYPERSHOT}, /* Hyper Olympic (Gentei Ban) */
+	 {0x915a53a7,SI_GAMEPAD,SI_GAMEPAD,SIFC_HYPERSHOT}, /* Hyper Sports */
+#endif
+   {0xad9c63e2,SI_GAMEPAD,-1,SIFC_SHADOW},  /* Space Shadow */
+
+   {0x24598791,-1,SI_ZAPPER,0},  /* Duck Hunt */
 	 {0xff24d794,-1,SI_ZAPPER,0},   /* Hogan's Alley */
-	 {0xbeb8ab01,-1,SI_ZAPPER,0},	/* Gumshoe */
-	 {0xde8fd935,-1,SI_ZAPPER,0},	/* To the Earth */
-	 {0xedc3662b,-1,SI_ZAPPER,0},	/* Operation Wolf */
-	 {0x23d17f5e,SI_GAMEPAD,SI_ZAPPER,0},	/* The Lone Ranger */
+   {0xbeb8ab01,-1,SI_ZAPPER,0},  /* Gumshoe */
+   {0xde8fd935,-1,SI_ZAPPER,0},  /* To the Earth */
+   {0xedc3662b,-1,SI_ZAPPER,0},  /* Operation Wolf */
+   {0x2a6559a1,-1,SI_ZAPPER,0},  /* Operation Wolf (J) */
+
+   {0x23d17f5e,SI_GAMEPAD,SI_ZAPPER,0},  /* The Lone Ranger */
 	 {0xb8b9aca3,-1,SI_ZAPPER,0},  /* Wild Gunman */
 	 {0x5112dc21,-1,SI_ZAPPER,0},  /* Wild Gunman */
 	 {0x4318a2f8,-1,SI_ZAPPER,0},  /* Barker Bill's Trick Shooting */
 	 {0x5ee6008e,-1,SI_ZAPPER,0},  /* Mechanized Attack */
 	 {0x3e58a87e,-1,SI_ZAPPER,0},  /* Freedom Force */
-	 {0x851eb9be,SI_GAMEPAD,SI_ZAPPER,0},	/* Shooting Range */
-	 {0x74bea652,SI_GAMEPAD,SI_ZAPPER,0},	/* Supergun 3-in-1 */
+   {0x851eb9be,SI_GAMEPAD,SI_ZAPPER,0},  /* Shooting Range */
+   {0x74bea652,SI_GAMEPAD,SI_ZAPPER,0},  /* Supergun 3-in-1 */
 	 {0x32fb0583,-1,SI_ARKANOID,0}, /* Arkanoid(NES) */
 	 {0xd89e5a67,-1,-1,SIFC_ARKANOID}, /* Arkanoid (J) */
 	 {0x0f141525,-1,-1,SIFC_ARKANOID}, /* Arkanoid 2(J) */
 
-	 {0xf7606810,-1,-1,SIFC_FKB},	/* Family BASIC 2.0A */
-	 {0x895037bc,-1,-1,SIFC_FKB},	/* Family BASIC 2.1a */
-	 {0xb2530afc,-1,-1,SIFC_FKB},	/* Family BASIC 3.0 */
+   {0x912989dc,-1,-1,SIFC_FKB},  /* Playbox BASIC */
+   {0xf7606810,-1,-1,SIFC_FKB},  /* Family BASIC 2.0A */
+   {0x895037bc,-1,-1,SIFC_FKB},  /* Family BASIC 2.1a */
+   {0xb2530afc,-1,-1,SIFC_FKB},  /* Family BASIC 3.0 */
+#if 0
+   {0x82f1fb96,-1,-1,SIFC_SUBORKB},  /* Subor 1.0 Russian */
+   {0xabb2f974,-1,-1,SIFC_SUBORKB},  /* Study and Game 32-in-1 */
+   {0xd5d6eac4,-1,-1,SIFC_SUBORKB},  /* Edu (As) */
+   {0x589b6b0d,-1,-1,SIFC_SUBORKB},  /* SuporV20 */
+     {0x5e073a1b,-1,-1,SIFC_SUBORKB},  /* Supor English (Chinese) */
+    {0x8b265862,-1,-1,SIFC_SUBORKB},
+   {0x41401c6d,-1,-1,SIFC_SUBORKB},  /* SuporV40 */
+     {0x41ef9ac4,-1,-1,SIFC_SUBORKB},
+     {0x368c19a8,-1,-1,SIFC_SUBORKB},   /* LIKO Study Cartridge */
+   {0x543ab532,-1,-1,SIFC_SUBORKB},   /* LIKO Color Lines */
+#endif
 	 {0,-1,-1,-1}
 	};
  int x=0;
@@ -203,142 +236,123 @@ static void SetInput(void)
  }
 }
 
+#define INESB_INCOMPLETE  1
+#define INESB_CORRUPT     2
+#define INESB_HACKED      4
+
+struct BADINF {
+	uint64 md5partial;
+	char *name;
+	uint32 type;
+};
+
+
+static struct BADINF BadROMImages[]=
+{
+ #include "ines-bad.h"
+};
+
+void CheckBad(uint64 md5partial)
+{
+ int x;
+
+ x=0;
+ //printf("0x%llx\n",md5partial);
+ while(BadROMImages[x].name)
+ {
+  if(BadROMImages[x].md5partial == md5partial)
+  {
+   FCEU_PrintError("The copy game you have loaded, \"%s\", is bad, and will not work properly on FCE Ultra.", BadROMImages[x].name);
+   return;
+  }
+  x++;
+ }
+
+}
+
+
 struct CHINF {
 	uint32 crc32;
 	int32 mapper;
 	int32 mirror;
 };
 
-#define SAVCNT	14
 static void CheckHInfo(void)
 {
  /* ROM images that have the battery-backed bit set in the header that really
     don't have battery-backed RAM is not that big of a problem, so I'll
-    treat this differently.
+    treat this differently by only listing games that should have battery-backed RAM.
+
+    Lower 64 bits of the MD5 hash.
  */
 
- static uint32 savie[SAVCNT]=
+ static uint64 savie[]=
 	{
-	 0x7cab2e9b,0x3ee43cda,0xe1383deb,	/* Mouryou Senki Madara */
-	 0x3b3f88f0,0x2545214c,			/* Dragon Warrior PRG 0 and 1 */
-	 0x8c5a784e,	/* DW 2 */
-	 0xa86a5318,	/* DW 3 */
-	 0x506e259d,    /* DW 4 */
-	 0xcebd2a31,0xb8b88130, /* Final Fantasy */
-	 0x466efdc2,	/* FF(J) */
-	 0xc9556b36,	/* FF1+2*/
-	 0xd29db3c7,	/* FF2 */
-	 0x57e220d0,	/* FF3 */
+   0x498c10dc463cfe95LL,  /* Battle Fleet */
+   0x6917ffcaca2d8466LL,  /* Famista '90 */
+
+         0xd63dcc68c2b20adcLL,    /* Final Fantasy J */
+         0x012df596e2b31174LL,    /* Final Fantasy 1+2 */
+         0xf6b359a720549ecdLL,    /* Final Fantasy 2 */
+         0x5a30da1d9b4af35dLL,    /* Final Fantasy 3 */
+
+   0x2ee3417ba8b69706LL,  /* Hydlide 3*/
+
+   0xebbce5a54cf3ecc0LL,  /* Justbreed */
+
+   0x6a858da551ba239eLL,  /* Kaijuu Monogatari */
+   0xa40666740b7d22feLL,  /* Mindseeker */
+
+         0x77b811b2760104b9LL,    /* Mouryou Senki Madara */
+
+   0x11b69122efe86e8cLL,  /* RPG Jinsei Game */
+
+   0xa70b495314f4d075LL,  /* Ys 3 */
+
+
+   0xc04361e499748382LL,  /* AD&D Heroes of the Lance */
+   0xb72ee2337ced5792LL,  /* AD&D Hillsfar */
+   0x2b7103b7a27bd72fLL,  /* AD&D Pool of Radiance */
+
+ 	 0x854d7947a3177f57LL,    /* Crystalis */
+
+   0xb0bcc02c843c1b79LL,  /* DW */
+   0x4a1f5336b86851b6LL,  /* DW */
+
+   0x2dcf3a98c7937c22LL,  /* DW 2 */
+   0x733026b6b72f2470LL,  /* Dw 3 */
+   0x98e55e09dfcc7533LL,  /* DW 4*/
+   0x8da46db592a1fcf4LL,  /* Faria */
+   0x91a6846d3202e3d6LL,  /* Final Fantasy */
+   0xedba17a2c4608d20LL,  /* ""    */
+
+         0x94b9484862a26cbaLL,    /* Legend of Zelda */
+         0x04a31647de80fdabLL,    /*      ""      */
+
+         0x9aa1dc16c05e7de5LL,    /* Startropics */
+         0x1b084107d0878bd0LL,    /* Startropics 2*/
+
+         0x836c0ff4f3e06e45LL,    /* Zelda 2 */
+
+   0      /* Abandon all hope if the game has 0 in the lower 64-bits of its MD5 hash */
 	};
 
  static struct CHINF moo[]=
 	{
-	 {0xc68363f6,180,0},	/* Crazy Climber */
-	 {0xbe939fce,9,1},	/* Punchout*/
-	 {0x5e66eaea,13,1},	/* Videomation */
-	 {0xaf5d7aa2,-1,0},	/* Clu Clu Land */
-
-	 {0xc2730c30,34,0},	/* Deadly Towers */
-	 {0x932ff06e,34,1},	/* Classic Concentration */
-	 {0x4c7c1af3,34,1},	/* Caesar's Palace */
-	 {0x9ea1dc76,2,0},	/* Rainbow Islands */
-
-	 {0x9eefb4b4,4,8},	/* Pachi Slot Adventure 2 */
-	 {0x5337f73c,4,8},	/* Niji no Silk Road */
-	 {0x7474ac92,4,8},	/* Kabuki: Quantum Fighter */
-
-	 {0x970bd9c2,1,8},	/* Hanjuku Hero */
-
-	 {0xbb7c5f7a,89,8},	/* Mito Koumon or something similar */
-	 /* Probably a Namco MMC3-workalike */
-	 {0xa5e6baf9,4,1|4},	/* Dragon Slayer 4 */
-	 {0xe40b4973,4,1|4},	/* Metro Cross */
-         {0xd97c31b0,4,1|4},    /* Rasaaru Ishii no Childs Quest */
-
-	 {0x84382231,9,0},	/* Punch Out (J) */
-
-	 {0xfcdaca80,0,0},	/* Elevator Action */
-	 {0xe492d45a,0,0},	/* Zippy Race */
-	 {0x32fa246f,0,0},	/* Tag Team Pro Wrestling */
-	 {0x6d65cac6,2,0},	/* Terra Cresta */
-	 {0x28c11d24,2,1},	/* Sukeban Deka */
-         {0x02863604,2,1},      /* Sukeban Deka */
-         {0x2bb6a0f8,2,1},      /* Sherlock Holmes */
-	 {0x55773880,2,1},	/* Gilligan's Island */
-	 {0x419461d0,2,1},	/* Super Cars */
-	 {0x6e0eb43e,2,1},	/* Puss n Boots */
-	 {0xfc3e5c86,2,1},	/* Trojan */
-
-	 {0x291bcd7d,1,8},	/* Pachio Kun 2 */
-	 {0xf74dfc91,1,-1},	/* Win, Lose, or Draw */
-
-	 {0x59280bec,4,8},	/* Jackie Chan */
-
-	 {0xfe364be5,1,8},	/* Deep Dungeon 4 */
-	 {0xd8ee7669,1,8},	/* Adventures of Rad Gravity */
-	 {0xa5e8d2cd,1,8},	/* Breakthru */
-	 {0xf6fa4453,1,8},	/* Bigfoot */
-	 {0x37ba3261,1,8},	/* Back to the Future 2 and 3 */
-	 {0x934db14a,1,-1},	/* All-Pro Basketball */
-	 {0xe94d5181,1,8},	/* Mirai Senshi - Lios */
-	 {0x7156cb4d,1,8},	/* Muppet Adventure Carnival thingy */
-	 {0x5b6ca654,1,8},	/* Barbie rev X*/
-	 {0x57c12280,1,8},	/* Demon Sword */
-
-	 {0xcf322bb3,3,1},	/* John Elway's Quarterback */
-	 {0x9bde3267,3,1},	/* Adventures of Dino Riki */
-	 {0x02cc3973,3,8},	/* Ninja Kid */
-	 {0xb5d28ea2,3,1},	/* Mystery Quest - mapper 3?*/
-	 {0xbc065fc3,3,1},	/* Pipe Dream */
-
-	 {0x5b837e8d,1,8},	/* Alien Syndrome */
-	 {0x283ad224,32,8},	/* Ai Sensei no Oshiete */
-	 {0x5555fca3,32,8},	/* "" ""		*/
-	 {0x243a8735,32,0x10|4}, /* Major League */
-
-	 {0x6bc65d7e,66,1},	/* Youkai Club*/
-	 {0xc2df0a00,66,1},	/* Bio Senshi Dan(hacked) */
-	 {0xbde3ae9b,66,1},	/* Doraemon */
-	 {0xd26efd78,66,1},	/* SMB Duck Hunt */
-	 {0x811f06d9,66,1},	/* Dragon Power */
-
-	 {0x3293afea,66,1},	/* Mississippi Satsujin Jiken */
-	 {0xe84274c5,66,1},	/* "" "" */
-
-
-	 {0x6e68e31a,16,8},	/* Dragon Ball 3*/
-
-	 {0xba51ac6f,78,2},
-	 {0x3d1c3137,78,8},
-
-	 {0xbda8f8e4,152,8},	/* Gegege no Kitarou 2 */
-	 {0x026c5fca,152,8},	/* Saint Seiya Ougon Densetsu */
-	 {0x0f141525,152,8},	/* Arkanoid 2 (Japanese) */
-	 {0xb1a94b82,152,8},	/* Pocket Zaurus */
-
-	 {0x3f15d20d,153,8},	/* Famicom Jump 2 */
-
-	 {0xbba58be5,70,-1},	/* Family Trainer - Manhattan Police */
-	 {0x370ceb65,70,-1},	/* Family Trainer - Meiro Dai Sakusen */
-	 {0xdd8ed0f7,70,1},	/* Kamen Rider Club */
-
-	 {0x90c773c1,118,-1},	/* Goal! 2 */
-	 {0xb9b4d9e0,118,-1},	/* NES Play Action Football */
-	 {0x78b657ac,118,-1},	/* Armadillo */
-	 {0x37b62d04,118,-1},	/* Ys 3 */
-	 {0x07d92c31,118,-1},   /* RPG Jinsei Game */
-	 {0x2705eaeb,234,-1},	/* Maxi 15 */
-	 {0x404b2e8b,4,2},	/* Rad Racer 2 */
-
-	 {0x1356f6a6,4,8},	/* "Cattou Ninden Teyandee" English tranlation.
-				    Should I have even bothered to do this? */
-	 {0x50fd4fd6,4,8},	/* "" "" */
-
-	 {0xa912b064,51|0x800,8},	/* 11-in-1 Ball Games(has CHR ROM when it shouldn't) */
-	 {0,-1,-1}
+  #include "ines-correct.h"
 	};
  int tofix=0;
- int x=0;
+ int x;
+ uint64 partialmd5=0;
+
+ for(x=0;x<8;x++)
+ {
+  partialmd5 |= (uint64)iNESCart.MD5[15-x] << (x*8);
+  //printf("%16llx\n",partialmd5);
+ }
+ CheckBad(partialmd5);
+
+ x=0;
 
  do
  {
@@ -350,6 +364,7 @@ static void CheckHInfo(void)
     {
      VROM_size=0;
      free(VROM);
+     VROM=0;
      tofix|=8;
     }
     if(MapperNo!=(moo[x].mapper&0xFF))
@@ -362,7 +377,7 @@ static void CheckHInfo(void)
    {
     if(moo[x].mirror==8)
     {
-     if(Mirroring==2)	/* Anything but hard-wired(four screen). */
+     if(Mirroring==2)  /* Anything but hard-wired(four screen). */
      {
       tofix|=2;
       Mirroring=0;
@@ -371,7 +386,7 @@ static void CheckHInfo(void)
     else if(Mirroring!=moo[x].mirror)
     {
      if(Mirroring!=(moo[x].mirror&~4))
-      if((moo[x].mirror&~4)<=2)	/* Don't complain if one-screen mirroring
+      if((moo[x].mirror&~4)<=2)  /* Don't complain if one-screen mirroring
 				   needs to be set(the iNES header can't
 				   hold this information).
 				*/
@@ -384,9 +399,10 @@ static void CheckHInfo(void)
   x++;
  } while(moo[x].mirror>=0 || moo[x].mapper>=0);
 
- for(x=0;x<SAVCNT;x++)
+ x=0;
+ while(savie[x] != 0)
  {
-  if(savie[x]==iNESGameCRC32)
+  if(savie[x] == partialmd5)
   {
    if(!(head.ROM_type&2))
    {
@@ -394,6 +410,7 @@ static void CheckHInfo(void)
     head.ROM_type|=2;
    }
   }
+  x++;
  }
 
  /* Games that use these iNES mappers tend to have the four-screen bit set
@@ -404,6 +421,10 @@ static void CheckHInfo(void)
   Mirroring=0;
   tofix|=2;
  }
+
+ /* Four-screen mirroring implicitly set. */
+ if(MapperNo==99)
+  Mirroring=2;
 
  if(tofix)
  {
@@ -421,19 +442,26 @@ static void CheckHInfo(void)
   if(tofix&8)
    strcat(gigastr,"This game should not have any CHR ROM.  ");
   strcat(gigastr,"\n");
-  FCEUD_PrintError(gigastr);
+  FCEU_printf("%s",gigastr);
  }
 }
 
-int iNESLoad(char *name, int fp)
+typedef struct {
+	int mapper;
+	void (*init)(CartInfo *);
+} NewMI;
+
+int iNESLoad(const char *name, int fp)
 {
-        FILE *sp;
+        struct md5_context md5;
 
 	if(FCEU_fread(&head,1,16,fp)!=16)
  	 return 0;
 
         if(memcmp(&head,"NES\x1a",4))
          return 0;
+
+	memset(&iNESCart,0,sizeof(iNESCart));
 
         if(!memcmp((char *)(&head)+0x7,"DiskDude",8))
         {
@@ -453,10 +481,18 @@ int iNESLoad(char *name, int fp)
           memset((char *)(&head)+0xA,0,0x6);
         }
 
+//  int ROM_size=0;
         if(!head.ROM_size)
-         head.ROM_size++;
+	{
+//   FCEU_PrintError("No PRG ROM!");
+//   return(0);
+   ROM_size=256;
+         //head.ROM_size++;
+	}
+  else
+   ROM_size=head.ROM_size;
 
-        ROM_size = head.ROM_size;
+//    ROM_size = head.ROM_size;
         VROM_size = head.VROM_size;
 	ROM_size=uppow2(ROM_size);
 
@@ -465,14 +501,14 @@ int iNESLoad(char *name, int fp)
 
         MapperNo = (head.ROM_type>>4);
         MapperNo|=(head.ROM_type2&0xF0);
-
         Mirroring = (head.ROM_type&1);
+
 	if(head.ROM_type&8) Mirroring=2;
 
         if(!(ROM=(uint8 *)FCEU_malloc(ROM_size<<14)))
 	 return 0;
 
-        if (VROM_size)
+  if(VROM_size)
          if(!(VROM=(uint8 *)FCEU_malloc(VROM_size<<13)))
 	 {
 	  free(ROM);
@@ -481,13 +517,15 @@ int iNESLoad(char *name, int fp)
 
         memset(ROM,0xFF,ROM_size<<14);
         if(VROM_size) memset(VROM,0xFF,VROM_size<<13);
-        if(head.ROM_type&4) 	/* Trainer */
+  if(head.ROM_type&4)   /* Trainer */
 	{
-	 if(!(trainerpoo=FCEU_malloc(512)))
-	  return(0);
+	 trainerpoo=(uint8 *)FCEU_gmalloc(512);
  	 FCEU_fread(trainerpoo,512,1,fp);
 	}
+
 	ResetCartMapping();
+	ResetExState(0,0);
+
 	SetupCartPRGMapping(0,ROM,ROM_size*0x4000,0);
         SetupCartPRGMapping(1,WRAM,8192,1);
 
@@ -496,22 +534,48 @@ int iNESLoad(char *name, int fp)
 	if(VROM_size)
 	 FCEU_fread(VROM,0x2000,head.VROM_size,fp);
 
-        printf("File %s loaded.\n",name);
+        md5_starts(&md5);
+        md5_update(&md5,ROM,ROM_size<<14);
 
 	iNESGameCRC32=CalcCRC32(0,ROM,ROM_size<<14);
-	if(VROM_size)
-	 iNESGameCRC32=CalcCRC32(iNESGameCRC32,VROM,VROM_size<<13);
-        printf("\n PRG ROM:  %3d x 16k\n CHR ROM:  %3d x  8k\n ROM CRC32:  %08x\n Mapper:  %d\n Mirroring: %s\n",head.ROM_size,head.VROM_size,iNESGameCRC32,MapperNo,Mirroring==2?"None(Four-screen)":Mirroring?"Vertical":"Horizontal");
-        if(head.ROM_type&2) puts(" Battery-backed.");
-        if(head.ROM_type&4) puts(" Trained.");
-	puts("");
 
-	CheckBad();
+	if(VROM_size)
+	{
+	 iNESGameCRC32=CalcCRC32(iNESGameCRC32,VROM,VROM_size<<13);
+         md5_update(&md5,VROM,VROM_size<<13);
+	}
+	md5_finish(&md5,iNESCart.MD5);
+	memcpy(FCEUGameInfo.MD5,iNESCart.MD5,sizeof(iNESCart.MD5));
+
+	iNESCart.CRC32=iNESGameCRC32;
+
+        FCEU_printf(" PRG ROM:  %3d x 16KiB\n CHR ROM:  %3d x  8KiB\n ROM CRC32:  0x%08lx\n",
+		head.ROM_size,head.VROM_size,iNESGameCRC32);
+
+        {
+         int x;
+         FCEU_printf(" ROM MD5:  0x");
+         for(x=0;x<16;x++)
+          FCEU_printf("%02x",iNESCart.MD5[x]);
+         FCEU_printf("\n");
+        }
+	FCEU_printf(" Mapper:  %d\n Mirroring: %s\n", MapperNo,Mirroring==2?"None(Four-screen)":Mirroring?"Vertical":"Horizontal");
+        if(head.ROM_type&2) FCEU_printf(" Battery-backed.\n");
+        if(head.ROM_type&4) FCEU_printf(" Trained.\n");
+
 	SetInput();
 	CheckHInfo();
-	CheckVSUni();
-        //if(MapperNo!=4 && MapperNo!=118 && MapperNo!=119) exit(1); // Testing
+	{
+	 int x;
+	 uint64 partialmd5=0;
 
+	 for(x=0;x<8;x++)
+	 {
+	  partialmd5 |= (uint64)iNESCart.MD5[7-x] << (x*8);
+	 }
+
+	 FCEU_VSUniCheck(partialmd5, &MapperNo, &Mirroring);
+	}
 	/* Must remain here because above functions might change value of
 	   VROM_size and free(VROM).
 	*/
@@ -525,46 +589,126 @@ int iNESLoad(char *name, int fp)
 	else
          SetupCartMirroring(Mirroring&1,(Mirroring&4)>>2,0);
 
-        if(MapperNo==5) DetectMMC5WRAMSize();
-	else if(MapperNo==1) DetectMMC1WRAMSize();
+	iNESCart.battery=(head.ROM_type&2)?1:0;
+	iNESCart.mirror=Mirroring;
 
-        if(head.ROM_type&2)
-        {
-         char *soot;
+	//if(MapperNo != 18) {
+  //  if(ROM) free(ROM);
+  //  if(VROM) free(VROM);
+  //  ROM=VROM=0;
+  //  return(0);
+	// }
 
-         SaveGame=1;
-         soot=FCEU_MakeFName(FCEUMKF_SAV,0,"sav");
-         sp=fopen(soot,"rb");
-         if(sp!=NULL)
-         {
-	  void *ptr;
-	  uint32 amount;
+	if(NewiNES_Init(MapperNo))
+	{
 
-	  ptr=WRAM;
-	  amount=8192;
-	  if(MapperNo==1)
-	  {
-	   extern uint8 MMC1WRAMsize;
-	   if(MMC1WRAMsize==2) ptr=WRAM+8192;
-	  }
-	  else if(MapperNo==5)
-	  {
-	   extern uint8 MMC5WRAMsize;
-           if(MMC5WRAMsize==4)
-	    amount=32768;
-	  }
-          if(fread(ptr,1,amount,sp)==amount)
-           printf("  WRAM Save File \"%s\" loaded...\n",soot);
-          fclose(sp);
-         }
+	}
+	else
+	{
+	 iNESCart.Power=iNESPower;
+         if(head.ROM_type&2)
+	 {
+	  iNESCart.SaveGame[0]=WRAM;
+	  iNESCart.SaveGameLen[0]=8192;
+	 }
+	}
+	FCEU_LoadGameSave(&iNESCart);
 
-   }
 	GameInterface=iNESGI;
-        return 1;
+	FCEU_printf("\n");
+
+	// since apparently the iNES format doesn't store this information,
+	// guess if the settings should be PAL or NTSC from the ROM name
+	// TODO: MD5 check against a list of all known PAL games instead?
+	if(strstr(name,"(E)") || strstr(name,"(e)")
+	|| strstr(name,"(F)") || strstr(name,"(f)")
+	|| strstr(name,"(G)") || strstr(name,"(g)")
+	|| strstr(name,"(I)") || strstr(name,"(i)"))
+		FCEUI_SetVidSystem(1);
+	else
+		FCEUI_SetVidSystem(0);
+
+	return 1;
 }
 
-#include	"banksw.h"
+void FASTAPASS(2) VRAM_BANK1(uint32 A, uint8 V)
+{
+ V&=7;
+ PPUCHRRAM|=(1<<(A>>10));
+ CHRBankList[(A)>>10]=V;
+ VPage[(A)>>10]=&CHRRAM[V<<10]-(A);
+}
 
+void FASTAPASS(2) VRAM_BANK4(uint32 A, uint32 V)
+{
+ V&=1;
+ PPUCHRRAM|=(0xF<<(A>>10));
+ CHRBankList[(A)>>10]=(V<<2);
+ CHRBankList[((A)>>10)+1]=(V<<2)+1;
+ CHRBankList[((A)>>10)+2]=(V<<2)+2;
+ CHRBankList[((A)>>10)+3]=(V<<2)+3;
+ VPage[(A)>>10]=&CHRRAM[V<<10]-(A);
+}
+void FASTAPASS(2) VROM_BANK1(uint32 A,uint32 V)
+{
+ setchr1(A,V);
+ CHRBankList[(A)>>10]=V;
+}
+
+void FASTAPASS(2) VROM_BANK2(uint32 A,uint32 V)
+{
+ setchr2(A,V);
+ CHRBankList[(A)>>10]=(V<<1);
+ CHRBankList[((A)>>10)+1]=(V<<1)+1;
+}
+
+void FASTAPASS(2) VROM_BANK4(uint32 A, uint32 V)
+{
+ setchr4(A,V);
+ CHRBankList[(A)>>10]=(V<<2);
+ CHRBankList[((A)>>10)+1]=(V<<2)+1;
+ CHRBankList[((A)>>10)+2]=(V<<2)+2;
+ CHRBankList[((A)>>10)+3]=(V<<2)+3;
+}
+
+void FASTAPASS(1) VROM_BANK8(uint32 V)
+{
+ setchr8(V);
+ CHRBankList[0]=(V<<3);
+ CHRBankList[1]=(V<<3)+1;
+ CHRBankList[2]=(V<<3)+2;
+ CHRBankList[3]=(V<<3)+3;
+ CHRBankList[4]=(V<<3)+4;
+ CHRBankList[5]=(V<<3)+5;
+ CHRBankList[6]=(V<<3)+6;
+ CHRBankList[7]=(V<<3)+7;
+}
+
+void FASTAPASS(2) ROM_BANK8(uint32 A, uint32 V)
+{
+ setprg8(A,V);
+ if(A>=0x8000)
+  PRGBankList[((A-0x8000)>>13)]=V;
+}
+
+void FASTAPASS(2) ROM_BANK16(uint32 A, uint32 V)
+{
+ setprg16(A,V);
+ if(A>=0x8000)
+ {
+  PRGBankList[((A-0x8000)>>13)]=V<<1;
+  PRGBankList[((A-0x8000)>>13)+1]=(V<<1)+1;
+ }
+}
+
+void FASTAPASS(1) ROM_BANK32(uint32 V)
+{
+ setprg32(0x8000,V);
+ PRGBankList[0]=V<<2;
+ PRGBankList[1]=(V<<2)+1;
+ PRGBankList[2]=(V<<2)+2;
+ PRGBankList[3]=(V<<2)+3;
+}
 
 void FASTAPASS(1) onemir(uint8 V)
 {
@@ -601,148 +745,99 @@ static void NONE_init(void)
 	 setvram8(CHRRAM);
 }
 
-static uint8 secdata[2][32]=
-{
- {
-  0xff, 0xbf, 0xb7, 0x97, 0x97, 0x17, 0x57, 0x4f,
-  0x6f, 0x6b, 0xeb, 0xa9, 0xb1, 0x90, 0x94, 0x14,
-  0x56, 0x4e, 0x6f, 0x6b, 0xeb, 0xa9, 0xb1, 0x90,
-  0xd4, 0x5c, 0x3e, 0x26, 0x87, 0x83, 0x13, 0x00
- },
- {
-  0x00, 0x00, 0x00, 0x00, 0xb4, 0x00, 0x00, 0x00,
-  0x00, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x94, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
- }
-};
-
-static uint8 *secptr;
-
-static void CheckVSUni(void)
-{
-        FCEUGameInfo.type=GIT_VSUNI;
-
-	/* FCE Ultra doesn't complain when headers for these games are bad. */
-	secptr=0;
-	switch(iNESGameCRC32)
-	{
-	 default:FCEUGameInfo.type=0;break;
-
-	 case 0xffbef374: pale=1;break;	/* Castlevania */
-
-	 case 0x98e3c75a:
-	 case 0x7cff0f84: pale=2;break;	/* SMB */
-
-	 case 0xef7af338: pale=2;break; /* Ice Climber */
-	 case 0xabe1a0c2: FCEUGameInfo.input[0]=SI_ZAPPER;break; /*Duck hunt */
-	 case 0x16aa4e2d: pale=7;FCEUGameInfo.input[0]=SI_ZAPPER;break; /* hoganal ^_^ */
-	 case 0x2b85420e: pale=3;break; /* Dr Mario */
-
-	 case 0xfb0ddde7: pale=2;break;
-	 case 0xc95321a8: pale=6;break; /* Excitebike */
-	 case 0xb1c4c508: pale=1;break; /* Golf */
-
-	 case 0x66471efe: break;
-	 case 0xca3e9b1a: pale=7;break;	/* Pinball*/
-
-	 case 0xf735d926: pale=7; break; /* Gradius */
-
-	 case 0x2019fe65:
-	 case 0x31678411:MapperNo=68;pale=7;break; /* Platoon */
-
-	 case 0x74f713b4:pale=4;break; /* Goonies */
-	 case 0x9ae2baa0:pale=5;break; /* Slalom */
-	 case 0xe45485a5:secptr=secdata[1];vsdip=0x20;MapperNo=4;break; /* RBI Baseball */
-	 case 0x21a653c7:vsdip=0x20;MapperNo=4;break; /* Super Sky Kid */
-         case 0xe9a6f17d:vsdip=0x20;break; /* Tetris */
-
-         case 0x159ef3c1:break; /* Star Luster */
-         case 0x9768e5e0:break; /* Stroke and Match Golf */
-
-	 /* FCE Ultra doesn't have correct palettes for the following games. */
-	 case 0x0fa322c2:pale=2;break; /* Clu Clu Land */
-
-	 case 0x766c2cac:	/* Soccer */
-	 case 0x01357944:	/* Battle City */
-	 case 0xb2816bf9:break; /* Battle City (Bootleg) */
-
-	 case 0x832cf592:FCEUGameInfo.input[0]=SI_ZAPPER;break; /* Freedom Force */
-	 case 0x63abf889:break; /* Ladies Golf */
-	 case 0x8c0c2df5:pale=2;MapperNo=1;Mirroring=1;break; /* Top Gun */
-	 case 0x52c501d0:vsdip=0x80;MapperNo=4;secptr=secdata[0];break;
-			/* TKO Boxing */
-	}
-
-	if(MapperNo==99)
-	 Mirroring=2;
-}
-
-
-static int VSindex;
-
-static DECLFR(VSRead)
-{
- //printf("$%04x, $%04x\n",A,X.PC);
- switch(A)
- {
-  default:
-  case 0x5e00: VSindex=0;return 0xFF;
-  case 0x5e01: return(secptr[(VSindex++)&0x1F]);
- }
-}
-
-static void DoVSHooks(void)
-{
- if(secptr)
-  SetReadHandler(0x5e00,0x5e01,VSRead);
-}
-
 void (*MapInitTab[256])(void)=
 {
-	0,
-	Mapper1_init,Mapper2_init,Mapper3_init,Mapper4_init,
-	Mapper5_init,Mapper6_init,Mapper7_init,Mapper8_init,
-	Mapper9_init,Mapper10_init,Mapper11_init,0,
-	Mapper13_init,0,Mapper15_init,Mapper16_init,
-	Mapper17_init,Mapper18_init,Mapper19_init,0,
+    0,0,
+//    Mapper2_init,Mapper3_init,
+    0,0,
+    0,0,
+    Mapper6_init,Mapper7_init,Mapper8_init,Mapper9_init,
+    Mapper10_init,Mapper11_init,
+    0,
+//    Mapper13_init,
+    0,
+    0,
+    Mapper15_init,Mapper16_init,Mapper17_init,Mapper18_init,
+    0,0,
 	Mapper21_init,Mapper22_init,Mapper23_init,Mapper24_init,
-	Mapper25_init,Mapper26_init,0,0,
-	0,0,0,Mapper32_init,
-	Mapper33_init,Mapper34_init,0,0,
-	0,0,0,Mapper40_init,
-	Mapper41_init,Mapper42_init,Mapper43_init,Mapper44_init,
-	Mapper45_init,Mapper46_init,Mapper47_init,Mapper33_init,Mapper49_init,0,Mapper51_init,Mapper52_init,
-	0,0,0,0,0,0,0,0,
-	0,0,0,Mapper64_init,
-	Mapper65_init,Mapper66_init,Mapper67_init,Mapper68_init,
-	Mapper69_init,Mapper70_init,Mapper71_init,Mapper72_init,
-	Mapper73_init,0,Mapper75_init,Mapper76_init,
-	Mapper77_init,Mapper78_init,Mapper79_init,Mapper80_init,
-	0,Mapper82_init,Mapper83_init,0,
+    Mapper25_init,Mapper26_init,Mapper27_init,
+    0,0,0,0,
+    Mapper32_init,Mapper33_init,Mapper34_init,
+    0,0,0,0,0,
+    Mapper40_init,Mapper41_init,Mapper42_init,Mapper43_init,
+    0,0,
+    Mapper46_init,
+    0,
+    Mapper48_init,
+    0,
+    Mapper50_init,Mapper51_init,
+    0,0,0,0,0,
+    Mapper57_init,Mapper58_init,Mapper59_init,Mapper60_init,
+    Mapper61_init,Mapper62_init,
+    0,
+    Mapper64_init,Mapper65_init,Mapper66_init,Mapper67_init,
+    Mapper68_init,Mapper69_init,Mapper70_init,Mapper71_init,
+    Mapper72_init,Mapper73_init,
+    0,
+    Mapper75_init,Mapper76_init,Mapper77_init,Mapper78_init,
+    Mapper79_init,Mapper80_init,
+    0,
+    Mapper82_init,Mapper83_init,
+    0,
 	Mapper85_init,Mapper86_init,Mapper87_init,Mapper88_init,
-	Mapper89_init,Mapper90_init,0,Mapper92_init,
-	Mapper93_init,Mapper94_init,Mapper95_init,Mapper96_init,
-	Mapper97_init,0,Mapper99_init,0,
-	0,0,0,0,Mapper105_init,0,0,0,
-	0,0,0,Mapper112_init,Mapper113_init,0,0,0,
-	Mapper117_init,Mapper118_init,Mapper119_init,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,Mapper140_init,
-	0,0,0,0,0,0,0,0,
-	0,0,Mapper151_init,Mapper152_init,Mapper153_init,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,Mapper180_init,
-	0,Mapper182_init,0,Mapper184_init,Mapper185_init,0,0,0,
-	Mapper189_init,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,Mapper225_init,Mapper226_init,Mapper227_init,Mapper228_init,
-	Mapper229_init,0,0,Mapper232_init,0,Mapper234_init,Mapper43_init,0,
-	0,0,0,Mapper240_init,0,Mapper242_init,0,0,
-	Mapper245_init,Mapper246_init,0,Mapper248_init,Mapper249_init,Mapper250_init,0,0,0,0,0
+    Mapper89_init,
+    0,
+    Mapper91_init,Mapper92_init,Mapper93_init,Mapper94_init,
+    0,
+    Mapper96_init,Mapper97_init,
+    0,
+    Mapper99_init,
+    0,0,0,0,0,0,0,
+    Mapper107_init,
+    0,0,0,0,
+    0,Mapper113_init,
+    0,0,0,
+    Mapper117_init,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    Mapper140_init,
+    0,0,0,
+    Mapper144_init,
+    0,0,0,0,0,0,
+    Mapper151_init,Mapper152_init,Mapper153_init,Mapper154_init,
+    0,
+    Mapper156_init,Mapper157_init,Mapper158_init,0,
+    0,0,0,0,0,0,
+    Mapper166_init,Mapper167_init,
+    0,0,0,0,0,0,0,0,0,0,0,0,
+    Mapper180_init,
+    0,0,0,
+    Mapper184_init,Mapper185_init,
+    0,0,0,
+    Mapper189_init,
+    0,
+//    Mapper191_init,
+    0,
+    0,
+    Mapper193_init,
+    0,0,0,0,0,0,
+    Mapper200_init,Mapper201_init,Mapper202_init,Mapper203_init,
+    Mapper204_init,
+    0,0,
+    Mapper207_init,
+    0,0,0,
+    Mapper211_init,Mapper212_init,Mapper213_init,Mapper214_init,
+    0,0,0,0,0,0,0,0,0,0,
+    Mapper225_init,Mapper226_init,Mapper227_init,Mapper228_init,
+    Mapper229_init,Mapper230_init,Mapper231_init,Mapper232_init,
+    0,
+    Mapper234_init,Mapper235_init,
+    0,0,0,0,
+    Mapper240_init,Mapper241_init,Mapper242_init,0,
+    Mapper244_init,
+    0,
+    Mapper246_init,
+    0,0,0,0,0,0,0,0,
+    Mapper255_init
 };
 
 static DECLFW(BWRAM)
@@ -754,6 +849,13 @@ static DECLFR(AWRAM)
 {
                 return WRAM[A-0x6000];
 }
+
+#ifdef DEBUG_MAPPER
+static DECLFW(WriteHandler)
+{
+ FCEU_printf("$%04x:$%02x\n",A,V);
+}
+#endif
 
 void (*MapStateRestore)(int version);
 void iNESStateRestore(int version)
@@ -769,7 +871,7 @@ void iNESStateRestore(int version)
   for(x=0;x<8;x++)
     setchr1(0x400*x,CHRBankList[x]);
 
- switch(Mirroring)
+if(0) switch(Mirroring)
  {
    case 0:setmirror(MI_H);break;
    case 1:setmirror(MI_V);break;
@@ -781,10 +883,12 @@ void iNESStateRestore(int version)
  if(MapStateRestore) MapStateRestore(version);
 }
 
-static int MMC_init(int type)
+static void iNESPower(void)
 {
         int x;
+	int type=MapperNo;
 
+        SetReadHandler(0x8000,0xFFFF,CartBR);
         GameStateRestore=iNESStateRestore;
         MapClose=0;
 	MapperReset=0;
@@ -796,45 +900,28 @@ static int MMC_init(int type)
         SetWriteHandler(0x6000,0x7FFF,BWRAM);
         FCEU_CheatAddRAM(8,0x6000,WRAM);
 
+    #ifdef DEBUG_MAPPER
+    if(type==0) SetWriteHandler(0x4020,0xFFFF,WriteHandler);
+    #endif
+
 	/* This statement represents atrocious code.  I need to rewrite
 	   all of the iNES mapper code... */
 	IRQCount=IRQLatch=IRQa=0;
         if(head.ROM_type&2)
-	{
-	 extern uint8 MMC5WRAMsize,MMC1WRAMsize;
-	 if(type==5 && MMC5WRAMsize==4)
-	  memset(GameMemBlock+32768,0,sizeof(GameMemBlock)-32768);
-	 else if(type==1 && MMC1WRAMsize==2)
-	 {
-	  memset(GameMemBlock,0,8192);
-	  memset(GameMemBlock+16384,0,sizeof(GameMemBlock)-16384);
-	 }
-	 else
-          memset(GameMemBlock+8192,0,sizeof(GameMemBlock)-8192);
-	}
+         memset(GameMemBlock+8192,0,sizeof(GameMemBlock)-8192);
 	else
          memset(GameMemBlock,0,sizeof(GameMemBlock));
-        if(head.ROM_type&4)
-	 memcpy(WRAM+4096,trainerpoo,512);
 
         NONE_init();
 
-	if(FCEUGameInfo.type==GIT_VSUNI)
-	 DoVSHooks();
-        if(type==5)
-        {
-          MMC5HackVROMMask=CHRmask4[0];
-          MMC5HackExNTARAMPtr=MapperExRAM+0x6000;
-          MMC5Hack=1;
-          MMC5HackVROMPTR=VROM;
-          MMC5HackCHRMode=0;
-        }
-        ResetExState();
+        ResetExState(0,0);
+	if(FCEUGameInfo.type == GIT_VSUNI)
+ 	 AddExState(FCEUVSUNI_STATEINFO, ~0, 0, 0);
+
         AddExState(WRAM, 8192, 0, "WRAM");
-        if(type==19 || type==5 || type==6 || type==69 || type==85)
+        if(type==19 || type==6 || type==69 || type==85 || type==96)
          AddExState(MapperExRAM, 32768, 0, "MEXR");
-        if((!VROM_size || type==6 || type==19 || type==119) &&
-	   (type!=13 && type!=96))
+    if((!VROM_size || type==6 || type==19) && (type!=13 && type!=96))
          AddExState(CHRRAM, 8192, 0, "CHRR");
         if(head.ROM_type&8)
          AddExState(ExtraNTARAM, 2048, 0, "EXNR");
@@ -862,5 +949,107 @@ static int MMC_init(int type)
         {
          FCEU_PrintError("iNES mapper #%d is not supported at all.",type);
         }
-        return 1;
+}
+
+
+typedef struct {
+           int number;
+           void (*init)(CartInfo *);
+} BMAPPING;
+
+static BMAPPING bmap[] = {
+    {1,   Mapper1_Init},
+    {2,   UNROM_Init},
+    {3,   CNROM_Init},
+    {4,   Mapper4_Init},
+    {5,   Mapper5_Init},
+    {12,  Mapper12_Init},
+    {13,  CPROM_Init},
+    {19,  Mapper19_Init},
+    {44,  Mapper44_Init},
+    {45,  Mapper45_Init},
+    {47,  Mapper47_Init},
+    {49,  Mapper49_Init},
+    {52,  Mapper52_Init},
+    {74,  Mapper74_Init},
+    {90,  Mapper90_Init},
+    {95,  Mapper95_Init},
+    {105, Mapper105_Init},
+    {112, Mapper112_Init},
+    {114, Mapper114_Init},
+        {115, Mapper115_Init},
+        {116, Mapper116_Init},
+	{118, Mapper118_Init},
+    {119, Mapper119_Init},
+    {133, SA72008_Init},
+    {137, S8259D_Init},
+    {138, S8259B_Init},
+    {139, S8259C_Init},
+    {141, S8259A_Init},
+    {143, TCA01_Init},
+    {145, SA72007_Init},
+    {146, SA0161M_Init},
+    {147, TCU01_Init},
+    {148, SA0037_Init},
+    {149, SA0036_Init},
+    {150, S74LS374N_Init},
+	{155, Mapper155_Init},
+    {160, Mapper90_Init},
+    {163, Mapper163_Init},
+	{164, Mapper164_Init},
+    {165, Mapper165_Init},
+    {182, Mapper182_Init},
+    {183, Mapper183_Init},
+    {186, Mapper186_Init},
+        {187, Mapper187_Init},
+	{188, Mapper188_Init},
+    {191, Mapper191_Init},
+    {205, Mapper205_Init},
+    {206, DEIROM_Init},
+        {208, Mapper208_Init},
+    {209, Mapper209_Init},
+	{210, Mapper210_Init},
+    {215, Mapper215_Init},
+    {216, Mapper216_Init},
+    {217, Mapper217_Init},
+    {243, S74LS374NA_Init},
+        {245, Mapper245_Init},
+        {249, Mapper249_Init},
+        {250, Mapper250_Init},
+    {254, Mapper254_Init},
+    {  0,        0}
+};
+
+static int NewiNES_Init(int num)
+{
+ BMAPPING *tmp=bmap;
+
+ if(FCEUGameInfo.type == GIT_VSUNI)
+  AddExState(FCEUVSUNI_STATEINFO, ~0, 0, 0);
+
+ while(tmp->init)
+ {
+  if(num==tmp->number)
+  {
+   UNIFchrrama=0; // need here for compatibility with UNIF mapper code
+   if(!VROM_size)
+   {
+    int CHRRAMSize;
+    if(num==13)
+      CHRRAMSize=16384;
+    else
+      CHRRAMSize=8192;
+    VROM=(uint8 *)malloc(CHRRAMSize);
+    UNIFchrrama=VROM;
+    SetupCartCHRMapping(0,VROM,CHRRAMSize,1);
+    AddExState(VROM,CHRRAMSize, 0, "CHRR");
+   }
+   if(head.ROM_type&8)
+    AddExState(ExtraNTARAM, 2048, 0, "EXNR");
+   tmp->init(&iNESCart);
+   return(1);
+  }
+  tmp++;
+ }
+ return(0);
 }

@@ -27,11 +27,17 @@ typedef struct {
 	   void (*Fill)(int Count);
 	   void (*RChange)(void);
 	   void (*Kill)(void);
+
+	   // from 0.98.15, currently unused
+           void (*NeoFill)(int32 *Wave, int Count);
+	   void (*HiFill)(void);
+	   void (*HiSync)(int32 ts);
 } EXPSOUND;
 
 extern EXPSOUND GameExpSound;
 
 extern int64 nesincsizeLL;
+extern int64 nesincsize;
 extern uint8 PSG[];
 extern uint32 PSG_base;
 extern int32 PCMIRQCount;
@@ -62,7 +68,9 @@ extern uint8 fcnt;
 extern int32 fhcnt;
 extern int32 fhinc;
 
-void GetSoundBuffer(int32 **W);
+uint8 FCEU_GetJoyJoy(void);
+
+int GetSoundBuffer(int32 **W);
 int FlushEmulateSound(void);
 extern uint32 Wave[2048];
 extern int32 WaveFinal[2048];

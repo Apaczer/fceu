@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,276 +22,382 @@
 
 static uint8 cmd;
 static uint8 latch[8];
-#define CHRRAM (GameMemBlock)
+
+static void MSync(uint8 mirr)
+{
+  switch(mirr&3)
+  {
+    case 0:setmirror(MI_V);break;
+    case 1:setmirror(MI_H);break;
+    case 2:setmirrorw(0,1,1,1);break;
+    case 3:setmirror(MI_0);break;
+  }
+}
 
 static void S74LS374NSynco(void)
 {
- setprg32(0x8000,latch[0]);
- X6502_Rebase();
- setchr8(latch[1]);
- setmirror(latch[2]&1);
-// setchr8(6);
+  setprg32(0x8000,latch[0]);
+  setchr8(latch[1]|latch[3]|latch[4]);
+  MSync(latch[2]);
 }
 
 static DECLFW(S74LS374NWrite)
 {
- //printf("$%04x:$%02x\n",A,V);
- A&=0x4101;
- if(A==0x4100)
-  cmd=V&7;
- else
- {
-  switch(cmd)
+  A&=0x4101;
+  if(A==0x4100)
+    cmd=V&7;
+  else
   {
-   case 0:latch[0]=0;latch[1]=3;break;
-   case 4:latch[1]&=3;latch[1]|=(V<<2);break;
-   case 5:latch[0]=V&0x7;break;
-   case 6:latch[1]&=0x1C;latch[1]|=V&3;break;
-   case 7:latch[2]=V&1;break;
+    switch(cmd)
+    {
+      case 2:latch[3]=(V&1)<<3;break;
+      case 4:latch[4]=(V&1)<<2;break;
+      case 5:latch[0]=V&0x7;break;
+      case 6:latch[1]=V&3;break;
+      case 7:latch[2]=V>>1;break;
+    }
+    S74LS374NSynco();
   }
-  S74LS374NSynco();
- }
 }
 
-static void S74LS374NReset(void)
+static void S74LS374NPower(void)
 {
- latch[0]=latch[2]=0;
- latch[1]=3;
- S74LS374NSynco();
- SetReadHandler(0x8000,0xFFFF,CartBR);
- SetWriteHandler(0x4100,0x7FFF,S74LS374NWrite);
+   latch[0]=latch[1]=latch[2]=latch[3]=latch[4]=0;
+   S74LS374NSynco();
+   SetReadHandler(0x8000,0xFFFF,CartBR);
+   SetWriteHandler(0x4100,0x7FFF,S74LS374NWrite);
 }
 
 static void S74LS374NRestore(int version)
 {
- S74LS374NSynco();
+   S74LS374NSynco();
 }
 
-void S74LS374N_Init(void)
+void S74LS374N_Init(CartInfo *info)
 {
- BoardPower=S74LS374NReset;
- GameStateRestore=S74LS374NRestore;
- AddExState(latch, 3, 0, "LATC");
- AddExState(&cmd, 1, 0, "CMD");
+  info->Power=S74LS374NPower;
+  GameStateRestore=S74LS374NRestore;
+  AddExState(latch, 5, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
+}
+
+static void S74LS374NASynco(void)
+{
+  setprg32(0x8000,latch[0]);
+  setchr8(latch[1]);
+  MSync(latch[2]);
+}
+
+static DECLFW(S74LS374NAWrite)
+{
+  A&=0x4101;
+  if(A==0x4100)
+    cmd=V&7;
+  else
+  {
+    switch(cmd)
+    {
+      case 0:latch[0]=0;latch[1]=3;break;
+      case 2:latch[3]=(V&1)<<3;break;
+      case 4:latch[1]=(latch[1]&6)|(V&3);break;
+      case 5:latch[0]=V&1;break;
+      case 6:latch[1]=(latch[1]&1)|latch[3]|((V&3)<<1);break;
+      case 7:latch[2]=V&1;break;
+    }
+    S74LS374NSynco();
+  }
+}
+
+static void S74LS374NAPower(void)
+{
+   latch[0]=latch[2]=latch[3]=latch[4]=0;
+   latch[1]=3;
+   S74LS374NASynco();
+   SetReadHandler(0x8000,0xFFFF,CartBR);
+   SetWriteHandler(0x4100,0x7FFF,S74LS374NAWrite);
+}
+
+void S74LS374NA_Init(CartInfo *info)
+{
+  info->Power=S74LS374NAPower;
+  GameStateRestore=S74LS374NRestore;
+  AddExState(latch, 5, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
 }
 
 static int type;
+//static int PPUbus;
 static void S8259Synco(void)
 {
- int x;
+  int x;
+  setprg32(0x8000,latch[5]&7);
 
- setprg32(0x8000,latch[5]&7);
- X6502_Rebase();
-
- if(!UNIFchrrama)	// No CHR RAM?  Then BS'ing is ok.
- {
-  if(!type)
+  if(!UNIFchrrama)        // No CHR RAM?  Then BS'ing is ok.
   {
-   for(x=0;x<4;x++)
-    setchr2(0x800*x,(x&1)|((latch[x]&7)<<1)|((latch[4]&7)<<4));
+    for(x=0;x<4;x++)
+    {
+      int bank;
+      if(latch[7]&1)
+        bank=(latch[0]&0x7)|((latch[4]&7)<<3);
+      else
+        bank=(latch[x]&0x7)|((latch[4]&7)<<3);
+      switch (type)
+      {
+        case 00: bank=(bank<<1)|(x&1); setchr2(0x800*x,bank); break;
+        case 01: setchr2(0x800*x,bank); break;
+        case 02: bank=(bank<<2)|(x&3); setchr2(0x800*x,bank); break;
+        case 03: bank=latch[x]&7;
+                 switch (x&3)
+                 {
+                   case 01: bank|=(latch[4]&1)<<4;break;
+                   case 02: bank|=(latch[4]&2)<<3;break;
+                   case 03: bank|=((latch[4]&4)<<2)|((latch[6]&1)<<3);break;
+                 }
+                 setchr1(0x400*x,bank);
+                 setchr4(0x1000,~0);
+                 break;
+      }
+    }
   }
-  else
-  {
-   for(x=0;x<4;x++)
-    setchr2(0x800*x,(latch[x]&0x7)|((latch[4]&7)<<3));
-  }
- }
- switch((latch[7]>>1)&3)
- {
-  case 0:setmirrorw(0,0,0,1);break;
-  case 1:setmirror(MI_H);break;
-  case 2:setmirror(MI_V);break;
-  case 3:setmirror(MI_0);break;
- }
+  MSync(latch[7]>>1);
 }
 
 static DECLFW(S8259Write)
 {
- A&=0x4101;
- if(A==0x4100) cmd=V;
- else
- {
-  latch[cmd&7]=V;
-  S8259Synco();
- }
+  A&=0x4101;
+  if(A==0x4100)
+    cmd=V;
+  else
+  {
+    latch[cmd&7]=V;
+    S8259Synco();
+  }
 }
 
 static void S8259Reset(void)
 {
- int x;
- cmd=0;
+  int x;
+  cmd=0;
 
- for(x=0;x<8;x++) latch[x]=0;
- if(UNIFchrrama) setchr8(0);
+  for(x=0;x<8;x++) latch[x]=0;
+  setchr8(0);
 
- S8259Synco();
- SetReadHandler(0x8000,0xFFFF,CartBR);
- SetWriteHandler(0x4100,0x7FFF,S8259Write);
+  S8259Synco();
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x4100,0x7FFF,S8259Write);
 }
 
 static void S8259Restore(int version)
 {
- S8259Synco();
+  S8259Synco();
 }
 
-void S8259A_Init(void)
+void S8259A_Init(CartInfo *info) // Kevin's Horton 141 mapper
 {
- BoardPower=S8259Reset;
- GameStateRestore=S8259Restore;
- AddExState(latch, 8, 0, "LATC");
- AddExState(&cmd, 1, 0, "CMD");
- type=0;
-
- //if(!CHRsize[0])
- //{
- // SetupCartCHRMapping(0,CHRRAM,8192,1);
- // AddExState(CHRRAM, 8192, 0, "CHRR");
- //}
+  info->Power=S8259Reset;
+  GameStateRestore=S8259Restore;
+  AddExState(latch, 8, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
+  type=0;
 }
 
-void S8259B_Init(void)
+void S8259B_Init(CartInfo *info) // Kevin's Horton 138 mapper
 {
- BoardPower=S8259Reset;
- GameStateRestore=S8259Restore;
- AddExState(latch, 8, 0, "LATC");
- AddExState(&cmd, 1, 0, "CMD");
- type=1;
+  info->Power=S8259Reset;
+  GameStateRestore=S8259Restore;
+  AddExState(latch, 8, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
+  type=1;
+}
+
+void S8259C_Init(CartInfo *info) // Kevin's Horton 139 mapper
+{
+  info->Power=S8259Reset;
+  GameStateRestore=S8259Restore;
+  AddExState(latch, 8, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
+  type=2;
+}
+
+void S8259D_Init(CartInfo *info) // Kevin's Horton 137 mapper
+{
+  info->Power=S8259Reset;
+  GameStateRestore=S8259Restore;
+  AddExState(latch, 8, 0, "LATC");
+  AddExState(&cmd, 1, 0, "CMD");
+  type=3;
 }
 
 static void(*WSync)(void);
 
 static void SA0161MSynco()
 {
- setprg32(0x8000,(latch[0]>>3)&1);
- X6502_Rebase();
- setchr8(latch[0]&7);
+  setprg32(0x8000,(latch[0]>>3)&1);
+  setchr8(latch[0]&7);
 }
 
 static DECLFW(SAWrite)
 {
- if(A&0x100)
- {
-  latch[0]=V;
-  WSync();
- }
+  if(A&0x100)
+  {
+    latch[0]=V;
+    WSync();
+  }
 }
 
 static void SAReset(void)
 {
- latch[0]=0;
- WSync();
- SetReadHandler(0x8000,0xFFFF,CartBR);
- SetWriteHandler(0x4100,0x5FFF,SAWrite);
+  latch[0]=0;
+  WSync();
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x4100,0x5FFF,SAWrite);
 }
 
-void SA0161M_Init(void)
+static void SA0161MRestore(int version)
 {
- WSync=SA0161MSynco;
- GameStateRestore=SA0161MSynco;
- BoardPower=SAReset;
- AddExState(&latch[0], 1, 0, "LATC");
+  SA0161MSynco();
+}
+
+void SA0161M_Init(CartInfo *info)
+{
+  WSync=SA0161MSynco;
+  GameStateRestore=SA0161MRestore;
+  info->Power=SAReset;
+  AddExState(&latch[0], 1, 0, "LATC");
 }
 
 static void SA72007Synco()
 {
- setprg32(0x8000,0);
- X6502_Rebase();
- setchr8(latch[0]>>7);
+  setprg32(0x8000,0);
+  setchr8(latch[0]>>7);
 }
 
-void SA72007_Init(void)
+static void SA72007Restore(int version)
 {
- WSync=SA72007Synco;
- GameStateRestore=SA72007Synco;
- BoardPower=SAReset;
- AddExState(&latch[0], 1, 0, "LATC");
+  SA72007Synco();
+}
+
+void SA72007_Init(CartInfo *info)
+{
+  WSync=SA72007Synco;
+  GameStateRestore=SA72007Restore;
+  info->Power=SAReset;
+  AddExState(&latch[0], 1, 0, "LATC");
 }
 
 static void SA72008Synco()
 {
- setprg32(0x8000,(latch[0]>>2)&1);
- X6502_Rebase();
- setchr8(latch[0]&3);
+  setprg32(0x8000,(latch[0]>>2)&1);
+  setchr8(latch[0]&3);
 }
 
-void SA72008_Init(void)
+static void SA72008Restore(int version)
 {
- WSync=SA72008Synco;
- GameStateRestore=SA72008Synco;
- BoardPower=SAReset;
- AddExState(&latch[0], 1, 0, "LATC");
+  SA72008Synco();
+}
+
+void SA72008_Init(CartInfo *info)
+{
+  WSync=SA72008Synco;
+  GameStateRestore=SA72008Restore;
+  info->Power=SAReset;
+  AddExState(&latch[0], 1, 0, "LATC");
 }
 
 static DECLFW(SADWrite)
 {
- latch[0]=V;
- WSync();
+  latch[0]=V;
+  WSync();
 }
 
 static void SADReset(void)
 {
- latch[0]=0;
- WSync();
- SetReadHandler(0x8000,0xFFFF,CartBR);
- SetWriteHandler(0x8000,0xFFFF,SADWrite);
-}
-
-static void SA0036Synco()
-{
- setprg32(0x8000,0);
- X6502_Rebase();
- setchr8(latch[0]>>7);
+  latch[0]=0;
+  WSync();
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x8000,0xFFFF,SADWrite);
 }
 
 static void SA0037Synco()
 {
- setprg32(0x8000,(latch[0]>>3)&1);
- X6502_Rebase();
- setchr8(latch[0]&7);
+  setprg32(0x8000,(latch[0]>>3)&1);
+  setchr8(latch[0]&7);
 }
 
-void SA0036_Init(void)
+static void SA0037Restore(int version)
 {
- WSync=SA0036Synco;
- GameStateRestore=SA0036Synco;
- BoardPower=SADReset;
- AddExState(&latch[0], 1, 0, "LATC");
+  SA0037Synco();
 }
 
-void SA0037_Init(void)
+void SA0036_Init(CartInfo *info)
 {
- WSync=SA0037Synco;
- GameStateRestore=SA0037Synco;
- BoardPower=SADReset;
- AddExState(&latch[0], 1, 0, "LATC");
+  WSync=SA72007Synco;
+  GameStateRestore=SA72007Restore;
+  info->Power=SADReset;
+  AddExState(&latch[0], 1, 0, "LATC");
+}
+
+void SA0037_Init(CartInfo *info)
+{
+  WSync=SA0037Synco;
+  GameStateRestore=SA0037Restore;
+  info->Power=SADReset;
+  AddExState(&latch[0], 1, 0, "LATC");
 }
 
 static void TCU01Synco()
 {
- setprg32(0x8000,(latch[0]>>2)&1);
- X6502_Rebase();
- setchr8((latch[0]>>3)&0xF);
+  setprg32(0x8000,(latch[0]>>2)&1);
+  setchr8((latch[0]>>3)&0xF);
 }
 
 static DECLFW(TCWrite)
 {
- if((A&0x103)==0x102)
-  latch[0]=V;
- TCU01Synco();
+  if((A&0x103)==0x102)
+    latch[0]=V;
+  TCU01Synco();
 }
 
 static void TCU01Reset(void)
 {
- latch[0]=0;
- SetReadHandler(0x8000,0xFFFF,CartBR);
- SetWriteHandler(0x4100,0xFFFF,TCWrite);
- TCU01Synco();
+  latch[0]=0;
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x4100,0xFFFF,TCWrite);
+  TCU01Synco();
 }
 
-void TCU01_Init(void)
+static void TCU01Restore(int version)
 {
- GameStateRestore=TCU01Synco;
- BoardPower=TCU01Reset;
- AddExState(&latch[0], 1, 0, "LATC");
+  TCU01Synco();
 }
 
+void TCU01_Init(CartInfo *info)
+{
+  GameStateRestore=TCU01Restore;
+  info->Power=TCU01Reset;
+  AddExState(&latch[0], 1, 0, "LATC");
+}
+
+static DECLFR(TCA01Read)
+{
+  uint8 ret;
+  if((A&0x4100)==0x4100)
+    ret=(X.DB&0xC0)|((~A)&0x3F);
+  else
+    ret=X.DB;
+  return ret;
+}
+
+static void TCA01Reset(void)
+{
+  setprg16(0x8000,0);
+  setprg16(0xC000,1);
+  setchr8(0);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetReadHandler(0x4100,0x5FFF,TCA01Read);
+}
+
+void TCA01_Init(CartInfo *info)
+{
+  info->Power=TCA01Reset;
+}

@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2003 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,34 +20,25 @@
 
 #include "mapinc.h"
 
-
-
-DECLFW(Mapper112_write)
+static DECLFW(Mapper201_write)
 {
-switch(A)
-{
- case 0xe000:MIRROR_SET(V&1);break;
- case 0x8000:mapbyte1[0]=V;break;
- case 0xa000:switch(mapbyte1[0])
-            {
-            case 0:ROM_BANK8(0x8000,V);break;
-            case 1:ROM_BANK8(0xA000,V);break;
-                case 2: V&=0xFE;VROM_BANK1(0,V);
-                        VROM_BANK1(0x400,(V+1));break;
-                case 3: V&=0xFE;VROM_BANK1(0x800,V);
-                        VROM_BANK1(0xC00,(V+1));break;
-            case 4:VROM_BANK1(0x1000,V);break;
-            case 5:VROM_BANK1(0x1400,V);break;
-            case 6:VROM_BANK1(0x1800,V);break;
-            case 7:VROM_BANK1(0x1c00,V);break;
-            }
-            X6502_Rebase();
-            break;
- }
+//  FCEU_printf("%04x, %02x\n",A,V);
+  if(A&0x08)
+  {
+     ROM_BANK32(A&0x03);
+     VROM_BANK8(A&0x03);
+  }
+  else
+  {
+     ROM_BANK32(0);
+     VROM_BANK8(0);
+  }
 }
 
-void Mapper112_init(void)
+void Mapper201_init(void)
 {
-  SetWriteHandler(0x8000,0xffff,Mapper112_write);
+  ROM_BANK32(0);
+  VROM_BANK8(0);
+  SetWriteHandler(0x8000,0xffff,Mapper201_write);
 }
 

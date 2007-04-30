@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,84 +18,72 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* Not finished.  Darn evil game... *Mumble*... */
-
 #include "mapinc.h"
+#include "mmc3.h"
 
-static uint8 cmd;
-static uint8 regs[8];
+extern uint8 m114_perm[8];
 
-static void DoPRG(void)
+static void H2288PW(uint32 A, uint8 V)
 {
- if(cmd&0x40)
- {
-  setprg8(0xC000,regs[4]);
-  setprg8(0xA000,regs[5]);
-  setprg8(0x8000,~1);
-  setprg8(0xE000,~0);
- }
- else
- {
-  setprg8(0x8000,regs[4]);
-  setprg8(0xA000,regs[5]);
-  setprg8(0xC000,~1);
-  setprg8(0xE000,~0);
- }
+  if(EXPREGS[0]&0x40)
+  {
+    uint8 bank=(EXPREGS[0]&5)|((EXPREGS[0]&8)>>2)|((EXPREGS[0]&0x20)>>2);
+    if(EXPREGS[0]&2)
+      setprg32(0x8000,bank>>1);
+    else
+    {
+      setprg16(0x8000,bank);
+      setprg16(0xC000,bank);
+    }
+  }
+  else
+    setprg8(A,V&0x3F);
 }
 
-static void DoCHR(void)
+static DECLFW(H2288WriteHi)
 {
- uint32 base=(cmd&0x80)<<5;
-
- setchr2(0x0000^base,regs[0]);
- setchr2(0x0800^base,regs[2]);
-
- setchr1(0x1000^base,regs[6]);
- setchr1(0x1400^base,regs[1]);
- setchr1(0x1800^base,regs[7]);
- setchr1(0x1c00^base,regs[3]);
+  switch (A&0x8001)
+  {
+    case 0x8000: MMC3_CMDWrite(0x8000,(V&0xC0)|(m114_perm[V&7])); break;
+    case 0x8001: MMC3_CMDWrite(0x8001,V); break;
+  }
 }
 
-static DECLFW(H2288Write)
+static DECLFW(H2288WriteLo)
 {
- //printf("$%04x:$%02x, $%04x\n",A,V,X.PC.W);
- //RAM[0x7FB]=0x60;
- switch(A&0xE001)
- {
-  case 0xa000:setmirror((V&1)^1);break;
-  case 0x8000://  DumpMem("out",0x0000,0xFFFF);
-	      cmd=V;DoPRG();DoCHR();
-              X6502_Rebase();break;
-  case 0x8001:regs[cmd&7]=V;
-	      if((cmd&7)==4 || (cmd&7)==5) {
-	       DoPRG();
-               X6502_Rebase();
-	      } else
-	       DoCHR();
-	      break;
- }
+  if(A&0x800)
+  {
+    if(A&1)
+      EXPREGS[1]=V;
+    else
+      EXPREGS[0]=V;
+    FixMMC3PRG(MMC3_cmd);
+  }
 }
 
 static DECLFR(H2288Read)
 {
- //printf("Rd: $%04x, $%04x\n",A,X.PC.W);
- return((X.DB&0xFE)|(A&(A>>8)));
+  int bit;
+  bit=(A&1)^1;
+  bit&=((A>>8)&1);
+  bit^=1;
+  return((X.DB&0xFE)|bit);
 }
 
-static void H2288Reset(void)
+static void H2288Power(void)
 {
-  int x;
-
-  SetReadHandler(0x5800,0x5FFF,H2288Read);
+  EXPREGS[0]=EXPREGS[1]=0;
+  GenMMC3Power();
+  SetReadHandler(0x5000,0x5FFF,H2288Read);
   SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x8000,0xFFFF,H2288Write);
-  for(x=0;x<8;x++) regs[x]=0;
-  cmd=0;
-  DoPRG();
-  DoCHR();
+  SetWriteHandler(0x5000,0x5FFF,H2288WriteLo);
+  SetWriteHandler(0x8000,0x8FFF,H2288WriteHi);
 }
 
-void H2288_Init(void)
+void UNLH2288_Init(CartInfo *info)
 {
-  BoardPower=H2288Reset;
+  GenMMC3_Init(info, 256, 256, 0, 0);
+  pwrap=H2288PW;
+  info->Power=H2288Power;
+  AddExState(EXPREGS, 2, 0, "EXPR");
 }

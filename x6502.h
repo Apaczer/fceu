@@ -52,6 +52,8 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define FCEU_IQDPCM     0x10
 #define FCEU_IQFCOUNT   0x20
 #define FCEU_IQTEMP     0x80
+// from 0.98.15
+#define FCEU_IQEXT2	0x02
 
 #if defined(DEBUG_ASM_6502)
 #define TriggerIRQ TriggerIRQ_d

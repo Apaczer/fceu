@@ -39,7 +39,7 @@ typedef struct {
 	   int FirstSLine;
 	   int LastSLine;
 
-	   /* Driver code(user)-specified first and last rendered scanlines. 
+	   /* Driver code(user)-specified first and last rendered scanlines.
 	      Usr*SLine[0] is for NTSC, Usr*SLine[1] is for PAL.
            */
 	   int UsrFirstSLine[2];
@@ -52,6 +52,7 @@ extern FCEUS FSettings;
 
 void FCEU_PrintError(char *format, ...);
 void FCEU_DispMessage(char *format, ...);
+#define FCEU_printf printf
 
 void SetNESDeemph(uint8 d, int force);
 void DrawTextTrans(uint8 *dest, uint32 width, uint8 *textmsg, uint8 fgcolor);

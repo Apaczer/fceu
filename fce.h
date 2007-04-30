@@ -5,6 +5,8 @@ void asmcpu_unpack(void);
 void asmcpu_pack(void);
 #endif
 
+#define fceuindbg 0
+
 extern int GameLoaded;
 void ResetGameLoaded(void);
 
@@ -72,7 +74,7 @@ extern writefunc BWrite[0x10000];
 
 extern void (*GameInterface)(int h);
 extern void FP_FASTAPASS(1) (*PPU_hook)(uint32 A);
-extern void (*GameHBIRQHook)(void);
+extern void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
 extern void (*GameStateRestore)(int version);
 
 #define GI_RESETM2	1
@@ -82,6 +84,9 @@ extern void (*GameStateRestore)(int version);
 #include "git.h"
 extern FCEUGI FCEUGameInfo;
 extern int GameAttributes;
+
+extern uint8 pale;
+extern uint8 vsdip;
 
 
 #endif

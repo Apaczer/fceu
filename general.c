@@ -83,6 +83,11 @@ char *FCEU_MakeFName(int type, int id1, char *cd1)
                       sprintf(((char*)ret),"%s"PSS"snaps"PSS"%d.%s",BaseDirectory,id1,cd1);
 		    }
                     break;
+  case FCEUMKF_FDS:if(odirs[FCEUIOD_NV])
+		    sprintf((char*)ret,"%s"PSS"%s.fds",odirs[FCEUIOD_NV],FileBase);
+		   else
+	 	    sprintf((char*)ret,"%s"PSS"sav"PSS"%s.fds",BaseDirectory,FileBase);
+		   break;
   case FCEUMKF_SAV:if(odirs[FCEUIOD_NV])
                    {
                     sprintf(((char*)ret),"%s"PSS"%s.%s",odirs[FCEUIOD_NV],FileBase,cd1);

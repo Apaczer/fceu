@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,16 +64,14 @@ static void FP_FASTAPASS(1) latchcheck(uint32 VAddr)
      }
 }
 
-DECLFW(Mapper9_write)	// $Axxx
+DECLFW(Mapper9_write)        // $Axxx
 {
  ROM_BANK8(0x8000,V);
- X6502_Rebase();
 }
 
 DECLFW(Mapper10_write)
 {
  ROM_BANK16(0x8000,V);
- X6502_Rebase();
 }
 
 DECLFW(Mapper9and10_write)
@@ -81,19 +79,19 @@ DECLFW(Mapper9and10_write)
        switch(A&0xF000)
        {
         case 0xB000:
-                if (latcha1==0xFD) { VROM_BANK4(0x0000,V);}
+                if(latcha1==0xFD) { VROM_BANK4(0x0000,V);}
                 MMC4reg[0]=V;
                 break;
         case 0xC000:
-                if (latcha1==0xFE) {VROM_BANK4(0x0000,V);}
+                if(latcha1==0xFE) {VROM_BANK4(0x0000,V);}
                 MMC4reg[1]=V;
                 break;
         case 0xD000:
-                if (latcha2==0xFD) {VROM_BANK4(0x1000,V);}
+                if(latcha2==0xFD) {VROM_BANK4(0x1000,V);}
                 MMC4reg[2]=V;
                 break;
         case 0xE000:
-                if (latcha2==0xFE) {VROM_BANK4(0x1000,V);}
+                if(latcha2==0xFE) {VROM_BANK4(0x1000,V);}
                 MMC4reg[3]=V;
                 break;
         case 0xF000:
@@ -109,7 +107,7 @@ void Mapper9_init(void)
         ROM_BANK8(0xA000,~2);
         ROM_BANK8(0x8000,0);
         SetWriteHandler(0xA000,0xAFFF,Mapper9_write);
-	SetWriteHandler(0xB000,0xFFFF,Mapper9and10_write);
+        SetWriteHandler(0xB000,0xFFFF,Mapper9and10_write);
         PPU_hook=latchcheck;
 }
 
@@ -117,7 +115,7 @@ void Mapper10_init(void)
 {
         latcha1=latcha2=0xFE;
         SetWriteHandler(0xA000,0xAFFF,Mapper10_write);
-	SetWriteHandler(0xB000,0xFFFF,Mapper9and10_write);
+        SetWriteHandler(0xB000,0xFFFF,Mapper9and10_write);
         PPU_hook=latchcheck;
 }
 

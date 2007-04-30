@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,77 +18,71 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef UNIFPRIV
-int UNIFLoad(char *name, int fp);
-#endif
+void TCA01_Init(CartInfo *info);
+void TCU01_Init(CartInfo *info);
+void S8259A_Init(CartInfo *info);
+void S8259B_Init(CartInfo *info);
+void S8259C_Init(CartInfo *info);
+void S8259D_Init(CartInfo *info);
+void S74LS374N_Init(CartInfo *info);
+void S74LS374NA_Init(CartInfo *info);
+void SA0161M_Init(CartInfo *info);
 
-void TCU01_Init(void);
-void S8259B_Init(void);
-void S8259A_Init(void);
-void S74LS374N_Init(void);
-void SA0161M_Init(void);
+void SA72007_Init(CartInfo *info);
+void SA72008_Init(CartInfo *info);
+void SA0036_Init(CartInfo *info);
+void SA0037_Init(CartInfo *info);
 
-void SA72007_Init(void);
-void SA72008_Init(void);
-void SA0036_Init(void);
-void SA0037_Init(void);
+void UNLH2288_Init(CartInfo *info);
+void UNL8237_Init(CartInfo *info);
+void UNL8157_Init(CartInfo *info);
 
-void H2288_Init(void);
+void HKROM_Init(CartInfo *info);
 
-void HKROM_Init(void);
+void ETROM_Init(CartInfo *info);
+void EKROM_Init(CartInfo *info);
+void ELROM_Init(CartInfo *info);
+void EWROM_Init(CartInfo *info);
 
-void ETROM_Init(void);
-void EKROM_Init(void);
-void ELROM_Init(void);
-void EWROM_Init(void);
+void SAROM_Init(CartInfo *info);
+void SBROM_Init(CartInfo *info);
+void SCROM_Init(CartInfo *info);
+void SEROM_Init(CartInfo *info);
+void SGROM_Init(CartInfo *info);
+void SKROM_Init(CartInfo *info);
+void SLROM_Init(CartInfo *info);
+void SL1ROM_Init(CartInfo *info);
+void SNROM_Init(CartInfo *info);
+void SOROM_Init(CartInfo *info);
 
-void SAROM_Init(void);
-void SBROM_Init(void);
-void SCROM_Init(void);
-void SEROM_Init(void);
-void SGROM_Init(void);
-void SKROM_Init(void);
-void SLROM_Init(void);
-void SL1ROM_Init(void);
-void SNROM_Init(void);
-void SOROM_Init(void);
+void NROM_Init(CartInfo *info);
+void NROM256_Init(CartInfo *info);
+void NROM128_Init(CartInfo *info);
+void MHROM_Init(CartInfo *info);
+void UNROM_Init(CartInfo *info);
+void MALEE_Init(CartInfo *info);
+void Supervision16_Init(CartInfo *info);
+void Super24_Init(CartInfo *info);
+void Novel_Init(CartInfo *info);
+void CNROM_Init(CartInfo *info);
+void CPROM_Init(CartInfo *info);
+void GNROM_Init(CartInfo *info);
 
-void NROM_Init(void);
-void NROM256_Init(void);
-void NROM128_Init(void);
-void MHROM_Init(void);
-void UNROM_Init(void);
-void MALEE_Init(void);
-void Supervision16_Init(void);
-void Super24_Init(void);
-void Novel_Init(void);
-void CNROM_Init(void);
-void CPROM_Init(void);
+void TEROM_Init(CartInfo *info);
+void TFROM_Init(CartInfo *info);
+void TGROM_Init(CartInfo *info);
+void TKROM_Init(CartInfo *info);
+void TSROM_Init(CartInfo *info);
+void TLROM_Init(CartInfo *info);
+void TLSROM_Init(CartInfo *info);
+void TKSROM_Init(CartInfo *info);
+void TQROM_Init(CartInfo *info);
+void TQROM_Init(CartInfo *info);
 
-void TFROM_Init(void);
-void TGROM_Init(void);
-void TKROM_Init(void);
-void TSROM_Init(void);
-void TLROM_Init(void);
-void TLSROM_Init(void);
-void TKSROM_Init(void);
-void TQROM_Init(void);
-void TQROM_Init(void);
+void DEIROM_Init(CartInfo *info);
+void DreamTech01_Init(CartInfo *info);
+void Mapper190_Init(CartInfo *info);
+void UNLCC21_Init(CartInfo *info);
 
-
-void UNIFOpenWRAM(int t, char *ext, int override);
-void UNIFWriteWRAM(uint8 *p, int size);
-void UNIFReadWRAM(uint8 *p, int size);
-void UNIFCloseWRAM(void);
-#define	UOW_RD	0
-#define UOW_WR	1
-
-extern void (*BoardClose)(void);
-extern void (*BoardPower)(void);
-extern void (*BoardReset)(void);
-
-#define UNIFMemBlock (GameMemBlock+32768)
-
-extern int UNIFbattery;
-extern char *UNIFchrrama;	// Meh.  So I can't stop CHR RAM 
+extern uint8 *UNIFchrrama;  // Meh.  So I can stop CHR RAM
 	 			// bank switcherooing with certain boards...

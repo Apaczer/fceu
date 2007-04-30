@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,16 @@ static void Fixerit(void)
 {
  switch(mapbyte2[0]&3)
  {
-  case 0:vnapage[0]=vnapage[2]=VROM+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
-	 vnapage[1]=vnapage[3]=VROM+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
-	 break;
-  case 1:vnapage[0]=vnapage[1]=VROM+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
-         vnapage[2]=vnapage[3]=VROM+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
+  case 0:vnapage[0]=vnapage[2]=CHRptr[0]+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
+         vnapage[1]=vnapage[3]=CHRptr[0]+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
          break;
-  case 2:vnapage[0]=vnapage[1]=vnapage[2]=vnapage[3]=VROM+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
-	 break;
-  case 3:vnapage[0]=vnapage[1]=vnapage[2]=vnapage[3]=VROM+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
-	 break;
+  case 1:vnapage[0]=vnapage[1]=CHRptr[0]+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
+         vnapage[2]=vnapage[3]=CHRptr[0]+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
+         break;
+  case 2:vnapage[0]=vnapage[1]=vnapage[2]=vnapage[3]=CHRptr[0]+(((mapbyte1[0]|128)&CHRmask1[0])<<10);
+         break;
+  case 3:vnapage[0]=vnapage[1]=vnapage[2]=vnapage[3]=CHRptr[0]+(((mapbyte1[1]|128)&CHRmask1[0])<<10);
+         break;
  }
 }
 
@@ -49,12 +49,12 @@ DECLFW(Mapper68_write)
  {
   case 0xc000:mapbyte1[0]=V;
               if(VROM_size && mapbyte2[0]&0x10)
-	       Fixerit();
+               Fixerit();
               break;
 
   case 0xd000:mapbyte1[1]=V;
-	      if(VROM_size && mapbyte2[0]&0x10)
-	       Fixerit();
+              if(VROM_size && mapbyte2[0]&0x10)
+               Fixerit();
               break;
 
   case 0xe000: mapbyte2[0]=V;
@@ -69,13 +69,12 @@ DECLFW(Mapper68_write)
                 }
                }
                else if(VROM_size)
-	       {
-	        Fixerit();
-	        PPUNTARAM=0;
-	       }
+               {
+                Fixerit();
+                PPUNTARAM=0;
+               }
                break;
-  case 0xf000: ROM_BANK16(0x8000,V);
-               X6502_Rebase();break;
+  case 0xf000: ROM_BANK16(0x8000,V);break;
  }
 }
 
@@ -93,7 +92,7 @@ static void Mapper68_StateRestore(int version)
               }
               else if(VROM_size)
               {
-		Fixerit();
+                Fixerit();
                 PPUNTARAM=0;
               }
 }

@@ -10,3 +10,5 @@ int FASTAPASS(1) FCEU_fgetc(int stream);
 long FASTAPASS(1) FCEU_fgetsize(int stream);
 int FASTAPASS(1) FCEU_fisarchive(int stream);
 
+#define FCEUD_UTF8fopen fopen
+

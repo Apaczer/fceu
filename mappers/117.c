@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,14 @@
 
 DECLFW(Mapper117_write)
 {
+ //if(A>=0xc000)
+ //printf("$%04x:$%02x, %d,%d\n",A,V,scanline,timestamp);
  switch(A)
  {
-  case 0xc003:IRQCount=V;break;
-  case 0xc001:IRQa=V;break;
+  case 0xc001:IRQLatch=V;break;
+  case 0xc003:IRQCount=IRQLatch;IRQa|=2;break;
+  case 0xe000:IRQa&=~1;IRQa|=V&1;X6502_IRQEnd(FCEU_IQEXT);break;
+  case 0xc002:X6502_IRQEnd(FCEU_IQEXT);break;
   case 0xa000:VROM_BANK1(0x0000,V);break;
   case 0xa001:VROM_BANK1(0x0400,V);break;
   case 0xa002:VROM_BANK1(0x0800,V);break;
@@ -36,30 +40,25 @@ DECLFW(Mapper117_write)
   case 0xa005:VROM_BANK1(0x1400,V);break;
   case 0xa006:VROM_BANK1(0x1800,V);break;
   case 0xa007:VROM_BANK1(0x1c00,V);break;
-  case 0x8000:ROM_BANK8(0x8000,V);
-              X6502_Rebase();break;
-  case 0x8001:ROM_BANK8(0xa000,V);
-              X6502_Rebase();break;
-  case 0x8002:ROM_BANK8(0xc000,V);
-              X6502_Rebase();break;
-  case 0x8003:ROM_BANK8(0xe000,V);
-              X6502_Rebase();break;
+  case 0x8000:ROM_BANK8(0x8000,V);break;
+  case 0x8001:ROM_BANK8(0xa000,V);break;
+  case 0x8002:ROM_BANK8(0xc000,V);break;
+  case 0x8003:ROM_BANK8(0xe000,V);break;
  }
 }
 
 static void Mapper117_hb(void)
 {
- if(IRQa)
+ //if(scanline==0x40) X6502_IRQBegin(FCEU_IQEXT);
+ //return;
+ if(IRQa==3 && IRQCount)
  {
-        if(IRQCount<=0)
-        {
-         IRQa=0;
-         TriggerIRQ();
-        }
-        else
-        {
-         IRQCount--;
-        }
+  IRQCount--;
+  if(!IRQCount)
+  {
+   IRQa&=1;
+   X6502_IRQBegin(FCEU_IQEXT);
+  }
  }
 }
 

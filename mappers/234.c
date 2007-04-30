@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@ static void DoBS(void)
   ROM_BANK32(r1&0xF);
   VROM_BANK8( ((r1&0xF)<<2) | ((r2>>4)&3) );
  }
- X6502_Rebase();
 }
 
 static void R1Set(uint8 V)
@@ -92,17 +91,17 @@ static void M15Reset(void)
 void Mapper234_init(void)
 {
         SetWriteHandler(0xff80,0xff9f,R1W);
-	SetReadHandler(0xff80,0xff9f,R1R);
+        SetReadHandler(0xff80,0xff9f,R1R);
 
-	SetWriteHandler(0xffe8,0xfff7,R2W);
-	SetReadHandler(0xffe8,0xfff7,R2R);
+        SetWriteHandler(0xffe8,0xfff7,R2W);
+        SetReadHandler(0xffe8,0xfff7,R2R);
 
-	SetReadHandler(0x6000,0x7FFF,0);
-	SetWriteHandler(0x6000,0x7FFF,0);
+        SetReadHandler(0x6000,0x7FFF,0);
+        SetWriteHandler(0x6000,0x7FFF,0);
 
-	M15Reset();
+        M15Reset();
 
-	GameStateRestore=M15Restore;
-	MapperReset=M15Reset;
+        GameStateRestore=M15Restore;
+        MapperReset=M15Reset;
 }
 

@@ -2,7 +2,7 @@
  *
  * Copyright notice for this file:
  *  Copyright (C) 1998 BERO
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,42 +18,41 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <string.h>
+
 #include "mapinc.h"
 
 static uint8 latche;
 
-static DECLFW(Mapper2_write)
-{
-	latche=V;
-        ROM_BANK16(0x8000,V);
-        X6502_Rebase();
-}
+//static DECLFW(Mapper2_write)
+//{
+//    latche=V;
+//    ROM_BANK16(0x8000,V);
+//}
+//
+//void Mapper2_init(void)
+//{
+//    SetWriteHandler(0x8000,0xFFFF,Mapper2_write);
+//    AddExState(&latche, 1, 0, "LATC");
+//}
 
-void Mapper2_init(void)
-{
-  SetWriteHandler(0x8000,0xFFFF,Mapper2_write);
-  AddExState(&latche, 1, 0, "LATC");
-}
+//static DECLFW(Mapper3_write)
+//{
+//  VROM_BANK8(V);
+//  latche=V;
+//}
 
-static DECLFW(Mapper3_write)
-{
-        VROM_BANK8(V);
-	latche=V;
-}
+//void Mapper3_init(void)
+//{
+//        SetWriteHandler(0x8000,0xFFFF,Mapper3_write);
+//        AddExState(&latche, 1, 0, "LATC");
+//}
 
-void Mapper3_init(void)
+static DECLFW(Mapper7_write)
 {
-	SetWriteHandler(0x8000,0xFFFF,Mapper3_write);
-	AddExState(&latche, 1, 0, "LATC");
-}
-
-DECLFW(Mapper7_write)
-{
+//    FCEU_printf("%04x,%04x\n",A,V);
       ROM_BANK32(V&0xF);
       onemir((V>>4)&1);
       latche=V;
-      X6502_Rebase();
 }
 
 void Mapper7_init(void)
@@ -61,70 +60,69 @@ void Mapper7_init(void)
         onemir(0);
         ROM_BANK32(0);
         SetWriteHandler(0x8000,0xFFFF,Mapper7_write);
-	AddExState(&latche, 1, 0, "LATC");
+        AddExState(&latche, 1, 0, "LATC");
 }
 
-DECLFW(Mapper11_write)
+static DECLFW(Mapper11_write)
 {
-        ROM_BANK32(V);
+        ROM_BANK32(V&0xF);
         VROM_BANK8(V>>4);
-	latche=V;
-        X6502_Rebase();
+        latche=V;
 }
 
 void Mapper11_init(void)
 {
         ROM_BANK32(0);
-	SetWriteHandler(0x8000,0xFFFF,Mapper11_write);
-	AddExState(&latche, 1, 0, "LATC");
+        SetWriteHandler(0x8000,0xFFFF,Mapper11_write);
+        AddExState(&latche, 1, 0, "LATC");
 }
-
-static DECLFW(Mapper13_write)
+void Mapper144_init(void)
 {
-	setchr4r(0x10,0x1000,V&3);
-	setprg32(0x8000,(V>>4)&3);
-	latche=V;
-	X6502_Rebase();
+       ROM_BANK32(0);
+        SetWriteHandler(0x8001,0xFFFF,Mapper11_write);
+        AddExState(&latche, 1, 0, "LATC");
+
 }
+//static DECLFW(Mapper13_write)
+//{
+//        setchr4r(0x10,0x1000,V&3);
+//        setprg32(0x8000,(V>>4)&3);
+//        latche=V;
+//}
 
-static void Mapper13_StateRestore(int version)
+//static void Mapper13_StateRestore(int version)
+//{
+//        setchr4r(0x10,0x0000,0);
+//        setchr4r(0x10,0x1000,latche&3);
+//        setprg32(0x8000,(latche>>4)&3);
+//}
+
+//void Mapper13_init(void)
+//{
+//        SetWriteHandler(0x8000,0xFFFF,Mapper13_write);
+//        GameStateRestore=Mapper13_StateRestore;
+//        AddExState(&latche, 1, 0, "LATC");
+//        AddExState(MapperExRAM, 16384, 0, "CHRR");
+//        SetupCartCHRMapping(0x10, MapperExRAM, 16384, 1);
+//        latche=0;
+//        Mapper13_StateRestore(FCEU_VERSION_NUMERIC);
+//}
+
+static DECLFW(Mapper34_write)
 {
-	setchr4r(0x10,0x0000,0);
-        setchr4r(0x10,0x1000,latche&3);
-        setprg32(0x8000,(latche>>4)&3);
-	X6502_Rebase();
-}
-
-void Mapper13_init(void)
-{
-	SetWriteHandler(0x8000,0xFFFF,Mapper13_write);
-	GameStateRestore=Mapper13_StateRestore;
-	AddExState(&latche, 1, 0, "LATC");
-	AddExState(MapperExRAM, 16384, 0, "CHRR");
-	SetupCartCHRMapping(0x10, MapperExRAM, 16384, 1);
-
-	latche=0;
-        Mapper13_StateRestore(VERSION_NUMERIC);
-}
-
-DECLFW(Mapper34_write)
-{
-switch(A)
+ switch(A)
  {
- case 0x7FFD:ROM_BANK32(V);
-             X6502_Rebase();break;
- case 0x7FFE:VROM_BANK4(0x0000,V);break;
- case 0x7fff:VROM_BANK4(0x1000,V);break;
+  case 0x7FFD:ROM_BANK32(V);break;
+  case 0x7FFE:VROM_BANK4(0x0000,V);break;
+  case 0x7fff:VROM_BANK4(0x1000,V);break;
  }
  if(A>=0x8000)
- {
   ROM_BANK32(V);
-  X6502_Rebase();
- }
 }
 
 void Mapper34_init(void)
 {
+ ROM_BANK32(0);
   SetWriteHandler(0x7ffd,0xffff,Mapper34_write);
 }
 
@@ -133,7 +131,6 @@ DECLFW(Mapper66_write)
  VROM_BANK8(V&0xF);
  ROM_BANK32((V>>4));
  latche=V;
- X6502_Rebase();
 }
 
 void Mapper66_init(void)
@@ -147,9 +144,8 @@ DECLFW(Mapper152_write)
 {
  ROM_BANK16(0x8000,(V>>4)&0x7);
  VROM_BANK8(V&0xF);
- onemir((V>>7)&1);	/* Saint Seiya...hmm. */
+ onemir((V>>7)&1);        /* Saint Seiya...hmm. */
  latche=V;
- X6502_Rebase();
 }
 
 void Mapper152_init(void)
@@ -164,7 +160,6 @@ static DECLFW(Mapper70_write)
  ROM_BANK16(0x8000,V>>4);
  VROM_BANK8(V&0xF);
  latche=V;
- X6502_Rebase();
 }
 
 void Mapper70_init(void)
@@ -175,12 +170,11 @@ void Mapper70_init(void)
 /* Should be two separate emulation functions for this "mapper".  Sigh.  URGE TO KILL RISING. */
 static DECLFW(Mapper78_write)
 {
- //printf("$%04x:$%02x\n",A,V);
+ //printf("$%04x:$%02x\n",A,V&0x8);
  ROM_BANK16(0x8000,V&0x7);
  VROM_BANK8(V>>4);
  onemir((V>>3)&1);
  latche=V;
- X6502_Rebase();
 }
 
 void Mapper78_init(void)
@@ -206,7 +200,6 @@ DECLFW(Mapper93_write)
   ROM_BANK16(0x8000,V>>4);
   MIRROR_SET(V&1);
   latche=V;
-  X6502_Rebase();
 }
 
 void Mapper93_init(void)
@@ -220,7 +213,6 @@ DECLFW(Mapper94_write)
 {
  ROM_BANK16(0x8000,V>>2);
  latche=V;
- X6502_Rebase();
 }
 
 void Mapper94_init(void)
@@ -241,23 +233,21 @@ static DECLFW(Mapper96_write)
  setprg32(0x8000,V&3);
  setchr4r(0x10,0x0000,(latche&4)|M96LA);
  setchr4r(0x10,0x1000,(latche&4)|3);
- X6502_Rebase();
 }
 
 static void FP_FASTAPASS(1) M96Hook(uint32 A)
 {
- if((A&0x3000)!=0x2000)
-  return;
+ if((A&0x3000)!=0x2000) return;
+ //if((A&0x3ff)>=0x3c0) return;
  M96LA=(A>>8)&3;
  setchr4r(0x10,0x0000,(latche&4)|M96LA);
 }
 
-static void M96Sync()
+static void M96Sync(int v)
 {
  setprg32(0x8000,latche&3);
  setchr4r(0x10,0x0000,(latche&4)|M96LA);
  setchr4r(0x10,0x1000,(latche&4)|3);
- X6502_Rebase();
 }
 
 void Mapper96_init(void)
@@ -268,7 +258,8 @@ void Mapper96_init(void)
  AddExState(&M96LA, 1, 0, "LAVA");
  SetupCartCHRMapping(0x10, MapperExRAM, 32768, 1);
  latche=M96LA=0;
- M96Sync();
+ M96Sync(0);
+ setmirror(MI_0);
  GameStateRestore=M96Sync;
 }
 
@@ -276,7 +267,6 @@ static DECLFW(Mapper140_write)
 {
  VROM_BANK8(V&0xF);
  ROM_BANK32((V>>4)&0xF);
- X6502_Rebase();
 }
 
 void Mapper140_init(void)
@@ -285,34 +275,68 @@ void Mapper140_init(void)
  SetWriteHandler(0x6000,0x7FFF,Mapper140_write);
 }
 
-static void M185Sync()
+static void M185Sync(int version)
 {
- int x;
+//   on    off
+//1  0x0F, 0xF0 - Bird Week
+//2  0x33, 0x00 - B-Wings
+//3  0x11, 0x00 - Mighty Bomb Jack
+//4  0x22, 0x20 - Sansuu 1 Nen, Sansuu 2 Nen
+//5  0xFF, 0x00 - Sansuu 3 Nen
+//6  0x21, 0x13 - Spy vs Spy
 
- if(!(mapbyte1[0]&3))
-// if(!(mapbyte1[0]==0x21))
- {
-  for(x=0;x<8;x++)
-   setchr1r(0x10,x<<10,0);
-  }
- else
-  setchr8(0);
+//  if((mapbyte1[0]&3)==1)                     // 6, 3
+//  if(mapbyte1[0]&1)                          // 1, 2, 3, 5
+//  if(mapbyte1[0]&2)                          // 1, 2, 4, 5,
+  if((mapbyte1[0]&2)||((mapbyte1[0]&3)==1)) // 1, 2, 3, 4, 5
+   setchr8(0);
+  else
+   setchr8r(0x10,0);
 }
 
 static DECLFW(Mapper185_write)
 {
- mapbyte1[0]=V;
- M185Sync();
- // printf("Wr: $%04x:$%02x\n",A,V);
+  mapbyte1[0]=V;
+  M185Sync(0);
 }
 
 void Mapper185_init(void)
 {
- memset(MapperExRAM,0xFF,1024);
- MapStateRestore=M185Sync;
- mapbyte1[0]=0;
- M185Sync();
-
- SetupCartCHRMapping(0x10,MapperExRAM,1024,0);
- SetWriteHandler(0x8000,0xFFFF,Mapper185_write);
+  int x;
+  for(x=0;x<8192;x++)
+   MapperExRAM[x]=0xff;
+  MapStateRestore=M185Sync;
+  mapbyte1[0]=0;
+  M185Sync(0);
+  SetupCartCHRMapping(0x10,MapperExRAM,8192,0);
+  SetWriteHandler(0x8000,0xFFFF,Mapper185_write);
 }
+
+
+static DECLFW(M156Write)
+{
+ if(A>=0xc000 && A<=0xC003)
+  VROM_BANK1((A&3)*1024,V);
+ else if(A>=0xc008 &&  A<=0xc00b)
+  VROM_BANK1(0x1000+(A&3)*1024,V);
+ if(A==0xc010) ROM_BANK16(0x8000,V);
+// printf("$%04x:$%02x\n",A,V);
+}
+
+void Mapper156_init(void)
+{
+ onemir(0);
+ SetWriteHandler(0xc000,0xc010,M156Write);
+}
+
+static DECLFW(m107w)
+{
+ ROM_BANK32((V>>1)&0x3);
+ VROM_BANK8(V&0x7);
+}
+
+void Mapper107_init(void)
+{
+ SetWriteHandler(0x8000,0xffff,m107w);
+}
+

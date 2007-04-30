@@ -83,6 +83,7 @@ static const uint32 SNoiseFreqTable[0x10]=
 static uint32 NoiseFreqTable[0x10];
 
 int64 nesincsizeLL;
+int64 nesincsize;
 
 static const uint8 NTSCPCMTable[0x10]=
 {
@@ -329,15 +330,6 @@ static DECLFW(Write_PSG)
              PCMIRQCount=0;
             X6502_IRQEnd(FCEU_IQDPCM);
 	   }
-           break;
- case 0x17:
-	   V&=0xC0;
-           fcnt=0;
-           if(V&0x80)
-            FrameSoundUpdate();
-           fhcnt=fhinc;
-           X6502_IRQEnd(FCEU_IQFCOUNT);
-	   SIRQStat&=~0x40;
            break;
  }
  PSG[A]=V;
@@ -851,12 +843,25 @@ static void RDoNoise(void)
    }
 }
 
+DECLFW(Write_IRQFM)
+{
+ V=(V&0xC0)>>6;
+ fcnt=0;
+ if(V&0x2)
+  FrameSoundUpdate();
+ fcnt=1;
+ fhcnt=fhinc;
+ X6502_IRQEnd(FCEU_IQFCOUNT);
+ SIRQStat&=~0x40;
+// IRQFrameMode=V;
+}
+
 void SetNESSoundMap(void)
 {
   SetWriteHandler(0x4000,0x4013,Write_PSG);
   SetWriteHandler(0x4011,0x4011,Write0x11);
   SetWriteHandler(0x4015,0x4015,Write_PSG);
-  SetWriteHandler(0x4017,0x4017,Write_PSG);
+  SetWriteHandler(0x4017,0x4017,Write_IRQFM);
   SetReadHandler(0x4015,0x4015,Read_PSG);
 }
 
@@ -917,6 +922,7 @@ static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
 
 
 
+static int32 inbuf=0;
 int FlushEmulateSound(void)
 {
   int x;
@@ -962,12 +968,15 @@ int FlushEmulateSound(void)
   for(x=0;x<5;x++)
    ChannelBC[x]=end&0xF;
   soundtsoffs=(soundtsinc*(end&0xF))>>16;
-  return(end>>4);
+  end>>=4;
+  inbuf=end;
+  return(end);
 }
 
-void GetSoundBuffer(int32 **W)
+int GetSoundBuffer(int32 **W)
 {
  *W=WaveNSF;
+ return inbuf;
 }
 
 void PowerSound(void)
@@ -1023,7 +1032,8 @@ void SetSoundVariables(void)
   if(GameExpSound.RChange)
    GameExpSound.RChange();
 
-  nesincsizeLL=(int64)((int64)562949953421312*(long double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
+  nesincsizeLL=(int64)((int64)562949953421312*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
+  nesincsize=(int64)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16));
   PSG_base=(uint32)(PAL?(long double)PAL_CPU/16:(long double)NTSC_CPU/16);
 
   for(x=0;x<0x10;x++)

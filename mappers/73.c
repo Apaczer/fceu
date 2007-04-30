@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,19 @@
 
 
 
-DECLFW(Mapper73_write)
+static DECLFW(Mapper73_write)
 {
-switch(A&0xF000)
+ //if(A>=0xd000 && A<=0xdfff)
+  X6502_IRQEnd(FCEU_IQEXT);        /* How are IRQs acknowledged on this chip? */
+ switch(A&0xF000)
  {
- case 0x8000:IRQCount&=0xFFF0;IRQCount|=(V&0xF);break;
- case 0x9000:IRQCount&=0xFF0F;IRQCount|=(V&0xF)<<4;break;
- case 0xa000:IRQCount&=0xF0FF;IRQCount|=(V&0xF)<<8;break;
- case 0xb000:IRQCount&=0x0FFF;IRQCount|=(V&0xF)<<12;break;
- case 0xc000:IRQa=V&2;break;
- case 0xf000:ROM_BANK16(0x8000,V);
-             X6502_Rebase();break;
+  //default: printf("$%04x:$%02x\n",A,V);break;
+  case 0x8000:IRQCount&=0xFFF0;IRQCount|=(V&0xF);break;
+  case 0x9000:IRQCount&=0xFF0F;IRQCount|=(V&0xF)<<4;break;
+  case 0xa000:IRQCount&=0xF0FF;IRQCount|=(V&0xF)<<8;break;
+  case 0xb000:IRQCount&=0x0FFF;IRQCount|=(V&0xF)<<12;break;
+  case 0xc000:IRQa=V&2;break;
+  case 0xf000:ROM_BANK16(0x8000,V);break;
  }
 }
 
@@ -45,7 +47,7 @@ static void FP_FASTAPASS(1) Mapper73IRQHook(int a)
   {
    IRQCount&=0xFFFF;
    IRQa=0;
-   TriggerIRQ();
+   X6502_IRQBegin(FCEU_IQEXT);
   }
  }
 }

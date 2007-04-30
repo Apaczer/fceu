@@ -46,8 +46,6 @@ uint8 *XBuf=NULL;
 
 int InitVirtualVideo(void)
 {
- uint32 m;
-
  if(!XBuf)		/* Some driver code may allocate XBuf externally. */
   if(!(XBuf = (uint8*) (FCEU_malloc(320 * 240))))
    return 0;

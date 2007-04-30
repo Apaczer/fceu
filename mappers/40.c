@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,10 +25,9 @@ static DECLFW(Mapper40_write)
 {
  switch(A&0xe000)
  {
-  case 0x8000:IRQa=0;IRQCount=0;break;
+  case 0x8000:IRQa=0;IRQCount=0;X6502_IRQEnd(FCEU_IQEXT);break;
   case 0xa000:IRQa=1;break;
-  case 0xe000:ROM_BANK8(0xc000,V&7);
-              X6502_Rebase();break;
+  case 0xe000:ROM_BANK8(0xc000,V&7);break;
  }
 }
 
@@ -37,11 +36,11 @@ static void FP_FASTAPASS(1) Mapper40IRQ(int a)
  if(IRQa)
  {
         if(IRQCount<4096)
-	 IRQCount+=a;
-	else
+         IRQCount+=a;
+        else
         {
          IRQa=0;
-         TriggerIRQ();
+         X6502_IRQBegin(FCEU_IQEXT);
         }
  }
 }
