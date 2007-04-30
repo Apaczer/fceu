@@ -397,11 +397,13 @@ static uint8 CycTable[256] =
 
 void FASTAPASS(1) X6502_IRQBegin_c(int w)
 {
+ dprintf("IRQB %02x",w);
  _IRQlow|=w;
 }
 
 void FASTAPASS(1) X6502_IRQEnd_c(int w)
 {
+ dprintf("IRQE %02x",w);
  _IRQlow&=~w;
 }
 

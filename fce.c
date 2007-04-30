@@ -353,7 +353,7 @@ static DECLFR(A2002)
                         vtoggle=0;
                         PPU_status&=0x7F;
 			 PPUGenLatch=ret;
-			dprintf("r [2002] %02x",ret);
+			//dprintf("r [2002] %02x",ret);
                         return ret;
 }
 
@@ -959,7 +959,7 @@ static void DoHBlank(void)
 {
  if(ScreenON || SpriteON)
   FetchSpriteData();
- if(GameHBIRQHook && (ScreenON || SpriteON))
+ if(GameHBIRQHook && (ScreenON || SpriteON) && ((PPU[0]&0x38)!=0x18))
  {
   X6502_Run(6);
   Fixit2();
@@ -978,7 +978,8 @@ static void DoHBlank(void)
  //PPU_hook(0,-1);
  //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
  scanline++;
- ResetRL();
+ if (scanline<240)
+  ResetRL();
  X6502_Run(16);
 }
 
@@ -1190,9 +1191,12 @@ int FCEUI_Initialize(void)
         return 1;
 }
 
+void MMC5_hb(int);     /* Ugh ugh ugh. */
 static INLINE void Thingo(void)
 {
    Loop6502();
+
+   if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
 
    // check: Battletoads & Double Dragon
    if(tosprite>=256)
@@ -1215,6 +1219,7 @@ void EmLoop(void)
 {
  for(;;)
  {
+  int x;
   uint32 scanlines_per_frame = PAL ? 312 : 262;
   UpdateInput();
   ApplyPeriodicCheats();
@@ -1222,14 +1227,12 @@ void EmLoop(void)
   // FCEUPPU_Loop:
   if(ppudead) /* Needed for Knight Rider, possibly others. */
   {
-   memset(XBuf, 0x80, 256*240);
+   memset(XBuf, 0x80, 320*240);
    X6502_Run(scanlines_per_frame*(256+85));
    ppudead--;
    goto update;
   }
-	//extern int asdc;
-	//printf("asdc: %i\n", asdc);
-	//asdc=0;
+
   X6502_Run(256+85);
 
   PPU[2]|=0x80;
@@ -1242,7 +1245,7 @@ void EmLoop(void)
 				   of this delay.
 			 	*/
   if(FCEUGameInfo.type==GIT_NSF)
-   TriggerNMINSF();
+   DoNSFFrame();
   else if(VBlankON)
    TriggerNMI();
 
@@ -1255,15 +1258,16 @@ void EmLoop(void)
      X6502_Run(256+85);
   }
   // X6502_Run((scanlines_per_frame-242)*(256+85)-12);
-
   PPU_status&=0x1f;
-
   X6502_Run(256);
+
   {
    if(ScreenON || SpriteON)
    {
     if(GameHBIRQHook)
      GameHBIRQHook();
+     if(PPU_hook)
+      for(x=0;x<42;x++) {PPU_hook(0x2000); PPU_hook(0);} // ugh
     if(GameHBIRQHook2)
      GameHBIRQHook2();
    }
@@ -1285,6 +1289,37 @@ void EmLoop(void)
   {
    X6502_Run((256+85)*240);
   }
+  #ifdef FRAMESKIP
+   else if(FSkip)
+   {
+    int y;
+
+    y=SPRAM[0];
+    y++;
+
+    PPU_status|=0x20;       // Fixes "Bee 52".  Does it break anything?
+    if(GameHBIRQHook)
+    {
+     X6502_Run(256);
+     for(scanline=0;scanline<240;scanline++)
+     {
+      if(ScreenON || SpriteON)
+       GameHBIRQHook();
+      if(scanline==y && SpriteON) PPU_status|=0x40;
+      X6502_Run((scanline==239)?85:(256+85));
+      ResetRL(); // ??
+     }
+    }
+    else if(y<240)
+    {
+     X6502_Run((256+85)*y);
+     if(SpriteON) PPU_status|=0x40; // Quick and very dirty hack.
+     X6502_Run((256+85)*(240-y));
+    }
+    else
+     X6502_Run((256+85)*240);
+   }
+  #endif
   else
   {
    int x,max,maxref;
@@ -1296,6 +1331,7 @@ void EmLoop(void)
     deempcnt[deemp]++;
     Thingo();
    }
+   if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
    for(x=1,max=0,maxref=0;x<7;x++)
    {
     if(deempcnt[x]>max)
@@ -1305,8 +1341,6 @@ void EmLoop(void)
     }
     deempcnt[x]=0;
    }
-   //FCEU_DispMessage("%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x %d",deempcnt[0],deempcnt[1],deempcnt[2],deempcnt[3],deempcnt[4],deempcnt[5],deempcnt[6],deempcnt[7],maxref);
-   //memset(deempcnt,0,sizeof(deempcnt));
    SetNESDeemph(maxref,0);
   }
 

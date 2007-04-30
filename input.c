@@ -205,6 +205,7 @@ void UpdateInput(void)
 	if(netplay) NetplayUpdate(&joy[0],&joy[1]);
 	#endif
 	if (current < 0) FCEUMOV_AddJoy(joy);
+	else framecount++; // for debug
 	//FlushCommandQueue();
 }
 

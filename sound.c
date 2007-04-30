@@ -845,6 +845,7 @@ static void RDoNoise(void)
 
 DECLFW(Write_IRQFM)
 {
+ PSG[0x17]=V;
  V=(V&0xC0)>>6;
  fcnt=0;
  if(V&0x2)
@@ -853,7 +854,7 @@ DECLFW(Write_IRQFM)
  fhcnt=fhinc;
  X6502_IRQEnd(FCEU_IQFCOUNT);
  SIRQStat&=~0x40;
-// IRQFrameMode=V;
+ //IRQFrameMode=V; // IRQFrameMode is PSG[0x17] upper bits
 }
 
 void SetNESSoundMap(void)

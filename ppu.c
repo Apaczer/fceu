@@ -176,9 +176,12 @@ void FetchSpriteData(void)
                   if(MMC5Hack) C = MMC5SPRVRAMADR(vadr);
                   else C = VRAMADR(vadr);
                   dst.ca[0]=C[0];
-		  PPU_hook(vadr);
+		  if(nosprites<8)
+		  {
+		   PPU_hook(0x2000);
+                   PPU_hook(vadr);
+		  }
                   dst.ca[1]=C[8];
-		  PPU_hook(vadr|8);
                   dst.x=spr->x;
                   dst.atr=spr->atr;
 
@@ -194,6 +197,18 @@ void FetchSpriteData(void)
                   break;
                 }
          }
+
+        if(nosprites>8) PPU_status|=0x20;  /* Handle case when >8 sprites per
+					   scanline option is enabled. */
+	else if(PPU_hook)
+	{
+	 for(n=0;n<(8-nosprites);n++)
+	 {
+                 PPU_hook(0x2000);
+                 PPU_hook(vofs);
+	 }
+	}
+
 }
 
 #ifdef FRAMESKIP
