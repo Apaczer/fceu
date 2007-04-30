@@ -5,7 +5,6 @@ OBJECTS = fce.o video.o general.o endian.o svga.o sound.o nsf.o fds.o netplay.o 
 fceu: 		fceu2
 include	mappers/Makefile
 include boards/Makefile
-#include mbshare/Makefile
 include input/Makefile
 
 fceu2:	        ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER}
