@@ -229,7 +229,7 @@ static void NamcoSoundHack(void)
 #endif
   z=((SOUNDTS<<16)/soundtsinc)>>4;
   a=z-dwave;
-  if(a) DoNamcoSound(&Wave[dwave], a);
+  if(a) DoNamcoSound((int32 *)&Wave[dwave], a);
   dwave+=a;
 }
 
@@ -238,7 +238,7 @@ static void NamcoSound(int Count)
   int32 z,a;
   z=((SOUNDTS<<16)/soundtsinc)>>4;
   a=z-dwave;
-  if(a) DoNamcoSound(&Wave[dwave], a);
+  if(a) DoNamcoSound((int32 *)&Wave[dwave], a);
   dwave=0;
 }
 

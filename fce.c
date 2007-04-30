@@ -48,6 +48,7 @@
 #include	"crc32.h"
 #include        "ppu.h"
 
+#include        "palette.h"
 #include        "movie.h"
 
 #include        "dprintf.h"
@@ -1032,7 +1033,7 @@ void CloseGame(void)
  if(GameLoaded)
  {
   if(FCEUGameInfo.type!=GIT_NSF)
-   FlushGameCheats();
+   FCEU_FlushGameCheats(0,0);
   #ifdef NETWORK
   if(FSettings.NetworkPlay) KillNetplay();
   #endif
@@ -1139,8 +1140,8 @@ FCEUGI *FCEUI_LoadGame(char *name)
         SaveStateRefresh();
         if(FCEUGameInfo.type!=GIT_NSF)
         {
-         LoadGamePalette();
-         LoadGameCheats();
+	 FCEU_LoadGamePalette();
+         FCEU_LoadGameCheats(0);
         }
 
 	FCEU_ResetPalette();
@@ -1187,7 +1188,7 @@ int FCEUI_Initialize(void)
 	FSettings.UsrFirstSLine[0]=8;
 	FSettings.UsrFirstSLine[1]=0;
         FSettings.UsrLastSLine[0]=FSettings.UsrLastSLine[1]=239;
-	FSettings.SoundVolume=65535;	// 100%
+	FSettings.SoundVolume=100;
         return 1;
 }
 
@@ -1222,7 +1223,7 @@ void EmLoop(void)
   int x;
   uint32 scanlines_per_frame = PAL ? 312 : 262;
   UpdateInput();
-  ApplyPeriodicCheats();
+  FCEU_ApplyPeriodicCheats();
 
   // FCEUPPU_Loop:
   if(ppudead) /* Needed for Knight Rider, possibly others. */
@@ -1435,7 +1436,7 @@ static void PowerPPU(void)
 
 void ResetNES(void)
 {
-        if(!GameLoaded || (FCEUGameInfo.type==GIT_NSF)) return;
+        if(!GameLoaded) return;
         GameInterface(GI_RESETM2);
         ResetSound();
         ResetPPU();

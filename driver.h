@@ -57,6 +57,9 @@ void FCEUI_SetInput(int port, int type, void *ptr, int attrib);
 void FCEUI_SetInputFC(int type, void *ptr, int attrib);
 void FCEUI_DisableFourScore(int s);
 
+void FCEUI_GetNTSCTH(int *tint, int *hue);
+void FCEUI_SetNTSCTH(int n, int tint, int hue);
+
 #include "version.h"
 
 #define SI_NONE      0
@@ -163,20 +166,24 @@ void FCEUI_SaveSnapshot(void);
 void FCEU_DispMessage(char *format, ...);
 #define FCEUI_DispMessage FCEU_DispMessage
 
-int FCEUI_AddCheat(char *name, uint32 addr, uint8 val);
+int FCEUI_AddCheat(const char *name, uint32 addr, uint8 val, int compare, int type);
 int FCEUI_DelCheat(uint32 which);
 
 int32 FCEUI_CheatSearchGetCount(void);
 void FCEUI_CheatSearchGetRange(uint32 first, uint32 last, int (*callb)(uint32 a, uint8 last, uint8 current));
-void FCEUI_CheatSearchGet(int (*callb)(uint32 a, uint8 last, uint8 current));
+void FCEUI_CheatSearchGet(int (*callb)(uint32 a, uint8 last, uint8 current, void *data),void *data);
 void FCEUI_CheatSearchBegin(void);
 void FCEUI_CheatSearchEnd(int type, uint8 v1, uint8 v2);
-void FCEUI_ListCheats(int (*callb)(char *name, uint32 a, uint8 v, int s));
+void FCEUI_ListCheats(int (*callb)(char *name, uint32 a, uint8 v, int compare, int s, int type, void *data), void *data);
 
-int FCEUI_GetCheat(uint32 which, char **name, uint32 *a, uint8 *v, int *s);
-int FCEUI_SetCheat(uint32 which, char *name, int32 a, int32 v, int s);
+int FCEUI_GetCheat(uint32 which, char **name, uint32 *a, uint8 *v, int *compare, int *s, int *type);
+int FCEUI_SetCheat(uint32 which, const char *name, int32 a, int32 v, int compare,int s, int type);
 void FCEUI_CheatSearchShowExcluded(void);
 void FCEUI_CheatSearchSetCurrentAsOriginal(void);
+
+int FCEUI_DecodePAR(const char *code, uint16 *a, uint8 *v, int *c, int *type);
+int FCEUI_DecodeGG(const char *str, uint16 *a, uint8 *v, int *c);
+int FCEUI_ToggleCheat(uint32 which);
 
 #define FCEUIOD_STATE   0
 #define FCEUIOD_SNAPS   1

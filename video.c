@@ -236,7 +236,7 @@ int SaveSnapshot(void)
    tmp+=16;
   }
 
-  if(compress(compmem,&compmemsize,mork,(totallines<<8)+totallines)!=Z_OK)
+  if(compress(compmem,(unsigned long *)&compmemsize,mork,(totallines<<8)+totallines)!=Z_OK)
   {
    if(mal) free(mal);
    goto PNGerr;

@@ -2,7 +2,7 @@ CROSS	= arm-linux-
 CC	= $(CROSS)gcc
 STRIP	= $(CROSS)strip
 AS	= $(CROSS)as
-TFLAGS  = -Winline -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DZLIB -DFRAMESKIP -D_REENTRANT
+TFLAGS  = -Winline -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT
 ASFLAGS	= -mcpu=arm920t -mfloat-abi=soft
 RM	= rm -f
 B	= drivers/gp2x/

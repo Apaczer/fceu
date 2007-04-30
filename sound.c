@@ -866,7 +866,7 @@ void SetNESSoundMap(void)
   SetReadHandler(0x4015,0x4015,Read_PSG);
 }
 
-static int32 WaveNSF[256];
+static int32 WaveNSF[2048];
 
 int32 highp;                   // 0 through 65536, 0 = no high pass, 65536 = max high pass
 
@@ -952,12 +952,12 @@ int FlushEmulateSound(void)
 //  printf("count %d, num ints %d\n", end, (end >> 4));
   if(FCEUGameInfo.type==GIT_NSF)
   {
-   printf("IS NSF");
-   int x,s=0,si=end/1024;       // Only want 1/4 of the output buffer to be displayed
-   for(x=0;x<256;x++)
+   int x;//,s=0,si=end/1024;
+   for(x=0;x<1024;x++)
    {
-    WaveNSF[x]=WaveFinal[s>>4];
-    s+=si;
+    //WaveNSF[x]=WaveFinal[s>>4];
+    WaveNSF[x]=WaveFinalMono[x];
+    //s+=si;
    }
   }
 
@@ -1073,5 +1073,5 @@ void FCEUI_Sound(int Rate)
 
 void FCEUI_SetSoundVolume(uint32 volume)
 {
- FSettings.SoundVolume=(volume<<16)/100;
+ FSettings.SoundVolume=volume;
 }

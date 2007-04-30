@@ -20,11 +20,6 @@
  */
 
 #include "driver.h"
-typedef struct __pal {
-	uint8 r;
-	uint8 g;
-	uint8 b;
-} pal;
 
 typedef struct {
            int PAL;
@@ -75,10 +70,7 @@ void SetNESPalette(void);
 #define JOY_LEFT        0x40
 #define JOY_RIGHT       0x80
 
-extern pal *palo;
-
 void DoCommand(uint8 c);
 extern uint8 CommandQueue;
-void FCEU_ResetPalette(void);
-void LoadGamePalette(void);
+
 void FlushCommandQueue(void);

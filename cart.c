@@ -453,6 +453,7 @@ void OpenGenie(void)
 
   fn=FCEU_MakeFName(FCEUMKF_GGROM,0,0);
   fp=fopen(fn,"rb");
+  free(fn);
   if(!fp)
   {
    FCEU_PrintError("Error opening Game Genie ROM image!");

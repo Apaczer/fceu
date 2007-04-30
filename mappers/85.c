@@ -38,7 +38,7 @@ void DoVRC7Sound(void)
  z=((SOUNDTS<<16)/soundtsinc)>>4;
  a=z-dwave;
 
- moocow(VRC7Sound, &Wave[dwave], a, 1);
+ moocow(VRC7Sound, (int32 *)&Wave[dwave], a, 1);
 
  dwave+=a;
 }
@@ -56,7 +56,7 @@ void UpdateOPL(int Count)
  a=z-dwave;
 
  if(VRC7Sound && a)
-  moocow(VRC7Sound, &Wave[dwave], a, 1);
+  moocow(VRC7Sound, (int32 *)&Wave[dwave], a, 1);
 
  dwave=0;
 }

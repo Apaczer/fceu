@@ -49,6 +49,8 @@
 #include "cart.h"
 #include "input.h"
 
+#include "vsuni.h"
+
 FCEUS FSettings;
 
 static int howlong;
@@ -126,10 +128,6 @@ void FCEUI_SetGameGenie(int a)
  FSettings.GameGenie=a?1:0;
 }
 
-static void CalculatePalette(void);
-static void ChoosePalette(void);
-static void WritePalette(void);
-
 #ifndef NETWORK
 #define netplay 0
 #endif
@@ -142,7 +140,7 @@ uint8 DIPS=0;
 //uint8 vsdip=0;
 //int coinon=0;
 
-uint8 pale=0;
+//uint8 pale=0;
 uint8 CommandQueue=0;
 
 static int controlselect=0;
@@ -151,6 +149,7 @@ static int ntsctint=46+10;
 static int ntschue=72;
 static int controllength=0;
 
+#if 0
 pal *palo;
 static pal *palpoint[8]=
      {
@@ -163,6 +162,7 @@ static pal *palpoint[8]=
      palettevseb,
      rp2c04001
      };
+#endif
 
 void FCEUI_SetSnapName(int a)
 {
@@ -174,6 +174,7 @@ void FCEUI_SaveExtraDataUnderBase(int a)
  FSettings.SUnderBase=a;
 }
 
+#if 0
 void FCEUI_SetPaletteArray(uint8 *pal)
 {
  if(!pal)
@@ -191,6 +192,7 @@ void FCEUI_SetPaletteArray(uint8 *pal)
  }
  FCEU_ResetPalette();
 }
+#endif
 
 void FCEUI_SelectState(int w)
 {
@@ -259,7 +261,7 @@ void DriverInterface(int w, void *d)
   case DES_VSUNICOIN:CommandQueue=19;break;
   case DES_NTSCSELHUE:if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF){controlselect=1;controllength=360;}break;
   case DES_NTSCSELTINT:if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF){controlselect=2;controllength=360;}break;
-
+#if 0
   case DES_NTSCDEC:
 		  if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF)
 		  {
@@ -301,9 +303,11 @@ void DriverInterface(int w, void *d)
 		      controllength=360;
 		     }
           	    break;
+#endif
   }
 }
 
+#if 0
 static uint8 lastd=0;
 void SetNESDeemph(uint8 d, int force)
 {
@@ -418,6 +422,7 @@ static void CalculatePalette(void)
   }
  WritePalette();
 }
+#endif
 
 #include "drawing.h"
 #ifdef FRAMESKIP
@@ -461,10 +466,16 @@ void FCEU_PutImage(void)
           ReallySnap();
           dosnapsave=0;
          }
-	 if(FCEUGameInfo.type==GIT_VSUNI && DIPS&2)
-	  DrawDips();
-         if(StateShow) DrawState();
-         if(controllength) {controllength--;DrawBars();}
+	 if(FCEUGameInfo.type==GIT_VSUNI)
+		 FCEU_VSUniDraw(XBuf);
+         //if(StateShow) DrawState();
+
+	 //FCEU_DrawSaveStates(XBuf);
+	 //FCEU_DrawMovies(XBuf);
+	 //FCEU_DrawNTSCControlBars(XBuf);
+	 //FCEU_DrawRecordingStatus(XBuf);
+
+         //if(controllength) {controllength--;DrawBars();}
         }
 	DrawMessage();
 	#ifdef FPS
@@ -476,6 +487,7 @@ void FCEU_PutImage(void)
 	DrawInput(XBuf+8);
 }
 
+#if 0
 static int ipalette=0;
 
 void LoadGamePalette(void)
@@ -538,7 +550,6 @@ void WritePalette(void)
     }
 }
 
-#if 0
 void FlushCommandQueue(void)
 {
   if(!netplay && CommandQueue) {DoCommand(CommandQueue);CommandQueue=0;}

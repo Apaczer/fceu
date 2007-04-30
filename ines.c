@@ -549,7 +549,7 @@ int iNESLoad(const char *name, int fp)
 
 	iNESCart.CRC32=iNESGameCRC32;
 
-        FCEU_printf(" PRG ROM:  %3d x 16KiB\n CHR ROM:  %3d x  8KiB\n ROM CRC32:  0x%08lx\n",
+        FCEU_printf(" PRG ROM:  %3d x 16KiB\n CHR ROM:  %3d x  8KiB\n ROM CRC32:  0x%08x\n",
 		head.ROM_size,head.VROM_size,iNESGameCRC32);
 
         {

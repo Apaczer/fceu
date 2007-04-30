@@ -42,6 +42,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define SCREEN_WIDTH 320
+#define SCREEN_OFFS 32
+
 static uint8 SongReload;
 static int CurrentSong;
 
@@ -403,7 +406,7 @@ void DrawNSF(uint8 *XBuf)
 
  if(vismode==0) return;
 
- memset(XBuf,0,256*240);
+ memset(XBuf,0,320*240);
 
 
  {
@@ -422,7 +425,7 @@ void DrawNSF(uint8 *XBuf)
     uint32 y;
     y=142+((Bufpl[(x*l)>>8]*mul)>>14);
     if(y<240)
-     XBuf[x+y*256]=3;
+     XBuf[x+y*SCREEN_WIDTH+SCREEN_OFFS]=3;
    }
   }
   else if(special==1)
@@ -439,7 +442,7 @@ void DrawNSF(uint8 *XBuf)
     yp=120+r*sin(x*M_PI*2/256);
     xp&=255;
     yp%=240;
-    XBuf[xp+yp*256]=3;
+    XBuf[xp+yp*SCREEN_WIDTH+SCREEN_OFFS]=3;
    }
   }
   else if(special==2)
@@ -463,7 +466,7 @@ void DrawNSF(uint8 *XBuf)
     n=120+r*sin(t);
 
     if(m<256 && n<240)
-     XBuf[m+n*256]=3;
+     XBuf[m+n*SCREEN_WIDTH+SCREEN_OFFS]=3;
 
    }
    for(x=128;x<256;x++)
@@ -482,20 +485,20 @@ void DrawNSF(uint8 *XBuf)
     n=120+r*sin(t);
 
     if(m<256 && n<240)
-     XBuf[m+n*256]=3;
+     XBuf[m+n*SCREEN_WIDTH+SCREEN_OFFS]=3;
 
    }
    theta+=(double)M_PI/256;
   }
  }
 
- DrawTextTrans(XBuf+10*256+4+(((31-strlen((char*)NSFHeader.SongName))<<2)), 256, NSFHeader.SongName, 6);
- DrawTextTrans(XBuf+26*256+4+(((31-strlen((char*)NSFHeader.Artist))<<2)), 256,NSFHeader.Artist, 6);
- DrawTextTrans(XBuf+42*256+4+(((31-strlen((char*)NSFHeader.Copyright))<<2)), 256,NSFHeader.Copyright, 6);
+ DrawTextTrans(XBuf+10*SCREEN_WIDTH+SCREEN_OFFS+4+(((31-strlen((char*)NSFHeader.SongName))<<2)), SCREEN_WIDTH, NSFHeader.SongName, 6);
+ DrawTextTrans(XBuf+26*SCREEN_WIDTH+SCREEN_OFFS+4+(((31-strlen((char*)NSFHeader.Artist))<<2)), SCREEN_WIDTH,NSFHeader.Artist, 6);
+ DrawTextTrans(XBuf+42*SCREEN_WIDTH+SCREEN_OFFS+4+(((31-strlen((char*)NSFHeader.Copyright))<<2)), SCREEN_WIDTH,NSFHeader.Copyright, 6);
 
- DrawTextTrans(XBuf+70*256+4+(((31-strlen("Song:"))<<2)), 256, (uint8*)"Song:", 6);
+ DrawTextTrans(XBuf+70*SCREEN_WIDTH+SCREEN_OFFS+4+(((31-strlen("Song:"))<<2)), SCREEN_WIDTH, (uint8*)"Song:", 6);
  sprintf(snbuf,"<%d/%d>",CurrentSong,NSFHeader.TotalSongs);
- DrawTextTrans(XBuf+82*256+4+(((31-strlen(snbuf))<<2)), 256, (uint8*)snbuf, 6);
+ DrawTextTrans(XBuf+82*SCREEN_WIDTH+SCREEN_OFFS+4+(((31-strlen(snbuf))<<2)), SCREEN_WIDTH, (uint8*)snbuf, 6);
 
  {
   static uint8 last=0;

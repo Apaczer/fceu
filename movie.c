@@ -98,7 +98,7 @@ int resetDMCacc=0;
 static uint32 nextts = 0;
 static int32 nextd = 0;
 
-#define FCEUSTATE_RLSB            0x80000000
+//#define FCEUSTATE_RLSB            0x80000000
 
 SFORMAT FCEUMOV_STATEINFO[]={
  { joop, 4,"JOOP"},

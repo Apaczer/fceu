@@ -469,7 +469,6 @@ void X6502_Reset_c(void)
 {
   _PC=RdMem(0xFFFC);
   _PC|=RdMem(0xFFFD)<<8;
-  if(FCEUGameInfo.type==GIT_NSF) _PC=0x3830;
   _jammed=0;
   _PI=_P=I_FLAG;
 }

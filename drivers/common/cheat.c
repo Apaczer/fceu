@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,12 @@
 #include <ctype.h>
 #include "../../driver.h"
 
-static void GetString(char *s)
+static void GetString(char *s, int max)
 {
  int x;
- fgets(s,256,stdin);
+ fgets(s,max,stdin);
 
- for(x=0;x<256;x++)
+ for(x=0;x<max;x++)
   if(s[x]=='\n')
   {
    s[x]=0;
@@ -52,6 +52,17 @@ static uint32 GetH16(unsigned int def)
 
 /* Get unsigned 8-bit integer from stdin in decimal. */
 static uint8 Get8(unsigned int def)
+{
+ char buf[32];
+
+ fgets(buf,32,stdin);
+ if(buf[0]=='\n')
+  return(def);
+ sscanf(buf,"%u",&def);
+ return def;
+}
+
+static int GetI(int def)
 {
  char buf[32];
 
@@ -106,7 +117,7 @@ int ListChoice(int hmm)
    if(buf[0]=='s' || buf[0]=='S') return(-1);
    if(buf[0]=='\n') return(0);
    if(!sscanf(buf,"%d",&num))
-    return(0);  
+    return(0);
    if(num<1) goto tryagain;
    return(num);
   }
@@ -154,12 +165,12 @@ int AddToList(char *text, uint32 id)
  mordoe=1;
  listids[listcount]=id;
  printf("%2d) %s\n",listcount+1,text);
- listcount++; 
+ listcount++;
  return(1);
 }
 
 /*
-**	
+**
 **	End list code.
 **/
 
@@ -181,13 +192,8 @@ static void UnhideEx(void)
 
 static void ToggleCheat(int num)
 {
- uint32 A;
- int s;
-
- FCEUI_GetCheat(num,0,&A,0,&s);
- s^=1;
- FCEUI_SetCheat(num,0,-1,-1,s);
- printf("Cheat for address $%04x %sabled.\n",(unsigned int)A,s?"en":"dis");
+ printf("Cheat %d %sabled.\n",1+num,
+  FCEUI_ToggleCheat(num)?"en":"dis");
 }
 
 static void ModifyCheat(int num)
@@ -196,16 +202,19 @@ static void ModifyCheat(int num)
  char buf[256];
  uint32 A;
  uint8 V;
+ int compare;
+ int type;
+
  int s;
  int t;
 
- FCEUI_GetCheat(num, &name, &A, &V, &s);
+ FCEUI_GetCheat(num, &name, &A, &V, &compare, &s, &type);
 
  printf("Name [%s]: ",name);
- GetString(buf);
+ GetString(buf,256);
 
  /* This obviously doesn't allow for cheats with no names.  Bah.  Who wants
-    nameless cheats anyway... 
+    nameless cheats anyway...
  */
 
  if(buf[0])
@@ -219,12 +228,71 @@ static void ModifyCheat(int num)
  printf("Value [%03d]: ",(unsigned int)V);
  V=Get8(V);
 
+ printf("Compare [%3d]: ",compare);
+ compare=GetI(compare);
+
+ printf("Type(0=Old Style, 1=Read Substitute) [%1d]: ",type);
+ type=GetI(type)?1:0;
+
  printf("Enable [%s]: ",s?"Y":"N");
  t=getchar();
  if(t=='Y' || t=='y') s=1;
  else if(t=='N' || t=='n') s=0;
 
- FCEUI_SetCheat(num,name,A,V,s);
+ FCEUI_SetCheat(num,name,A,V,compare,s,type);
+}
+
+
+static void AddCheatGGPAR(int which)
+{
+ uint16 A;
+ uint8 V;
+ int C;
+ int type;
+ char name[256],code[256];
+
+ printf("Name: ");
+ GetString(name,256);
+
+ printf("Code: ");
+ GetString(code,256);
+
+ printf("Add cheat \"%s\" for code \"%s\"?",name,code);
+ if(GetYN(0))
+ {
+  if(which)
+  {
+   if(!FCEUI_DecodePAR(code,&A,&V,&C,&type))
+   {
+    puts("Invalid Game Genie code.");
+    return;
+   }
+  }
+  else
+  {
+   if(!FCEUI_DecodeGG(code,&A,&V,&C))
+   {
+    puts("Invalid Game Genie code.");
+    return;
+   }
+   type=1;
+  }
+
+  if(FCEUI_AddCheat(name,A,V,C,type))
+   puts("Cheat added.");
+  else
+   puts("Error adding cheat.");
+ }
+}
+
+static void AddCheatGG(void)
+{
+ AddCheatGGPAR(0);
+}
+
+static void AddCheatPAR(void)
+{
+ AddCheatGGPAR(1);
 }
 
 static void AddCheatParam(uint32 A, uint8 V)
@@ -232,7 +300,7 @@ static void AddCheatParam(uint32 A, uint8 V)
  char name[256];
 
  printf("Name: ");
- GetString(name);
+ GetString(name,256);
  printf("Address [$%04x]: ",(unsigned int)A);
  A=GetH16(A);
  printf("Value [%03d]: ",(unsigned int)V);
@@ -240,7 +308,7 @@ static void AddCheatParam(uint32 A, uint8 V)
  printf("Add cheat \"%s\" for address $%04x with value %03d?",name,(unsigned int)A,(unsigned int)V);
  if(GetYN(0))
  {
-  if(FCEUI_AddCheat(name,A,V))
+  if(FCEUI_AddCheat(name,A,V,-1,0))
    puts("Cheat added.");
   else
    puts("Error adding cheat.");
@@ -253,12 +321,17 @@ static void AddCheat(void)
 }
 
 static int lid;
-static int clistcallb(char *name, uint32 a, uint8 v, int s)
+static int clistcallb(char *name, uint32 a, uint8 v, int compare, int s, int type, void *data)
 {
  char tmp[512];
  int ret;
 
- sprintf(tmp,"%s $%04x:%03d - %s",s?"*":" ",(unsigned int)a,(unsigned int)v,name);
+ if(compare>=0)
+  sprintf(tmp,"%s   $%04x:%03d:%03d - %s",s?"*":" ",(unsigned int)a,(unsigned int)v,compare,name);
+ else
+  sprintf(tmp,"%s   $%04x:%03d     - %s",s?"*":" ",(unsigned int)a,(unsigned int)v,name);
+ if(type==1)
+  tmp[2]='S';
  ret=AddToList(tmp,lid);
  lid++;
  return(ret);
@@ -270,7 +343,7 @@ static void ListCheats(void)
  lid=0;
 
  BeginListShow();
- FCEUI_ListCheats(clistcallb);
+ FCEUI_ListCheats(clistcallb,0);
  which=EndListShow();
  if(which>=0)
  {
@@ -283,7 +356,7 @@ static void ListCheats(void)
 	    break;
    case 'd':if(!FCEUI_DelCheat(which))
  	     puts("Error deleting cheat!");
-	    else 
+	    else
 	     puts("Cheat has been deleted.");
 	    break;
    case 'm':ModifyCheat(which);
@@ -298,7 +371,7 @@ static void ResetSearch(void)
  puts("Done.");
 }
 
-static int srescallb(uint32 a, uint8 last, uint8 current)
+static int srescallb(uint32 a, uint8 last, uint8 current, void *data)
 {
  char tmp[13];
  sprintf(tmp, "$%04x:%03d:%03d",(unsigned int)a,(unsigned int)last,(unsigned int)current);
@@ -313,7 +386,7 @@ static void ShowRes(void)
  {
   int which;
   BeginListShow();
-  FCEUI_CheatSearchGet(srescallb);
+  FCEUI_CheatSearchGet(srescallb,0);
   which=EndListShow();
   if(which>=0)
    AddCheatParam(which,0);
@@ -354,10 +427,10 @@ static void DoSearch(void)
 {
  static int v1=0,v2=0;
  static int method=0;
- char *m[4]={"O==V1 && C==V2","O==V1 && |O-C|==V2","|O-C|==V2","O!=C"};
+ char *m[6]={"O==V1 && C==V2","O==V1 && |O-C|==V2","|O-C|==V2","O!=C","Value decreased","Value increased"};
  printf("\nSearch Filter:\n");
 
- method=ShowShortList(m,4,method);
+ method=ShowShortList(m,6,method);
  if(method<=1)
  {
   printf("V1 [%03d]: ",v1);
@@ -373,19 +446,21 @@ static void DoSearch(void)
 }
 
 
-static MENU NewCheatsMenu[7]={
- {"Add Cheat",AddCheat,1},
- {"Reset Search",ResetSearch,1},
- {"Do Search",DoSearch,1},
- {"Set Original to Current",SetOC,1},
- {"Unhide Excluded",UnhideEx,1},
- {"Show Results",ShowRes,1},
+static MENU NewCheatsMenu[]={
+ {"Add Cheat",(void *)AddCheat,1},
+ {"Reset Search",(void *)ResetSearch,1},
+ {"Do Search",(void *)DoSearch,1},
+ {"Set Original to Current",(void *)SetOC,1},
+ {"Unhide Excluded",(void *)UnhideEx,1},
+ {"Show Results",(void *)ShowRes,1},
+ {"Add Game Genie Cheat",(void *)AddCheatGG,1},
+ {"Add PAR Cheat",(void *)AddCheatPAR,1},
  {0}
 };
 
-static MENU MainMenu[3]={
- {"List Cheats",ListCheats,1},
- {"New Cheats...",NewCheatsMenu,0},
+static MENU MainMenu[]={
+ {"List Cheats",(void *)ListCheats,1},
+ {"New Cheats...",(void *)NewCheatsMenu,0},
  {0}
 };
 
@@ -423,11 +498,11 @@ static void DoMenu(MENU *men)
    if(c>x) goto invalid;
    if(men[c-1].type)
    {
-    void (*func)(void)=men[c-1].action;
+    void (*func)(void)=(void(*)())men[c-1].action;
     func();
    }
    else
-    DoMenu(men[c-1].action);	/* Mmm...recursivey goodness. */
+    DoMenu((MENU*)men[c-1].action);	/* Mmm...recursivey goodness. */
    goto redisplay;
   }
   else
