@@ -269,10 +269,10 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@ REG_ADDRを変更するが気にするな
 @@@
 .macro	READ_WORD
-	READ
+	bl	read_byte
 	mov	REG_PC, r0
 	add	REG_ADDR, REG_ADDR, #1
-	READ
+	bl	read_byte
 	orr	r0, REG_PC, r0, lsl #8
 .endm
 

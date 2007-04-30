@@ -300,6 +300,7 @@ void NSF_init(void)
   SetReadHandler(0x2000,0x37ff,0);
   SetReadHandler(0x3836,0x3FFF,0);
   SetReadHandler(0x3800,0x3835,NSFROMRead);
+  Page[0x3800>>11]=NSFROM-0x3800; // this is required for asm core to work.
 
   SetWriteHandler(0x5ff6,0x5fff,NSF_write);
 
@@ -406,8 +407,8 @@ void DrawNSF(uint8 *XBuf)
 
  if(vismode==0) return;
 
- memset(XBuf,0,320*240);
-
+ for (x=0;x<240;x++)
+  memset(XBuf+SCREEN_OFFS+x*SCREEN_WIDTH,0,256);
 
  {
   int32 *Bufpl;

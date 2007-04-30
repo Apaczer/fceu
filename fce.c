@@ -1288,7 +1288,8 @@ void EmLoop(void)
 
   if(FCEUGameInfo.type==GIT_NSF)
   {
-   X6502_Run((256+85)*240);
+   for(scanline=0;scanline<240;scanline++)
+    X6502_Run(256+85);
   }
   #ifdef FRAMESKIP
    else if(FSkip)

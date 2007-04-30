@@ -167,6 +167,7 @@ void FASTAPASS(3) setprg2r(int r, unsigned int A, unsigned int V)
 {
   V&=PRGmask2[r];
   setpageptr(2,A,PRGptr[r]?(&PRGptr[r][V<<11]):0,PRGram[r]);
+  X6502_Rebase();
 }
 
 void FASTAPASS(2) setprg2(uint32 A, uint32 V)
@@ -178,6 +179,7 @@ void FASTAPASS(3) setprg4r(int r, unsigned int A, unsigned int V)
 {
   V&=PRGmask4[r];
   setpageptr(4,A,PRGptr[r]?(&PRGptr[r][V<<12]):0,PRGram[r]);
+  X6502_Rebase();
 }
 
 void FASTAPASS(2) setprg4(uint32 A, uint32 V)
@@ -199,6 +201,7 @@ void FASTAPASS(3) setprg8r(int r, unsigned int A, unsigned int V)
    for(x=0;x<4;x++)
     setpageptr(2,A+(x<<11),PRGptr[r]?(&PRGptr[r][((VA+x)&PRGmask2[r])<<11]):0,PRGram[r]);
   }
+  X6502_Rebase();
 }
 
 void FASTAPASS(2) setprg8(uint32 A, uint32 V)
@@ -221,6 +224,7 @@ void FASTAPASS(3) setprg16r(int r, unsigned int A, unsigned int V)
    for(x=0;x<8;x++)
     setpageptr(2,A+(x<<11),PRGptr[r]?(&PRGptr[r][((VA+x)&PRGmask2[r])<<11]):0,PRGram[r]);
   }
+  X6502_Rebase();
 }
 
 void FASTAPASS(2) setprg16(uint32 A, uint32 V)
@@ -243,6 +247,7 @@ void FASTAPASS(3) setprg32r(int r,unsigned int A, unsigned int V)
    for(x=0;x<16;x++)
     setpageptr(2,A+(x<<11),PRGptr[r]?(&PRGptr[r][((VA+x)&PRGmask2[r])<<11]):0,PRGram[r]);
   }
+  X6502_Rebase();
 }
 
 void FASTAPASS(2) setprg32(uint32 A, uint32 V)

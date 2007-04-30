@@ -167,7 +167,7 @@ int SaveSnapshot(void)
  int x,u,y;
  FILE *pp=NULL;
  uint8 *compmem=NULL;
- uint32 compmemsize=totallines*263+12;
+ unsigned long compmemsize=totallines*263+12;
 
  if(!(compmem=FCEU_malloc(compmemsize)))
   return 0;
@@ -236,7 +236,7 @@ int SaveSnapshot(void)
    tmp+=16;
   }
 
-  if(compress(compmem,(unsigned long *)&compmemsize,mork,(totallines<<8)+totallines)!=Z_OK)
+  if(compress(compmem,&compmemsize,mork,(totallines<<8)+totallines)!=Z_OK)
   {
    if(mal) free(mal);
    goto PNGerr;

@@ -1,3 +1,6 @@
+#define SCREEN_WIDTH 320
+#define SCREEN_OFFS 32
+
 void DrawTextLineBG(uint8 *dest)
 {
  int x,y;
@@ -8,12 +11,12 @@ void DrawTextLineBG(uint8 *dest)
   int offs;
 
   if(y>=7) offs=otable[13-y];
-  else offs=otable[y];   
-          
+  else offs=otable[y];
+
   for(x=offs;x<(256-offs);x++)
-   dest[y*256+x]=(dest[y*256+x]&0x0f)|0xC0;//&=0xe0; //0x80;
+   dest[y*SCREEN_WIDTH+x]=(dest[y*SCREEN_WIDTH+x]&0x0f)|0xC0;//&=0xe0; //0x80;
  }
-}       
+}
 
 static void DrawMessage(void)
 {
@@ -21,11 +24,11 @@ static void DrawMessage(void)
   {
    uint8 *t;
    howlong--;
-   t=XBuf+(FSettings.LastSLine-16)*256;
+   t=XBuf+(FSettings.LastSLine-16)*SCREEN_WIDTH+SCREEN_OFFS;
    if(t>=XBuf)
    {
     DrawTextLineBG(t);
-    DrawTextTrans(t+256*3+(128-strlen(errmsg)*4),256,(uint8 *)errmsg,4);
+    DrawTextTrans(t+3*SCREEN_WIDTH+(128-strlen(errmsg)*4),SCREEN_WIDTH,(uint8 *)errmsg,128+4);
    }
   }
 }
@@ -49,9 +52,9 @@ void DrawTextTrans(uint8 *dest, uint32 width, uint8 *textmsg, uint8 fgcolor)
 	uint8 y;
 	uint8 z;
 
-	for(x=0;x<length;x++)    
-         for(y=0;y<8;y++)       
-          for(z=0;z<8;z++) 
+	for(x=0;x<length;x++)
+         for(y=0;y<8;y++)
+          for(z=0;z<8;z++)
            if((fontdata2[(textmsg[x]<<3)+y]>>z)&1) dest[y*width+(x<<3)+z]=fgcolor;
 }
 
@@ -78,39 +81,39 @@ void FCEU_DrawNumberRow(uint8 *XBuf, int *nstatus, int cur)
 {
  uint8 *XBaf;
  int z,x,y;
-            
- XBaf=XBuf - 4 + (FSettings.LastSLine-34)*256;
+
+ XBaf=XBuf - 4 + (FSettings.LastSLine-34)*SCREEN_WIDTH+SCREEN_OFFS;
  if(XBaf>=XBuf)
  for(z=1;z<11;z++)
- {  
+ {
   if(nstatus[z%10])
    {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
-            XBaf[y*256+x+z*21+z]=sstat[y*21+x+(z-1)*21*12]^0x80;
+            XBaf[y*SCREEN_WIDTH+x+z*21+z]=sstat[y*21+x+(z-1)*21*12]^0x80;
    } else {
           for(y=0;y<13;y++)
            for(x=0;x<21;x++)
             if(sstat[y*21+x+(z-1)*21*12]!=0x83)
-             XBaf[y*256+x+z*21+z]=sstat[y*21+x+(z-1)*21*12]^0x80;
+             XBaf[y*SCREEN_WIDTH+x+z*21+z]=sstat[y*21+x+(z-1)*21*12]^0x80;
 
             else
-             XBaf[y*256+x+z*21+z]=(XBaf[y*256+x+z*21+z]&0xF)|0xC0;
+             XBaf[y*SCREEN_WIDTH+x+z*21+z]=(XBaf[y*SCREEN_WIDTH+x+z*21+z]&0xF)|0xC0;
    }
-  if(cur==z%10) 
+  if(cur==z%10)
    {
     for(x=0;x<21;x++)
      XBaf[x+z*21+z*1]=4;
     for(x=1;x<12;x++)
      {
-     XBaf[256*x+z*21+z*1]=
-     XBaf[256*x+z*21+z*1+20]=4;
+     XBaf[SCREEN_WIDTH*x+z*21+z*1]=
+     XBaf[SCREEN_WIDTH*x+z*21+z*1+20]=4;
      }
     for(x=0;x<21;x++)
-     XBaf[12*256+x+z*21+z*1]=4;
+     XBaf[12*SCREEN_WIDTH+x+z*21+z*1]=4;
    }
   }
-}   
+}
 
 static uint8 play_slines[]=
 {
@@ -206,11 +209,11 @@ void FCEU_DrawRecordingStatusN(uint8* XBuf, int n)
 	uint8* slines=sline_icons[n];
 	int i;
 
-	XBuf += (FSettings.LastSLine-28)*256 + 240 + 255;
+	XBuf += (FSettings.LastSLine-28)*SCREEN_WIDTH+SCREEN_OFFS + 240 + 255;
 	for(i=0; slines[i]!=99; i+=3)
 	{
 		int y=slines[i];
-		uint8* dest=XBuf+(y*256);
+		uint8* dest=XBuf+(y*SCREEN_WIDTH);
 		int x;
 		for(x=slines[i+1]; x!=slines[i+2]; ++x)
 			dest[x]=0;
@@ -220,7 +223,7 @@ void FCEU_DrawRecordingStatusN(uint8* XBuf, int n)
 	for(i=0; slines[i]!=99; i+=3)
 	{
 		int y=slines[i];
-		uint8* dest=XBuf+(y*256);
+		uint8* dest=XBuf+(y*SCREEN_WIDTH);
 		int x;
 		for(x=slines[i+1]; x!=slines[i+2]; ++x)
 			dest[x]=4;

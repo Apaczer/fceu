@@ -27,14 +27,14 @@
 #define JOY_LEFT        0x40
 #define JOY_RIGHT       0x80
 
-
 #include "minimal.h"
+
+
 extern int swapbuttons;
 extern int scaled_display;
 extern int FSkip_setting;
 
 extern void SetVideoScaling(int pixels,int width,int height);
-static INLINE long UpdateGamepadGP2X(void);
 
 
 
@@ -58,35 +58,6 @@ static uint32 MouseData[3];
 static uint8 fkbkeys[0x48];
 unsigned long lastpad=0;
 
-void FCEUD_UpdateInput(void)
-{
-  int t=0;
-  long lastpad2=lastpad;
-  long pad = UpdateGamepadGP2X();
-  t=1;
-  //  JSreturn=(JSreturn&0xFF000000)|(JSreturn&0xFF)|((JSreturn&0xFF0000)>>8)|((JSreturn&0xFF00)<<8);
-  if(gametype==GIT_FDS)
-  {
-    NoWaiting&=~1;
-  	if ((pad & GP2X_PUSH) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_R)) && (!(lastpad2 & GP2X_PUSH)))
-  	{
-      DriverInterface(DES_FDSSELECT,0);
-  	}
-  	else if ((pad & GP2X_L) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_PUSH)) && (!(pad & GP2X_R))&& (!(lastpad2 & GP2X_L)))
-  	{
-      DriverInterface(DES_FDSINSERT,0);
-  	}
-  	else if ((pad & GP2X_R) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_PUSH)) && (!(lastpad2 & GP2X_R)))
-  	{
-      DriverInterface(DES_FDSEJECT,0);
-  	}
-  }
-
-}
-
-
-//#ifdef GP2X
-
 extern void ResetNES(void);
 extern void CleanSurface(void);
 
@@ -100,6 +71,7 @@ int TurboFireTop=0;  // 0 is none  // 1 is  A & X turbo  // 2 is Y & B turbo
 int TurboFireBottom=0;
 int turbo_toggle_A=0;
 int turbo_toggle_B=0;
+
 
 static void setsoundvol(int soundvolume)
 {
@@ -121,15 +93,15 @@ static void setsoundvol(int soundvolume)
     soundvolmeter[20]=0;
     FCEU_DispMessage("|%s|", soundvolmeter);
 }
-/**
- * GP2x joystick reader
- *
- */
-static INLINE long UpdateGamepadGP2X(void)
+
+
+
+void FCEUD_UpdateInput(void)
 {
+  long lastpad2=lastpad;
+  unsigned long pad=gp2x_joystick_read();
   uint32 JS=0;
 
-  unsigned long pad=gp2x_joystick_read();
 #define down(b) (pad & GP2X_##b)
 #define last_down(b) (lastpad & GP2X_##b)
 #define L_down (pad & GP2X_L)
@@ -370,18 +342,36 @@ static INLINE long UpdateGamepadGP2X(void)
   //padTmp=(pad & GP2X_START) >> 8;  //   2^8,
   JS |= (((pad & GP2X_START) >> 8) << 3);  // 0x8 is 2^3
 
-
   JSreturn = JS;
   lastpad=pad;
 
-  return pad;
   //JSreturn=(JS&0xFF000000)|(JS&0xFF)|((JS&0xFF0000)>>8)|((JS&0xFF00)<<8);
+
+
+  //  JSreturn=(JSreturn&0xFF000000)|(JSreturn&0xFF)|((JSreturn&0xFF0000)>>8)|((JSreturn&0xFF00)<<8);
+  // TODO: make these bindable, use new interface
+  if(gametype==GIT_FDS)
+  {
+    NoWaiting&=~1;
+  	if ((pad & GP2X_PUSH) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_R)) && (!(lastpad2 & GP2X_PUSH)))
+  	{
+      DriverInterface(DES_FDSSELECT,0);
+  	}
+  	else if ((pad & GP2X_L) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_PUSH)) && (!(pad & GP2X_R))&& (!(lastpad2 & GP2X_L)))
+  	{
+      DriverInterface(DES_FDSINSERT,0);
+  	}
+  	else if ((pad & GP2X_R) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_PUSH)) && (!(lastpad2 & GP2X_R)))
+  	{
+      DriverInterface(DES_FDSEJECT,0);
+  	}
+  }
+  return;
+
 no_pad:
   JSreturn=0;
   lastpad=pad;
-  return 0;
 }
-//#endif
 
 
 static void InitOtherInput(void)
