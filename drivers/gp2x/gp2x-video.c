@@ -32,7 +32,7 @@ static int framesEmulated, framesRendered;
 int scaled_display=0;
 int paletterefresh;
 
-#define FPS_COLOR 61
+#define FPS_COLOR 1
 
 
 static unsigned char fontdata8x8[] =
@@ -135,7 +135,7 @@ void CleanSurface(void)
 	int c=4;
 	while (c--)
 	{
-		memset (gp2x_screen8, 0x80, 320*240);
+		memset (gp2x_screen8, 0, 320*240);
 		gp2x_video_flip();
 	}
 	XBuf = gp2x_screen8;
@@ -157,7 +157,7 @@ int InitVideo(void)
 
 	srendline=0;
 	erendline=239;
-	XBuf = gp2x_screen8; // TODO: use mmuhacked upper mem
+	XBuf = gp2x_screen8;
 	return 1;
 }
 
@@ -205,8 +205,8 @@ static INLINE void printFps(uint8 *screen)
 			int y, *destt = (int *) screen;
 			for (y = 20/*240*/; y; y--)
 			{
-				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
-				*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
+				*destt++ = 0; *destt++ = 0; *destt++ = 0; *destt++ = 0;
+				*destt++ = 0; *destt++ = 0; *destt++ = 0; *destt++ = 0;
 				destt += 64+8;
 
 				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;

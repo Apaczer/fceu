@@ -45,6 +45,10 @@
 
 #include "dface.h"
 
+// just for printing some iNES info for user..
+#include "../../fce.h"
+#include "../../ines.h"
+
 static int ntsccol=0,ntschue=-1,ntsctint=-1;
 int soundvol=70;
 int inited=0;
@@ -336,6 +340,16 @@ int CLImain(int argc, char *argv[])
 	ParseGI(tmp);
 	//RefreshThrottleFPS();
 	InitOtherInput();
+
+	// additional print for gpfce
+	{
+	 int MapperNo;
+	 iNES_HEADER *head = iNESGetHead();
+         MapperNo = (head->ROM_type>>4);
+         MapperNo|=(head->ROM_type2&0xF0);
+	 FCEU_DispMessage("%s, Mapper: %d%s%s", PAL?"PAL":"NTSC", MapperNo, (head->ROM_type&2)?", BB":"", (head->ROM_type&4)?", T":"");
+	}
+
 	FCEUI_Emulate();
 
 	dk:

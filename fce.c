@@ -53,6 +53,10 @@
 
 #include        "dprintf.h"
 
+#ifdef GP2X
+#include	"drivers/gp2x/asmutils.h"
+#endif
+
 #define Pal     (PALRAM)
 
 
@@ -582,7 +586,7 @@ static void Loop6502(void)
 	 #endif
 	  if(ScreenON)
 	  {
-  	   if(scanline>=FSettings.FirstSLine && scanline<=FSettings.LastSLine)
+  	   if(scanline>=FSettings.FirstSLine && scanline<=Settings.LastSLine)
 	    BGRender(target);
 	   else
 	   {
@@ -610,17 +614,24 @@ static void Loop6502(void)
 	   for(x=63;x>=0;x--)
 	    ((uint32 *)target)[x]=((uint32*)target)[x]&0xF0F0F0F0;
 	  }
+#ifdef GP2X
+	   if((PPU[1]>>5)==0x7) block_or(target, 256, 0xc0);
+	   else	if(PPU[1]&0xE0) block_andor(target, 256, 0x3f, 0x40);
+	   else                 block_andor(target, 256, 0x3f, 0x80);
+#else
 	   if((PPU[1]>>5)==0x7)
 	    for(x=63;x>=0;x--)
-	     ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x40404040;
+	     ((uint32 *)target)[x]=(((uint32*)target)[x])|0xc0c0c0c0;
 	   else	if(PPU[1]&0xE0)
 	    for(x=63;x>=0;x--)
-	     ((uint32 *)target)[x]=((uint32*)target)[x]|0xC0C0C0C0;
+	     ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x40404040;
 	   else
             for(x=63;x>=0;x--)
-             ((uint32 *)target)[x]=((uint32*)target)[x]&0x3f3f3f3f;
-	  FCEU_dwmemset(target-  8,0x3f3f3f3f,8);
-	  FCEU_dwmemset(target+256,0x3f3f3f3f,8);
+             ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x80808080;
+#endif
+	  // black borders
+	  ((uint32 *)target)[-2]=((uint32 *)target)[-1]=0;
+	  ((uint32 *)target)[64]=((uint32 *)target)[65]=0;
 	 #ifdef FRAMESKIP
 	 }
 	 #endif
@@ -1228,7 +1239,7 @@ void EmLoop(void)
   // FCEUPPU_Loop:
   if(ppudead) /* Needed for Knight Rider, possibly others. */
   {
-   memset(XBuf, 0x80, 320*240);
+   //memset(XBuf, 0, 320*240);
    X6502_Run(scanlines_per_frame*(256+85));
    ppudead--;
    goto update;
@@ -1288,40 +1299,10 @@ void EmLoop(void)
 
   if(FCEUGameInfo.type==GIT_NSF)
   {
+   // run scanlines for asm core to fuction
    for(scanline=0;scanline<240;scanline++)
     X6502_Run(256+85);
   }
-  #ifdef FRAMESKIP
-   else if(FSkip)
-   {
-    int y;
-
-    y=SPRAM[0];
-    y++;
-
-    PPU_status|=0x20;       // Fixes "Bee 52".  Does it break anything?
-    if(GameHBIRQHook)
-    {
-     X6502_Run(256);
-     for(scanline=0;scanline<240;scanline++)
-     {
-      if(ScreenON || SpriteON)
-       GameHBIRQHook();
-      if(scanline==y && SpriteON) PPU_status|=0x40;
-      X6502_Run((scanline==239)?85:(256+85));
-      ResetRL(); // ??
-     }
-    }
-    else if(y<240)
-    {
-     X6502_Run((256+85)*y);
-     if(SpriteON) PPU_status|=0x40; // Quick and very dirty hack.
-     X6502_Run((256+85)*(240-y));
-    }
-    else
-     X6502_Run((256+85)*240);
-   }
-  #endif
   else
   {
    int x,max,maxref;

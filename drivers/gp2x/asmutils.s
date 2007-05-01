@@ -8,6 +8,53 @@ flushcache:
     mov pc, lr
 
 
+.global block_or @ void *src, size_t n, int pat
+
+block_or:
+    stmfd   sp!, {r4-r5}
+    orr     r2, r2, r2, lsl #8
+    orr     r2, r2, r2, lsl #16
+    mov     r1, r1, lsr #4
+block_loop_or:
+    ldmia   r0, {r3-r5,r12}
+    subs    r1, r1, #1
+    orr     r3, r3, r2
+    orr     r4, r4, r2
+    orr     r5, r5, r2
+    orr     r12,r12,r2
+    stmia   r0!, {r3-r5,r12}
+    bne     block_loop_or
+    ldmfd   sp!, {r4-r5}
+    bx      lr
+
+
+.global block_andor @ void *src, size_t n, int andpat, int orpat
+
+block_andor:
+    stmfd   sp!, {r4-r6}
+    orr     r2, r2, r2, lsl #8
+    orr     r2, r2, r2, lsl #16
+    orr     r3, r3, r3, lsl #8
+    orr     r3, r3, r3, lsl #16
+    mov     r1, r1, lsr #4
+block_loop_andor:
+    ldmia   r0, {r4-r6,r12}
+    subs    r1, r1, #1
+    and     r4, r4, r2
+    orr     r4, r4, r3
+    and     r5, r5, r2
+    orr     r5, r5, r3
+    and     r6, r6, r2
+    orr     r6, r6, r3
+    and     r12,r12,r2
+    orr     r12,r12,r3
+    stmia   r0!, {r4-r6,r12}
+    bne     block_loop_andor
+    ldmfd   sp!, {r4-r6}
+    bx      lr
+
+
+
 /* buggy and slow, probably because function call overhead
 @ renderer helper, based on bitbank's method
 .global draw8pix @ uint8 *P, uint8 *C, uint8 *PALRAM @ dest, src, pal

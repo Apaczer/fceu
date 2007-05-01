@@ -1053,3 +1053,9 @@ static int NewiNES_Init(int num)
  }
  return(0);
 }
+
+iNES_HEADER *iNESGetHead(void)
+{
+	return &head;
+}
+

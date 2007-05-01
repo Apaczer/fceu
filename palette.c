@@ -253,18 +253,16 @@ void WritePalette(void)
     int x;
 
     for(x=0;x<7;x++)
-     FCEUD_SetPalette(128+x,unvpalette[x].r,unvpalette[x].g,unvpalette[x].b);
+     FCEUD_SetPalette(x,unvpalette[x].r,unvpalette[x].g,unvpalette[x].b);
     if(FCEUGameInfo.type==GIT_NSF)
     {
      //for(x=0;x<128;x++)
      // FCEUD_SetPalette(x,x,0,x);
-     for(x=0;x<7;x++)
-      FCEUD_SetPalette(x,unvpalette[x].r,unvpalette[x].g,unvpalette[x].b);
     }
     else
     {
      for(x=0;x<64;x++)
-      FCEUD_SetPalette(x,palo[x].r,palo[x].g,palo[x].b);
+      FCEUD_SetPalette(x+128,palo[x].r,palo[x].g,palo[x].b);
      SetNESDeemph(lastd,1);
     }
 }

@@ -57,7 +57,7 @@ int InitVirtualVideo(void)
   XBuf=(uint8 *)m;
  }
 */
- memset(XBuf,128,320*240);
+ memset(XBuf,0,320*240);
  return 1;
 }
 

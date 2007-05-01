@@ -28,7 +28,7 @@ static void DrawMessage(void)
    if(t>=XBuf)
    {
     DrawTextLineBG(t);
-    DrawTextTrans(t+3*SCREEN_WIDTH+(128-strlen(errmsg)*4),SCREEN_WIDTH,(uint8 *)errmsg,128+4);
+    DrawTextTrans(t+3*SCREEN_WIDTH+(128-strlen(errmsg)*4),SCREEN_WIDTH,(uint8 *)errmsg,4);
    }
   }
 }

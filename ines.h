@@ -99,6 +99,8 @@ void FASTAPASS(1) onemir(uint8 V);
 void FASTAPASS(1) MIRROR_SET2(uint8 V);
 void FASTAPASS(1) MIRROR_SET(uint8 V);
 
+iNES_HEADER *iNESGetHead(void);
+
 void Mapper0_init(void);
 void Mapper1_init(void);
 //void Mapper2_init(void);
