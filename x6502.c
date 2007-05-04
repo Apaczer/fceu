@@ -63,27 +63,16 @@ uint32 timestamp;
 
 static INLINE uint8 RdMem(unsigned int A)
 {
- // notaz: try to avoid lookup of every address at least for ROM and RAM areas
- // I've verified that if ARead[0xfff0] points to CartBR, it is always normal ROM read.
-#if 0
- if ((A&0x8000)/* && ARead[0xfff0] == CartBR*/) {
-  return (_DB=Page[A>>11][A]);
- }
-#endif
-#if 0 // enabling this causes 4fps slowdown. Why?
- if ((A&0xe000) == 0) { // RAM area (always 0-0x1fff)
-  return (_DB=RAM[A&0x7FF]);
- }
-#endif
- _DB=ARead[A](A);
+ int _DB1=ARead[A](A);
+ /*if (A >= 0x2000)*/ _DB=_DB1;
 #ifdef DEBUG_ASM_6502
  //printf("a == %x, pc == %x\n", A, _PC);
  if (A >= 0x2000 && A != _PC && A != _PC - 1 && A != _PC + 1) {
-  dreads[dread_count_c++] = _DB;
+  dreads[dread_count_c++] = _DB1;
   if (dread_count_c > 4) { printf("dread_count out of range\n"); exit(1); }
  }
 #endif
- return _DB;
+ return _DB1;
 }
 
 static INLINE void WrMem(unsigned int A, uint8 V)
@@ -102,6 +91,7 @@ static INLINE void WrMem(unsigned int A, uint8 V)
 
 static INLINE uint8 RdRAM(unsigned int A)
 {
+ //return((_DB=RAM[A]));
  return((_DB=RAM[A]));
 }
 

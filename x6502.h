@@ -66,7 +66,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_IRQBegin X6502_IRQBegin_d
 #define X6502_IRQEnd X6502_IRQEnd_d
 #define X6502_Rebase X6502_Rebase_d
-#define X6502_GetCycleCount() 0
+#define X6502_GetCycleCount() g_cnt
 #define X6502_C
 #define X6502_A
 #define X6502_D
@@ -122,6 +122,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 
 // c
 #ifdef X6502_C
+extern int32 g_cnt;
 void TriggerIRQ_c(void);
 void TriggerNMI_c(void);
 void TriggerNMINSF_c(void);

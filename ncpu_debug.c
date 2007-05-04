@@ -10,6 +10,8 @@ extern uint32 nes_registers[0x10];
 extern uint32 pc_base;
 extern uint8  nes_internal_ram[0x800];
 extern uint32 timestamp_a;
+extern uint32 framecount;
+static uint32 framecount_d;
 uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
 int32  g_cnt = 0;
 
@@ -23,8 +25,8 @@ int mapirq_cyc_c, mapirq_cyc_a;
 static void leave(void)
 {
 	printf("\nA: %02x, X: %02x, Y: %02x, S: %02x\n", X.A, X.X, X.Y, X.S);
-	printf("PC = %04lx, OP=%02lX\n", PC_prev, OP_prev);
-	printf("rest = %08lx\n", nes_registers[4]);
+	printf("PC = %04x, OP=%02X\n", PC_prev, OP_prev);
+	printf("rest = %08x\n", nes_registers[4]);
 	exit(1);
 }
 
@@ -34,32 +36,32 @@ static void compare_state(void)
 	int i, fail = 0;
 
 	if ((nes_registers[0] >> 24) != X.A) {
-		printf("A: %02lx vs %02x\n", nes_registers[0] >> 24, X.A);
+		printf("A: %02x vs %02x\n", nes_registers[0] >> 24, X.A);
 		fail = 1;
 	}
 
 	if ((nes_registers[1] & 0xff) != X.X) {
-		printf("X: %02lx vs %02x\n", nes_registers[1] & 0xff, X.X);
+		printf("X: %02x vs %02x\n", nes_registers[1] & 0xff, X.X);
 		fail = 1;
 	}
 
 	if ((nes_registers[2] & 0xff) != X.Y) {
-		printf("Y: %02lx vs %02x\n", nes_registers[2] & 0xff, X.Y);
+		printf("Y: %02x vs %02x\n", nes_registers[2] & 0xff, X.Y);
 		fail = 1;
 	}
 
 	if (nes_registers[3] - pc_base != X.PC) {
-		printf("PC: %04lx vs %04x\n", nes_registers[3] - pc_base, X.PC);
+		printf("PC: %04x vs %04x\n", nes_registers[3] - pc_base, X.PC);
 		fail = 1;
 	}
 
 	if ((nes_registers[4] >> 24) != X.S) {
-		printf("S: %02lx vs %02x\n", nes_registers[4] >> 24, X.S);
+		printf("S: %02x vs %02x\n", nes_registers[4] >> 24, X.S);
 		fail = 1;
 	}
 
 	if (((nes_registers[4]>>8)&0xff) != X.IRQlow) {
-		printf("IRQlow: %02lx vs %02x\n", ((nes_registers[4]>>8)&0xff), X.IRQlow);
+		printf("IRQlow: %02x vs %02x\n", ((nes_registers[4]>>8)&0xff), X.IRQlow);
 		fail = 1;
 	}
 
@@ -75,7 +77,7 @@ static void compare_state(void)
 	}
 
 	if (((int32)nes_registers[7] >> 16) != X.count) {
-		printf("cycles: %li vs %li\n", (int32)nes_registers[7] >> 16, X.count);
+		printf("cycles: %i vs %i\n", (int32)nes_registers[7] >> 16, X.count);
 		fail = 1;
 	}
 
@@ -91,7 +93,7 @@ static void compare_state(void)
 
 	for (i = dwrite_count_a - 1; !fail && i >= 0; i--)
 		if (dwrites_a[i] != dwrites_c[i]) {
-			printf("dwrites[%i]: %06lx vs %06lx\n", dwrite_count_a, dwrites_a[i], dwrites_c[i]);
+			printf("dwrites[%i]: %06x vs %06x\n", dwrite_count_a, dwrites_a[i], dwrites_c[i]);
 			fail = 1;
 		}
 
@@ -101,7 +103,7 @@ static void compare_state(void)
 	}
 
 	if (timestamp_a != timestamp) {
-		printf("timestamp: %lu vs %lu\n", timestamp_a, timestamp);
+		printf("timestamp: %u vs %u\n", timestamp_a, timestamp);
 		fail = 1;
 	}
 
@@ -153,8 +155,12 @@ void X6502_Run_d(int32 c)
 	//printf("-- %06i: run(%i)\n", (int)g_cnt, (int)c);
 	g_cnt += cycles;
 
-	if (c > 200)
+	if (framecount != framecount_d) {
 		compare_ram();
+		framecount_d = framecount;
+	}
+
+	timestamp_a = timestamp;
 
 	while (g_cnt > 0)
 	{
@@ -177,7 +183,7 @@ void X6502_Run_d(int32 c)
 
 		dread_count_c = dread_count_a = dwrite_count_c = dwrite_count_a = 0;
 		mapirq_cyc_a = mapirq_cyc_c = 0;
-		timestamp_a = timestamp;
+		//timestamp_a = timestamp;
 
 		X6502_Run_c();
 
@@ -187,6 +193,10 @@ void X6502_Run_d(int32 c)
 		g_cnt -= 1 - X.count;
 		if (pending_add_cycles) {
 			g_cnt -= pending_add_cycles*48;
+			//X6502_AddCycles_c(pending_add_cycles);
+			//X6502_AddCycles_a(pending_add_cycles);
+			timestamp   += pending_add_cycles;
+			timestamp_a += pending_add_cycles;
 			pending_add_cycles = 0;
 		}
 		if (pending_rebase) {

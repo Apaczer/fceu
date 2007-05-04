@@ -37,7 +37,7 @@
 #define REG_P_REST r8
 #define REG_NZ  r9		// 14
 #define REG_ADDR r10		// 18
-#define REG_CYCLE r11		// 1c
+#define REG_CYCLE r11		// 1c [31:16] - fceu cycles, [15:8] - fceu irqhook cycles, [7:0] - fceu timestamp cycles
 #define REG_OP_TABLE r12	// 20
 
 

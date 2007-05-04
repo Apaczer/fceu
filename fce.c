@@ -586,7 +586,7 @@ static void Loop6502(void)
 	 #endif
 	  if(ScreenON)
 	  {
-  	   if(scanline>=FSettings.FirstSLine && scanline<=Settings.LastSLine)
+  	   if(scanline>=FSettings.FirstSLine && scanline<=FSettings.LastSLine)
 	    BGRender(target);
 	   else
 	   {
@@ -1187,7 +1187,7 @@ void FCEU_ResetVidSys(void)
   FSettings.FirstSLine=FSettings.UsrFirstSLine[0];
   FSettings.LastSLine=FSettings.UsrLastSLine[0];
  }
- printf("PAL = %i\n", PAL);
+ printf("ResetVidSys: PAL = %i\n", PAL);
  SetSoundVariables();
 }
 
