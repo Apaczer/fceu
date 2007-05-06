@@ -101,6 +101,7 @@ void GeniePower(void);
 void OpenGenie(void);
 void CloseGenie(void);
 void FCEU_KillGenie(void);
+void GenieSetPages(int restore);
 
 #endif // ndef _CART_H
 

@@ -642,6 +642,24 @@ void GeniePower(void)
   geniestage=2;
 }
 
+static uint8 *real_pages[16];
+
+void GenieSetPages(int restore)
+{
+ int page;
+ if (restore)
+ {
+  for (page=16; page<32; page++)
+   Page[page] = real_pages[page-16];
+ }
+ else
+ {
+  for (page=16; page<32; page++) {
+   real_pages[page-16] = Page[page];
+   Page[page]=GENIEROM - (page<<11) + ((page&1)<<11);
+  }
+ }
+}
 
 void FCEU_SaveGameSave(CartInfo *LocalHWInfo)
 {

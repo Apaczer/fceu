@@ -205,20 +205,13 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@ Read byte
 @@@
 
-.macro	READ rom_optimize=1
-	adr	lr, 1f
-.if \rom_optimize
-	tst	REG_ADDR, #0x8000
-	bne	read_rom_byte
-.endif
+.macro	READ unused_param
 	tst	REG_ADDR, #0xe000
-	bne	read_byte
 	@ RAM
-	bic	r0, REG_ADDR, #0x1800
-	add	r0, r0, #OTOFFS_NES_RAM
-	ldrb	r0, [r0, REG_OP_TABLE]
-	@@ というわけでジャンプする必要はない
-1:
+	biceq	r0, REG_ADDR, #0x1800
+	addeq	r0, r0, #OTOFFS_NES_RAM
+	ldreqb	r0, [r0, REG_OP_TABLE]
+	blne	read_byte
 .endm
 
 @@@
@@ -235,10 +228,8 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@ OPではr3を保存しなければならない
 
 .macro	READ_WRITE_1
-	adr	lr, 9999f
-	tst	REG_ADDR, #0x8000
-	bne	read_rom_byte
 	tst	REG_ADDR, #0xe000
+	adrne	lr, 9999f
 	bne	read_byte
 	@ RAM
 	bic	REG_ADDR, REG_ADDR, #0x1800
@@ -282,7 +273,6 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@ REG_ADDRを変更するが気にするな
 @@@
 .macro	READ_WORD
-	@ don't do ROM check, because we might be fetching important stuff like vectors
 	READ    0
 	mov	REG_PC, r0
 	add	REG_ADDR, REG_ADDR, #1
@@ -2723,10 +2713,11 @@ reset_cpu:
 @@@ low-level memhandlers
 @@@
 
+/*
+@ disabled because no improvements noticed, only causes trouble (with gg for example)
 read_rom_byte:
 @ try to avoid lookup of every address at least for ROM and RAM areas
 @ I've verified that if ARead[0xfff0] points to CartBR, it is always normal ROM read.
-#ifndef DEBUG_ASM_6502
 	ldr	r0, =CartBR
 	ldr	r2, =ARead
 	mov	r1, #0xff00
@@ -2739,7 +2730,7 @@ read_rom_byte:
 	ldr	r2, [r2, r1, lsl #2]
 	ldrb	r0, [r2, REG_ADDR]
 	bx	lr
-#endif
+*/
 
 
 read_byte:

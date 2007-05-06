@@ -203,6 +203,9 @@ void FlushGenieRW(void)
    ARead[x+0x8000]=AReadG[x];
    BWrite[x+0x8000]=BWriteG[x];
   }
+#ifdef ASM_6502
+  GenieSetPages(1);
+#endif
   free(AReadG);
   free(BWriteG);
   AReadG=0;
@@ -1425,6 +1428,18 @@ void ResetNES(void)
         X6502_Reset();
 }
 
+static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
+{
+ int x=0;
+ while(size)
+ {
+  *ptr=(x&4)?0xFF:0x00;
+  x++;
+  size--;
+  ptr++;
+ }
+}
+
 void PowerNES(void)
 {
         if(!GameLoaded) return;
@@ -1434,12 +1449,20 @@ void PowerNES(void)
 
         GeniePower();
 
+#ifndef DEBUG_ASM_6502
+        FCEU_MemoryRand(RAM,0x800);
+#else
         memset(RAM,0x00,0x800);
+#endif
         ResetMapping();
 	GameInterface(GI_POWER);
         PowerSound();
 	PowerPPU();
 	timestampbase=0;
+#ifdef ASM_6502
+	if (geniestage)
+	 GenieSetPages(0);
+#endif
 	X6502_Power();
 }
 
