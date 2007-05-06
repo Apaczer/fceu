@@ -91,7 +91,7 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@
 @@@ なんか名前が変だな(どーでもいーけどー
 @@@
-.macro	CYCLE_NEXT	n, hook_check=1, do_cyc_add=1
+.macro	CYCLE_NEXT	n, unused=0, do_cyc_add=1
 	@@DEBUG_INFO
 
 .if \do_cyc_add
@@ -99,17 +99,17 @@ ldmfd sp!,{r0-r3,r12,lr}
 .endif
 	subs	REG_CYCLE, REG_CYCLE, #\n*48<<16
 	ble	cpu_exec_end
-.if \hook_check
 	tst	REG_P_REST, #1<<16
-	blne	do_irq_hook
-.endif
+	bne	do_irq_hook
+
 	ldrb	r0, [REG_PC], #1
 	tst	REG_P_REST, #0xff<<8
 	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
 
 	@ do some messing to find out which IRQ is pending..
-	tst	REG_P_REST, #FCEU_IQNMI<<8
-	bne	do_int
+	@ assumption: NMI can be set only on very first run, because it is only set once before vblank..
+@	tst	REG_P_REST, #FCEU_IQNMI<<8
+@	bne	do_int
 	tst	REG_P_REST, #P_REST_I_FLAG
 	@@ if I_FLAG=1, continue execution, don't trigger IRQ
 	bicne	REG_P_REST, REG_P_REST, #FCEU_IQTEMP<<8
@@ -2826,13 +2826,26 @@ cpu_exec:
 
 @	ldr   REG_OP_TABLE, = cpu_exec_table @ set on init
 
-	CYCLE_NEXT	0, 0
+	ldrb	r0, [REG_PC], #1
+	tst	REG_P_REST, #0xff<<8
+	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
+
+	@ assumption: NMI can be set only on very first run, because it is only set once before vblank..
+	tst	REG_P_REST, #FCEU_IQNMI<<8
+	bne	do_int
+	tst	REG_P_REST, #P_REST_I_FLAG
+	@@ if I_FLAG=1, continue execution, don't trigger IRQ
+	bicne	REG_P_REST, REG_P_REST, #FCEU_IQTEMP<<8
+	ldrne	pc, [REG_OP_TABLE, r0, lsl #2]
+	@@ I_FLAG=0 and REST is checked, we have a IRQ
+	b	do_int
+
 
 cpu_exec_end:
 	FLUSH_TIMESTAMP r0
 
 	tst	REG_P_REST, #1<<16
-	blne	do_irq_hook_noflushts
+	bne	do_irq_hook_final
 
 	ldr     r0, =nes_registers
 	stmia	r0, {r4-r12}
@@ -2911,7 +2924,6 @@ nes_internal_ram:
 	.fill	0x100, 1, 0
 nes_stack:
 	.fill	0x700, 1, 0
-@ TODO: write code which keeps it up-to-date
 pc_base:
 	.long	0
 MapIRQHook:
@@ -3143,29 +3155,60 @@ X6502_Rebase_a:
 do_irq_hook:
 	FLUSH_TIMESTAMP r0
 
-do_irq_hook_noflushts:
 	@ get irqhook cycles
 	and	r0, REG_CYCLE, #0xff00
-	bic	REG_CYCLE, REG_CYCLE, #0xff00
 	mov	r0, r0, lsr #8
 #ifndef DEBUG_ASM_6502
 	@ I have reviewed all MapIRQHook functions, they only seem to cause IRQs, not messing cycles or something
 	str     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
-	mov	REG_P_REST, lr			@ r8
+	mov	REG_P_REST, REG_OP_TABLE				@ r8
 
 	@ if somebody modifies MapIRQHook without calling reset, we are doomed
 	mov	lr, pc
 	ldr	pc, [REG_OP_TABLE, #OTOFFS_IRQ_HOOK]
 
-	ldr	REG_OP_TABLE, =cpu_exec_table	@ got trashed because was in r12
-	mov	lr, REG_P_REST
+	mov	REG_OP_TABLE, REG_P_REST				@ got trashed because was in r12
 	ldr     REG_P_REST, [REG_OP_TABLE, #(OTOFFS_NES_REGS + 0x10)]	@ might set irq
 #else
 	ldr	r1, =mapirq_cyc_a
 	str	r0, [r1]
 	mov	r1, r0
 #endif
+
+	ldrb	r0, [REG_PC], #1
+	bic	REG_CYCLE, REG_CYCLE, #0xff00
+	tst	REG_P_REST, #0xff<<8
+	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
+
+	@ do some messing to find out which IRQ is pending..
+	tst	REG_P_REST, #P_REST_I_FLAG
+	@@ if I_FLAG=1, continue execution, don't trigger IRQ
+	bicne	REG_P_REST, REG_P_REST, #FCEU_IQTEMP<<8
+	ldrne	pc, [REG_OP_TABLE, r0, lsl #2]
+	@@ I_FLAG=0 and REST is checked, we have a IRQ
+	b	do_int
+
+
+do_irq_hook_final:
+	ldr     r1, =nes_registers
+
+	@ get irqhook cycles
+	and	r0, REG_CYCLE, #0xff00
+	bic	REG_CYCLE, REG_CYCLE, #0xff00
+	mov	r0, r0, lsr #8
+
+	stmia	r1, {r4-r12}
+
+	ldmfd   r13!,{r4-r11,lr}
+
+#ifndef DEBUG_ASM_6502
+	ldr	pc, [REG_OP_TABLE, #OTOFFS_IRQ_HOOK]
+#else
+	ldr	r1, =mapirq_cyc_a
+	str	r0, [r1]
+	mov	r1, r0
 	bx	lr
+#endif
 
 
 @ vim:filetype=armasm

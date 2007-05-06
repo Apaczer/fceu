@@ -144,6 +144,17 @@ static void FDSInit(void)
  FDSSoundReset();
  InDisk=0;
  SelectDisk=0;
+
+#ifdef ASM_6502
+ {
+  int page;
+  // asm code needs pages to be set again..
+  for (page=12; page<28; page++) // 0x6000-0xdfff 32K RAM
+   Page[page]=FDSRAM  - (page<<11) + ((page-12)<<11);
+  for (; page<32; page++)        // 0xe000-0xffff 8K BIOS
+   Page[page]=FDSBIOS - (page<<11) + ((page-28)<<11);
+ }
+#endif
 }
 
 void FCEU_FDSInsert(void)
@@ -188,7 +199,7 @@ void FCEU_FDSSelect(void)
 
 static void FP_FASTAPASS(1) FDSFix(int a)
 {
- if((IRQa&2) && IRQCount)
+ if(IRQCount && (IRQa&2))
  {
   IRQCount-=a;
   if(IRQCount<=0)
@@ -224,8 +235,13 @@ static DECLFR(FDSRead4030)
 	uint8 ret=0;
 
 	/* Cheap hack. */
+#ifndef ASM_6502
 	if(X.IRQlow&FCEU_IQEXT) ret|=1;
 	if(X.IRQlow&FCEU_IQEXT2) ret|=2;
+#else
+	if((nes_registers[4]>>8)&FCEU_IQEXT) ret|=1;
+	if((nes_registers[4]>>8)&FCEU_IQEXT2) ret|=2;
+#endif
 
 	if(!fceuindbg)
 	{
@@ -485,7 +501,7 @@ static INLINE void ClockFall(void)
  clockcount=(clockcount+1)&7;
 }
 
-static INLINE int32 FDSDoSound(void)
+static INLINE int32 FDSDoSound(int32 mul)
 {
  fdso.count+=fdso.cycles;
  if(fdso.count>=((int64)1<<40))
@@ -504,11 +520,14 @@ static INLINE int32 FDSDoSound(void)
  if(fdso.count>=32768) goto dogk;
 
  // Might need to emulate applying the amplitude to the waveform a bit better...
+/*
  {
   int k=amplitude[0];
   if(k>0x20) k=0x20;
   return (fdso.cwave[b24latch68>>19]*k)*4/((SPSG[0x9]&0x3)+2);
  }
+*/
+ return (fdso.cwave[b24latch68>>19]*mul)>>16;
 }
 
 static int32 FBC=0;
@@ -517,6 +536,7 @@ static void RenderSound(void)
 {
  int32 end, start;
  int32 x;
+ int32 mul;
 
  start=FBC;
  end=(SOUNDTS<<16)/soundtsinc;
@@ -524,10 +544,27 @@ static void RenderSound(void)
   return;
  FBC=end;
 
+ // hack for performance, might produce bad results..
+ if (!amplitude[0])
+  return;
+
+ switch (SPSG[0x9]&0x3)
+ {
+  default:mul = (4<<16)/2;
+  case 1: mul = (4<<16)/3;
+  case 2: mul = (4<<16)/4;
+  case 3: mul = (4<<16)/5;
+ }
+ {
+  int k=amplitude[0];
+  if(k>0x20) k=0x20;
+  mul *= k;
+ }
+
  if(!(SPSG[0x9]&0x80))
   for(x=start;x<end;x++)
   {
-   uint32 t=FDSDoSound();
+   uint32 t=FDSDoSound(mul);
    t+=t>>1;
    t>>=4;
    Wave[x>>4]+=t; //(t>>2)-(t>>3); //>>3;

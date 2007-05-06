@@ -9,7 +9,7 @@ include input/Makefile
 
 fceu2:	        ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER}
 		${CC} -o fceu ${OBJECTS} ${MOBJS} ${MUOBJS} ${MUSOBJS} ${INPOBJS} ${OBJDRIVER} ${LDRIVER}
-ifndef DEBUG
+ifndef NOSTRIP
 		$(STRIP) fceu
 endif
 

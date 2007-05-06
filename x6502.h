@@ -78,8 +78,10 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #define X6502_Reset X6502_Reset_a
 #define X6502_Power X6502_Power_a
 #define X6502_AddCycles X6502_AddCycles_a
-#define X6502_IRQBegin X6502_IRQBegin_a
-#define X6502_IRQEnd X6502_IRQEnd_a
+//#define X6502_IRQBegin X6502_IRQBegin_a
+//#define X6502_IRQEnd X6502_IRQEnd_a
+#define X6502_IRQBegin(w) nes_registers[4]|=w<<8
+#define X6502_IRQEnd(w) nes_registers[4]&=~(w<<8)
 #define X6502_Rebase X6502_Rebase_a
 #define X6502_GetCycleCount() ((int32)nes_registers[7]>>16)
 #define X6502_A

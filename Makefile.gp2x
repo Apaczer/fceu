@@ -9,11 +9,14 @@ B	= drivers/gp2x/
 ifdef DEBUG
 TFLAGS	+= -ggdb
 LDRIVER	+= -ggdb
+NOSTRIP = 1
 else
 TFLAGS	+= -ftracer -fstrength-reduce -funroll-loops -fomit-frame-pointer -fstrict-aliasing -ffast-math
-TFLAGS	+= -O3 # -pg
-LDRIVER	+= -O3 # -pg
+TFLAGS	+= -O3 #-pg -fno-omit-frame-pointer
+LDRIVER	+= -O3 #-pg -fno-omit-frame-pointer
 endif
+
+#NOSTRIP = 1
 
 asm_6502=1
 #debug_asm_6502=1
