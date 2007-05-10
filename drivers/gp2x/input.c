@@ -29,12 +29,11 @@
 
 #include "minimal.h"
 
+extern uint8 Exit; // exit emu loop
 
 extern int swapbuttons;
 extern int scaled_display;
 extern int FSkip_setting;
-
-extern void SetVideoScaling(int pixels,int width,int height);
 
 
 
@@ -99,7 +98,7 @@ static void setsoundvol(int soundvolume)
 void FCEUD_UpdateInput(void)
 {
   long lastpad2=lastpad;
-  unsigned long pad=gp2x_joystick_read();
+  unsigned long pad=gp2x_joystick_read(1); // TODO: USB joys and stuff
   uint32 JS=0;
 
 #define down(b) (pad & GP2X_##b)
@@ -132,6 +131,10 @@ void FCEUD_UpdateInput(void)
     //FCEUI_SetSoundVolume(soundvol);
     setsoundvol(soundvol);
   }
+  else if (down(VOL_DOWN) && down(VOL_UP))
+  {
+    Exit = 1;
+  }
 
   if (shift)
   {
@@ -149,11 +152,11 @@ void FCEUD_UpdateInput(void)
 
         if (scaled_display)
 	{
-	  SetVideoScaling(320, 256, 240);
+	  gp2x_video_RGB_setscaling(0, 256, 240);
 	}
         else
 	{
-          SetVideoScaling(320, 320, 240);
+          gp2x_video_RGB_setscaling(0, 320, 240);
 	}
 
         goto no_pad;

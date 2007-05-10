@@ -2,98 +2,72 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../driver.h"
+#include "../common/config.h"
+#include "../common/args.h"
 #include "gp2x.h"
 #include "gp2x-video.h"
 #ifdef NETWORK
 #include "unix-netplay.h"
 #endif
+
 #include "minimal.h"
+#include "cpuctrl.h"
+#include "squidgehack.h"
 
 int CLImain(int argc, char *argv[]);
-extern void SetVideoScaling(int, int, int);
 
 //#define SOUND_RATE 44100
 #define SOUND_RATE 22050
-#define GP2X_PORT_VERSION "0.3"
+#define GP2X_PORT_VERSION "0.4"
 
 DSETTINGS Settings;
 CFGSTRUCT DriverConfig[]={
-	AC(_xscale),
-	AC(_yscale),
-	AC(_xscalefs),
-	AC(_yscalefs),
-	AC(_efx),
-	AC(_efxfs),
-        AC(_sound),
-	#ifdef DSPSOUND
-        AC(_f8bit),
-	#else
-	AC(_ebufsize),
-	AC(_lbufsize),
-	#endif
-	AC(_fullscreen),
-        AC(_xres),
-	AC(_yres),
-        ACA(joyBMap),
-	ACA(joyAMap),
-        ACA(joy),
-        //ACS(_fshack),
+        AC(Settings.sound),
+        ACA(Settings.joyBMap),
+	ACA(Settings.joyAMap),
+        ACA(Settings.joy),
+	AC(Settings.showfps),
+	AC(Settings.scaling),
+	AC(Settings.frameskip),
+	AC(Settings.sstate_confirm),
+	AC(Settings.region_force),
+	AC(Settings.cpuclock),
+	AC(Settings.mmuhack),
+	AC(Settings.ramtimings),
+	// TODO
         ENDCFGSTRUCT
 };
 
-//-fshack x       Set the environment variable SDL_VIDEODRIVER to \"x\" when
-//                entering full screen mode and x is not \"0\".
 
 char *DriverUsage=
-"-xres   x       Set horizontal resolution to x for full screen mode.\n\
--yres   x       Set vertical resolution to x for full screen mode.\n\
--xscale(fs) x	Multiply width by x.\n\
--yscale(fs) x	Multiply height by x.\n\
--efx(fs) x	Enable scanlines effect if x is non zero.  yscale must be >=2\n\
-		and preferably a multiple of 2.\n\
--fs	 x      Select full screen mode if x is non zero.\n\
--joyx   y       Use joystick y as virtual joystick x.\n\
+"-joyx   y       Use joystick y as virtual joystick x.\n\
 -sound x        Sound.\n\
                  0 = Disabled.\n\
                  Otherwise, x = playback rate.\n\
+-showfps x      Display fps counter if x is nonzero\n\
+-mmuhack x      Enable squidge's MMU hack if x is nonzero (GP2X).\n\
+-ramtimings x   Enable RAM overclocking if x is nonzero (GP2X).\n\
 "
-#ifdef DSPSOUND
-"-f8bit x        Force 8-bit sound.\n\
-                 0 = Disabled.\n\
-                 1 = Enabled.\n\
-"
-#else
-"-lbufsize x	Internal FCE Ultra sound buffer size. Size = 2^x samples.\n\
--ebufsize x	External SDL sound buffer size. Size = 2^x samples.\n\
-"
-#endif
+#ifdef NETWORK
 "-connect s      Connect to server 's' for TCP/IP network play.\n\
 -server         Be a host/server for TCP/IP network play.\n\
--netport x      Use TCP/IP port x for network play.";
+-netport x      Use TCP/IP port x for network play."
+#endif
+;
 
 #ifdef NETWORK
 static int docheckie[2]={0,0};
 #endif
 ARGPSTRUCT DriverArgs[]={
-         {"-joy1",0,&joy[0],0},{"-joy2",0,&joy[1],0},
-         {"-joy3",0,&joy[2],0},{"-joy4",0,&joy[3],0},
-	 {"-xscale",0,&_xscale,0},
-	 {"-yscale",0,&_yscale,0},
-	 {"-efx",0,&_efx,0},
-         {"-xscalefs",0,&_xscalefs,0},
-         {"-yscalefs",0,&_yscalefs,0},
-         {"-efxfs",0,&_efxfs,0},
-	 {"-xres",0,&_xres,0},
-         {"-yres",0,&_yres,0},
-         {"-fs",0,&_fullscreen,0},
-         //{"-fshack",0,&_fshack,0x4001},
-         {"-sound",0,&_sound,0},
-	 #ifdef DSPSOUND
-         {"-f8bit",0,&_f8bit,0},
-	 #else
-	 {"-lbufsize",0,&_lbufsize,0},
-	 {"-ebufsize",0,&_ebufsize,0},
-	 #endif
+         {"-joy1",0,&Settings.joy[0],0},{"-joy2",0,&Settings.joy[1],0},
+         {"-joy3",0,&Settings.joy[2],0},{"-joy4",0,&Settings.joy[3],0},
+         {"-sound",0,&Settings.sound,0},
+         {"-showfps",0,&Settings.showfps,0},
+         {"-mmuhack",0,&Settings.mmuhack,0},
+         {"-ramtimings",0,&Settings.ramtimings,0},
+         {"-menu",0,&ext_menu,0x4001},
+         {"-menustate",0,&ext_state,0x4001},
 	 #ifdef NETWORK
          {"-connect",&docheckie[0],&netplayhost,0x4001},
          {"-server",&docheckie[1],0,0},
@@ -104,55 +78,23 @@ ARGPSTRUCT DriverArgs[]={
 
 
 
-
-
 void GetBaseDirectory(char *BaseDirectory)
 {
- char *ol;
-
- ol="/mnt/sd/roms/nes";
- BaseDirectory[0]=0;
- if(ol)
- {
-  strncpy(BaseDirectory,ol,2047);
-  BaseDirectory[2047]=0;
-  strcat(BaseDirectory,"/fceultra");
- }
+ strcpy(BaseDirectory, "fceultra");
 }
 
 static void SetDefaults(void)
 {
- _xres=320;
- _yres=240;
- _fullscreen=0;
- _sound=SOUND_RATE; // 48000 wrong
- #ifdef DSPSOUND
- _f8bit=0;
- #else
- _lbufsize=10;
- _ebufsize=8;
- #endif
- _xscale=_yscale=_xscalefs=_yscalefs=1;
- _efx=_efxfs=0;
- //_fshack=_fshacksave=0;
- memset(joy,0,sizeof(joy));
+ memset(&Settings,0,sizeof(Settings));
+ Settings.cpuclock = 150;
+ Settings.frameskip = -1; // auto
+ Settings.mmuhack = 1;
+ Settings.sound=SOUND_RATE;
 }
 
 void DoDriverArgs(void)
 {
         int x;
-
-	#ifdef BROKEN
-        if(_fshack)
-        {
-         if(_fshack[0]=='0')
-          if(_fshack[1]==0)
-          {
-           free(_fshack);
-           _fshack=0;
-          }
-        }
-	#endif
 
 	#ifdef NETWORK
         if(docheckie[0])
@@ -165,17 +107,20 @@ void DoDriverArgs(void)
 	#endif
 
         for(x=0;x<4;x++)
-         if(!joy[x])
+         if(!Settings.joy[x])
 	 {
-	  memset(joyBMap[x],0,sizeof(joyBMap[0]));
-	  memset(joyAMap[x],0,sizeof(joyAMap[0]));
+	  memset(Settings.joyBMap[x],0,sizeof(Settings.joyBMap[0]));
+	  memset(Settings.joyAMap[x],0,sizeof(Settings.joyAMap[0]));
 	 }
 }
+
 int InitMouse(void)
 {
  return(0);
 }
+
 void KillMouse(void){}
+
 void GetMouseData(uint32 *d)
 {
 }
@@ -200,13 +145,14 @@ char *GetKeyboard(void)
  return NULL;
 }
 
-#include "unix-basedir.h"
-extern int showfps;
-extern int swapbuttons;
+extern int swapbuttons; // TODO: rm
 char **g_argv;
 
+
+// TODO: cleanup
 int main(int argc, char *argv[])
 {
+	int ret;
 	g_argv = argv;
 
         puts("Starting GPFCE - Port version " GP2X_PORT_VERSION " (" __DATE__ ")");
@@ -214,42 +160,42 @@ int main(int argc, char *argv[])
         puts("Ported by Zheng Zhu");
         puts("Additional optimization/misc work by notaz\n");
 
-         //  stereo
-    	 //gp2x_init (1000, 8, SOUND_RATE, 16, 1, 60);
-
-    	 // mono 44khz
-    	//gp2x_init (1000, 8, SOUND_RATE<<1, 16, 0, 60);
-    	 // mono 22khz
-    	gp2x_init (1000, 8, SOUND_RATE, 16, 0, 60);
+    	gp2x_init();
+	cpuctrl_init();
 
         // unscale the screen, in case this is bad.
-        SetVideoScaling(320, 320, 240);
+	gp2x_video_changemode(8);
+        gp2x_video_RGB_setscaling(0, 320, 240);
 
         SetDefaults();
-        int ret=CLImain(argc,argv);
+
+        ret = CLImain(argc,argv);
 
         // unscale the screen, in case this is bad.
-        SetVideoScaling(320, 320, 240);
+        gp2x_video_RGB_setscaling(0, 320, 240);
 
+	cpuctrl_deinit();
         gp2x_deinit();
-        // make sure sound thread has exited cleanly
-        printf("Exiting main().  terminated");
-        if (showfps && swapbuttons)
-        {
-          execl("./selector","./selector","./gpfce_showfps_swapbuttons_config",NULL);
-        }
-        else if (showfps)
-        {
-          execl("./selector","./selector","./gpfce_showfps_config",NULL);
-        }
-        else if (swapbuttons)
-        {
-          execl("./selector","./selector","./gpfce_swapbuttons_config",NULL);
-        }
-        else
-        {
-          execl("./selector","./selector","./gpfce_config",NULL);
-        }
+
         return(ret?0:-1);
+}
+
+
+int mmuhack_status = 0;
+
+/* optional GP2X stuff to be done after config is loaded */
+void gp2x_opt_setup(void)
+{
+	if (Settings.mmuhack) {
+		int ret = mmuhack();
+		printf("squidge hack code finished and returned %i\n", ret); fflush(stdout);
+		mmuhack_status = ret;
+	}
+	if (Settings.ramtimings) {
+		printf("setting RAM timings.. "); fflush(stdout);
+		// craigix: --trc 6 --tras 4 --twr 1 --tmrd 1 --trfc 1 --trp 2 --trcd 2
+		set_RAM_Timings(6, 4, 1, 1, 1, 2, 2);
+		printf("done.\n"); fflush(stdout);
+	}
 }
 

@@ -16,35 +16,20 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/soundcard.h>
 
+#include "../../driver.h"
 #include "gp2x.h"
 #include "minimal.h"
 #include "throttle.h"
 
 
 extern int soundvol;
-extern unsigned long gp2x_dev[8];
 
-// always have this call
-INLINE void gp2x_sound_frame(void *blah, void *buff, int samples)
-{
-}
 
 void WriteSound(int16 *Buffer, int Count)
 {
-	write(gp2x_dev[3], Buffer, Count<<1);
+	gp2x_sound_write(Buffer, Count<<1);
 	SpeedThrottle();
-}
-
-void* gp2x_write_sound(void* blah)
-{
-	return NULL;
 }
 
 void SilenceSound(int n)

@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include "main.h"
+#include "gp2x.h"
 #include "throttle.h"
 
 #if 0
@@ -48,7 +49,7 @@ INLINE void SpeedThrottle(void)
 #else
 
 extern uint8 PAL;
-extern int FSkip, FSkip_setting;
+extern int FSkip;
 static int usec_aim = 0, usec_done = 0;
 static int skip_count = 0;
 
@@ -73,9 +74,9 @@ INLINE void SpeedThrottle(void)
 	usec_done += tv_now.tv_usec - tv_prev.tv_usec;
 
 #ifdef FRAMESKIP
-	if (FSkip_setting >= 0)
+	if (Settings.frameskip >= 0)
 	{
-		if (skip_count >= FSkip_setting)
+		if (skip_count >= Settings.frameskip)
 			skip_count = 0;
 		else {
 			skip_count++;
@@ -85,9 +86,10 @@ INLINE void SpeedThrottle(void)
 	else if (usec_done > usec_aim + 1024*4)
 	{
 		/* auto frameskip */
-		if (usec_done - usec_aim > 150000)
+		if (usec_done - usec_aim > 1024*32)
 			usec_done = usec_aim = 1; // too much behind, try to recover..
-		FSkip = 1;
+		else
+			FSkip = 1;
 		tv_prev = tv_now;
 		return;
 	}

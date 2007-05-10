@@ -1092,7 +1092,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
 	int have_movie = 0;
         int fp;
 
-        Exit=1;
+        //Exit=1;
         ResetGameLoaded();
 
 	strncpy(name2, name, sizeof(name2));
@@ -1113,6 +1113,8 @@ FCEUGI *FCEUI_LoadGame(char *name)
 	  printf("movie detected\n");
 	  FCEU_fclose(fp);
 	  *p = 0;
+	  fp=FCEU_fopen(name2,"rb");
+	  if (!fp && p - name2 > 2)  p[-2] = 0;
 	  fp=FCEU_fopen(name2,"rb");
 	  if (!fp) {
 	   printf("no ROM for movie\n");
@@ -1356,7 +1358,7 @@ update:
 
   if(Exit)
   {
-   CloseGame();
+   //CloseGame();
    break;
   }
 

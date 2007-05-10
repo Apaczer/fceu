@@ -1,0 +1,1091 @@
+// (c) Copyright 2006,2007 notaz, All rights reserved.
+// Free for non-commercial use.
+
+// For commercial use, separate licencing terms must be obtained.
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <dirent.h>
+
+#include "minimal.h"
+#include "usbjoy.h"
+#include "asmutils.h"
+#include "menu.h"
+#include "main.h"
+#include "fonts.h"
+#include "gp2x.h"
+
+#ifndef _DIRENT_HAVE_D_TYPE
+#error "need d_type for file browser
+#endif
+
+extern char lastLoadedGameName[PATH_MAX];
+extern int  mmuhack_status;
+//extern int  state_slot; // TODO
+extern uint8 Exit; // exit emu loop flag
+
+static char *gp2xKeyNames[] = {
+	"UP",    "01???",  "LEFT", "03???", "DOWN", "05???", "RIGHT",    "07???",
+	"START", "SELECT", "L",    "R",     "A",    "B",     "X",        "Y",
+	"10???", "11???",  "12???","13???", "14???","15???", "VOL DOWN", "VOL UP",
+	"18???", "19???",  "1a???","PUSH",  "1c???","1d???", "1e???",    "1f???"
+};
+
+char menuErrorMsg[40] = {0, };
+
+// TODO
+void gp2x_fceu_copy_bg(void)
+{
+	memset(gp2x_screen, 0, 320*240*2);
+}
+
+// draws white text to current bbp15 screen
+static void gp2x_text_out15_(int x, int y, const char *text)
+{
+	int i,l;
+	unsigned short *screen = gp2x_screen;
+
+	screen = screen + x + y*320;
+
+	for (i = 0; i < strlen(text); i++)
+	{
+		for (l=0;l<8;l++)
+		{
+			if(fontdata8x8[((text[i])*8)+l]&0x80) screen[l*320+0]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x40) screen[l*320+1]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x20) screen[l*320+2]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x10) screen[l*320+3]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x08) screen[l*320+4]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x04) screen[l*320+5]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x02) screen[l*320+6]=0xffff;
+			if(fontdata8x8[((text[i])*8)+l]&0x01) screen[l*320+7]=0xffff;
+		}
+		screen += 8;
+	}
+}
+
+void gp2x_text_out15(int x, int y, const char *texto, ...)
+{
+	va_list args;
+	char    buffer[512];
+
+	va_start(args,texto);
+	vsprintf(buffer,texto,args);
+	va_end(args);
+
+	gp2x_text_out15_(x,y,buffer);
+}
+
+
+void gp2x_text_out15_lim(int x, int y, const char *texto, int max)
+{
+	char    buffer[320/8+1];
+
+	strncpy(buffer, texto, 320/8);
+	if (max > 320/8) max = 320/8;
+	if (max < 0) max = 0;
+	buffer[max] = 0;
+
+	gp2x_text_out15(x,y,buffer);
+}
+
+static void gp2x_smalltext16(int x, int y, const char *texto)
+{
+	int i;
+	unsigned char  *src;
+	unsigned short *dst;
+
+	for (i = 0;; i++, x += 6)
+	{
+		unsigned char c = (unsigned char) texto[i];
+		int h = 8;
+
+		if (!c) break;
+
+		src = fontdata6x8[c];
+		dst = (unsigned short *)gp2x_screen + x + y*320;
+
+		while (h--)
+		{
+			int w = 0x20;
+			while (w)
+			{
+				if( *src & w ) *dst = 0xffff;
+				dst++;
+				w>>=1;
+			}
+			src++;
+
+			dst += 320-6;
+		}
+	}
+}
+
+static void gp2x_smalltext8_lim(int x, int y, const char *texto, int max)
+{
+	char    buffer[320/6+1];
+
+	strncpy(buffer, texto, 320/6);
+	if (max > 320/6) max = 320/6;
+	if (max < 0) max = 0;
+	buffer[max] = 0;
+
+	gp2x_smalltext16(x, y, buffer);
+}
+
+
+static unsigned long inp_prev = 0;
+static int inp_prevjoy = 0;
+
+static unsigned long wait_for_input(unsigned long interesting)
+{
+	unsigned long ret;
+	static int repeats = 0, wait = 50*1000;
+	int release = 0, i;
+
+	if (repeats == 2 || repeats == 4) wait /= 2;
+	if (repeats == 6) wait = 15 * 1000;
+
+	for (i = 0; i < 6 && inp_prev == gp2x_joystick_read(1); i++) {
+		if (i == 0) repeats++;
+		if (wait >= 30*1000) usleep(wait); // usleep sleeps for ~30ms minimum
+		else spend_cycles(wait * Settings.cpuclock);
+	}
+
+	while ( !((ret = gp2x_joystick_read(1)) & interesting) ) {
+		usleep(50000);
+		release = 1;
+	}
+
+	if (release || ret != inp_prev) {
+		repeats = 0;
+		wait = 50*1000;
+	}
+	inp_prev = ret;
+	inp_prevjoy = 0;
+
+	// we don't need diagonals in menus
+	if ((ret&GP2X_UP)   && (ret&GP2X_LEFT))  ret &= ~GP2X_LEFT;
+	if ((ret&GP2X_UP)   && (ret&GP2X_RIGHT)) ret &= ~GP2X_RIGHT;
+	if ((ret&GP2X_DOWN) && (ret&GP2X_LEFT))  ret &= ~GP2X_LEFT;
+	if ((ret&GP2X_DOWN) && (ret&GP2X_RIGHT)) ret &= ~GP2X_RIGHT;
+
+	return ret;
+}
+
+static unsigned long input2_read(unsigned long interesting, int *joy)
+{
+	unsigned long ret;
+	int i;
+
+	do
+	{
+		*joy = 0;
+		if ((ret = gp2x_joystick_read(0) & interesting)) break;
+		gp2x_usbjoy_update();
+		for (i = 0; i < num_of_joys; i++) {
+			ret = gp2x_usbjoy_check2(i);
+			if (ret) { *joy = i + 1; break; }
+		}
+		if (ret) break;
+	}
+	while(0);
+
+	return ret;
+}
+
+// similar to wait_for_input(), but returns joy num
+static unsigned long wait_for_input_usbjoy(unsigned long interesting, int *joy)
+{
+	unsigned long ret;
+	const int wait = 300*1000;
+	int i;
+
+	if (inp_prevjoy == 0) inp_prev &= interesting;
+	for (i = 0; i < 6; i++) {
+		ret = input2_read(interesting, joy);
+		if (*joy != inp_prevjoy || ret != inp_prev) break;
+		usleep(wait/6);
+	}
+
+	while ( !(ret = input2_read(interesting, joy)) ) {
+		usleep(50000);
+	}
+
+	inp_prev = ret;
+	inp_prevjoy = *joy;
+
+	return ret;
+}
+
+
+
+// -------------- ROM selector --------------
+
+static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
+{
+	int start, i, pos;
+
+	start = 12 - sel;
+	n--; // exclude current dir (".")
+
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+
+	if(start - 2 >= 0)
+		gp2x_smalltext8_lim(14, (start - 2)*10, curdir, 53-2);
+	for (i = 0; i < n; i++) {
+		pos = start + i;
+		if (pos < 0)  continue;
+		if (pos > 23) break;
+		if (namelist[i+1]->d_type == DT_DIR) {
+			gp2x_smalltext8_lim(14,   pos*10, "/", 1);
+			gp2x_smalltext8_lim(14+6, pos*10, namelist[i+1]->d_name, 53-3);
+		} else {
+			gp2x_smalltext8_lim(14,   pos*10, namelist[i+1]->d_name, 53-2);
+		}
+	}
+	gp2x_text_out15(5, 120, ">");
+	gp2x_video_flip();
+}
+
+static int scandir_cmp(const void *p1, const void *p2)
+{
+	struct dirent **d1 = (struct dirent **)p1, **d2 = (struct dirent **)p2;
+	if ((*d1)->d_type == (*d2)->d_type) return alphasort(d1, d2);
+	if ((*d1)->d_type == DT_DIR) return -1; // put before
+	if ((*d2)->d_type == DT_DIR) return  1;
+	return alphasort(d1, d2);
+}
+
+static char *filter_exts[] = {
+	// TODO
+	".mp3", ".MP3", ".srm", ".brm", "s.gz", ".mds",	"bcfg", ".txt", ".htm", "html",
+	".jpg", ".gpe", ".cue"
+};
+
+static int scandir_filter(const struct dirent *ent)
+{
+	const char *p;
+	int i;
+
+	if (ent == NULL || ent->d_name == NULL) return 0;
+	if (strlen(ent->d_name) < 5) return 1;
+
+	p = ent->d_name + strlen(ent->d_name) - 4;
+
+	for (i = 0; i < sizeof(filter_exts)/sizeof(filter_exts[0]); i++)
+	{
+		if (strcmp(p, filter_exts[i]) == 0) return 0;
+	}
+
+	return 1;
+}
+
+static char *romsel_loop(char *curr_path)
+{
+	struct dirent **namelist;
+	DIR *dir;
+	int n, sel = 0;
+	unsigned long inp = 0;
+	char *ret = NULL, *fname = NULL;
+
+	// is this a dir or a full path?
+	if ((dir = opendir(curr_path))) {
+		closedir(dir);
+	} else {
+		char *p;
+		for (p = curr_path + strlen(curr_path) - 1; p > curr_path && *p != '/'; p--);
+		*p = 0;
+		fname = p+1;
+	}
+
+	n = scandir(curr_path, &namelist, scandir_filter, scandir_cmp);
+	if (n < 0) {
+		// try root
+		n = scandir("/", &namelist, scandir_filter, scandir_cmp);
+		if (n < 0) {
+			// oops, we failed
+			printf("dir: %s\n", curr_path);
+			perror("scandir");
+			return NULL;
+		}
+	}
+
+	// try to find sel
+	if (fname != NULL) {
+		int i;
+		for (i = 1; i < n; i++) {
+			if (strcmp(namelist[i]->d_name, fname) == 0) {
+				sel = i - 1;
+				break;
+			}
+		}
+	}
+
+	for (;;)
+	{
+		draw_dirlist(curr_path, namelist, n, sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_L|GP2X_R|GP2X_B|GP2X_X);
+		if(inp & GP2X_UP  )  { sel--;   if (sel < 0)   sel = n-2; }
+		if(inp & GP2X_DOWN)  { sel++;   if (sel > n-2) sel = 0; }
+		if(inp & GP2X_LEFT)  { sel-=10; if (sel < 0)   sel = 0; }
+		if(inp & GP2X_L)     { sel-=24; if (sel < 0)   sel = 0; }
+		if(inp & GP2X_RIGHT) { sel+=10; if (sel > n-2) sel = n-2; }
+		if(inp & GP2X_R)     { sel+=24; if (sel > n-2) sel = n-2; }
+		if(inp & GP2X_B)     { // enter dir/select
+			again:
+			if (namelist[sel+1]->d_type == DT_REG) {
+				strcpy(lastLoadedGameName, curr_path);
+				strcat(lastLoadedGameName, "/");
+				strcat(lastLoadedGameName, namelist[sel+1]->d_name);
+				ret = lastLoadedGameName;
+				break;
+			} else if (namelist[sel+1]->d_type == DT_DIR) {
+				int newlen = strlen(curr_path) + strlen(namelist[sel+1]->d_name) + 2;
+				char *p, *newdir = malloc(newlen);
+				if (strcmp(namelist[sel+1]->d_name, "..") == 0) {
+					char *start = curr_path;
+					p = start + strlen(start) - 1;
+					while (*p == '/' && p > start) p--;
+					while (*p != '/' && p > start) p--;
+					if (p <= start) strcpy(newdir, "/");
+					else { strncpy(newdir, start, p-start); newdir[p-start] = 0; }
+				} else {
+					strcpy(newdir, curr_path);
+					p = newdir + strlen(newdir) - 1;
+					while (*p == '/' && p >= newdir) *p-- = 0;
+					strcat(newdir, "/");
+					strcat(newdir, namelist[sel+1]->d_name);
+				}
+				ret = romsel_loop(newdir);
+				free(newdir);
+				break;
+			} else {
+				// unknown file type, happens on NTFS mounts. Try to guess.
+				FILE *tstf; int tmp;
+				strcpy(lastLoadedGameName, curr_path);
+				strcat(lastLoadedGameName, "/");
+				strcat(lastLoadedGameName, namelist[sel+1]->d_name);
+				tstf = fopen(lastLoadedGameName, "rb");
+				if (tstf != NULL)
+				{
+					if (fread(&tmp, 1, 1, tstf) > 0 || ferror(tstf) == 0)
+						namelist[sel+1]->d_type = DT_REG;
+					else	namelist[sel+1]->d_type = DT_DIR;
+					fclose(tstf);
+					goto again;
+				}
+			}
+		}
+		if(inp & GP2X_X) break; // cancel
+	}
+
+	if (n > 0) {
+		while(n--) free(namelist[n]);
+		free(namelist);
+	}
+
+	return ret;
+}
+
+// ------------ patch/gg menu ------------
+
+#if 0 // TODO?
+static void draw_patchlist(int sel)
+{
+	int start, i, pos;
+
+	start = 12 - sel;
+
+	gp2x_fceu_copy_bg();
+
+	for (i = 0; i < PicoPatchCount; i++) {
+		pos = start + i;
+		if (pos < 0)  continue;
+		if (pos > 23) break;
+		gp2x_smalltext8_lim(14,     pos*10, PicoPatches[i].active ? "ON " : "OFF", 3);
+		gp2x_smalltext8_lim(14+6*4, pos*10, PicoPatches[i].name, 53-6);
+	}
+	pos = start + i;
+	if (pos < 24) gp2x_smalltext8_lim(14, pos*10, "done", 4);
+
+	gp2x_text_out15(5, 120, ">");
+	gp2x_video_flip();
+}
+
+
+void patches_menu_loop(void)
+{
+	int menu_sel = 0;
+	unsigned long inp = 0;
+
+	for(;;)
+	{
+		draw_patchlist(menu_sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_L|GP2X_R|GP2X_B|GP2X_X);
+		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = PicoPatchCount; }
+		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > PicoPatchCount) menu_sel = 0; }
+		if(inp &(GP2X_LEFT|GP2X_L))  { menu_sel-=10; if (menu_sel < 0) menu_sel = 0; }
+		if(inp &(GP2X_RIGHT|GP2X_R)) { menu_sel+=10; if (menu_sel > PicoPatchCount) menu_sel = PicoPatchCount; }
+		if(inp & GP2X_B) { // action
+			if (menu_sel < PicoPatchCount)
+				PicoPatches[menu_sel].active = !PicoPatches[menu_sel].active;
+			else 	return;
+		}
+		if(inp & GP2X_X) return;
+	}
+
+}
+
+// ------------ savestate loader ------------
+
+static void menu_prepare_bg(void);
+
+static int state_slot_flags = 0;
+
+static void state_check_slots(void)
+{
+	int slot;
+
+	state_slot_flags = 0;
+
+	for (slot = 0; slot < 10; slot++)
+	{
+		if (emu_check_save_file(slot))
+		{
+			state_slot_flags |= 1 << slot;
+		}
+	}
+}
+
+static void draw_savestate_bg(int slot)
+{
+	struct PicoVideo tmp_pv;
+	unsigned short tmp_cram[0x40];
+	unsigned short tmp_vsram[0x40];
+	void *tmp_vram, *file;
+	char *fname;
+
+	fname = emu_GetSaveFName(1, 0, slot);
+	if (!fname) return;
+
+	tmp_vram = malloc(sizeof(Pico.vram));
+	if (tmp_vram == NULL) return;
+
+	memcpy(tmp_vram, Pico.vram, sizeof(Pico.vram));
+	memcpy(tmp_cram, Pico.cram, sizeof(Pico.cram));
+	memcpy(tmp_vsram, Pico.vsram, sizeof(Pico.vsram));
+	memcpy(&tmp_pv, &Pico.video, sizeof(Pico.video));
+
+	if (strcmp(fname + strlen(fname) - 3, ".gz") == 0) {
+		file = gzopen(fname, "rb");
+		emu_set_save_cbs(1);
+	} else {
+		file = fopen(fname, "rb");
+		emu_set_save_cbs(0);
+	}
+
+	if (file) {
+		if (PicoMCD & 1) {
+			PicoCdLoadStateGfx(file);
+		} else {
+			areaSeek(file, 0x10020, SEEK_SET);  // skip header and RAM in state file
+			areaRead(Pico.vram, 1, sizeof(Pico.vram), file);
+			areaSeek(file, 0x2000, SEEK_CUR);
+			areaRead(Pico.cram, 1, sizeof(Pico.cram), file);
+			areaRead(Pico.vsram, 1, sizeof(Pico.vsram), file);
+			areaSeek(file, 0x221a0, SEEK_SET);
+			areaRead(&Pico.video, 1, sizeof(Pico.video), file);
+		}
+		areaClose(file);
+	}
+
+	emu_forced_frame();
+	gp2x_memcpy_buffers((1<<2), gp2x_screen, 0, 320*240*2);
+	menu_prepare_bg();
+
+	memcpy(Pico.vram, tmp_vram, sizeof(Pico.vram));
+	memcpy(Pico.cram, tmp_cram, sizeof(Pico.cram));
+	memcpy(Pico.vsram, tmp_vsram, sizeof(Pico.vsram));
+	memcpy(&Pico.video, &tmp_pv,  sizeof(Pico.video));
+	free(tmp_vram);
+}
+
+static void draw_savestate_menu(int menu_sel, int is_loading)
+{
+	int tl_x = 25, tl_y = 60, y, i;
+
+	if (state_slot_flags & (1 << menu_sel))
+		draw_savestate_bg(menu_sel);
+	gp2x_fceu_copy_bg();
+
+	gp2x_text_out15(tl_x, 30, is_loading ? "Load state" : "Save state");
+
+	/* draw all 10 slots */
+	y = tl_y;
+	for (i = 0; i < 10; i++, y+=10)
+	{
+		gp2x_text_out15(tl_x, y, "SLOT %i (%s)", i, (state_slot_flags & (1 << i)) ? "USED" : "free");
+	}
+	gp2x_text_out15(tl_x, y, "back");
+
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
+	gp2x_video_flip();
+}
+
+static int savestate_menu_loop(int is_loading)
+{
+	int menu_sel = 10, menu_sel_max = 10;
+	unsigned long inp = 0;
+
+	state_check_slots();
+
+	for(;;)
+	{
+		draw_savestate_menu(menu_sel, is_loading);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_B|GP2X_X);
+		if(inp & GP2X_UP  ) {
+			do {
+				menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max;
+			} while (!(state_slot_flags & (1 << menu_sel)) && menu_sel != menu_sel_max && is_loading);
+		}
+		if(inp & GP2X_DOWN) {
+			do {
+				menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0;
+			} while (!(state_slot_flags & (1 << menu_sel)) && menu_sel != menu_sel_max && is_loading);
+		}
+		if(inp & GP2X_B) { // save/load
+			if (menu_sel < 10) {
+				state_slot = menu_sel;
+				if (emu_SaveLoadGame(is_loading, 0)) {
+					strcpy(menuErrorMsg, is_loading ? "Load failed" : "Save failed");
+					return 1;
+				}
+				return 0;
+			} else	return 1;
+		}
+		if(inp & GP2X_X) return 1;
+	}
+}
+
+// -------------- key config --------------
+
+static char *usb_joy_key_name(int joy, int num)
+{
+	static char name[16];
+	switch (num)
+	{
+		case 0: sprintf(name, "Joy%i UP", joy); break;
+		case 1: sprintf(name, "Joy%i DOWN", joy); break;
+		case 2: sprintf(name, "Joy%i LEFT", joy); break;
+		case 3: sprintf(name, "Joy%i RIGHT", joy); break;
+		default:sprintf(name, "Joy%i b%i", joy, num-3); break;
+	}
+	return name;
+}
+
+static void draw_key_config(int curr_act, int is_p2)
+{
+	char strkeys[32*5];
+	int joy, i;
+
+	strkeys[0] = 0;
+	for (i = 0; i < 32; i++)
+	{
+		if (currentConfig.KeyBinds[i] & (1 << curr_act))
+		{
+			if (curr_act < 16 && (currentConfig.KeyBinds[i] & (1 << 16)) != (is_p2 << 16)) continue;
+			if (strkeys[0]) { strcat(strkeys, " + "); strcat(strkeys, gp2xKeyNames[i]); break; }
+			else strcpy(strkeys, gp2xKeyNames[i]);
+		}
+	}
+	for (joy = 0; joy < num_of_joys; joy++)
+	{
+		for (i = 0; i < 32; i++)
+		{
+			if (currentConfig.JoyBinds[joy][i] & (1 << curr_act))
+			{
+				if (curr_act < 16 && (currentConfig.JoyBinds[joy][i] & (1 << 16)) != (is_p2 << 16)) continue;
+				if (strkeys[0]) {
+					strcat(strkeys, ", "); strcat(strkeys, usb_joy_key_name(joy + 1, i));
+					break;
+				}
+				else strcpy(strkeys, usb_joy_key_name(joy + 1, i));
+			}
+		}
+	}
+
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+	gp2x_text_out15(60, 40, "Action: %s", actionNames[curr_act]);
+	gp2x_text_out15(60, 60, "Keys: %s", strkeys);
+
+	gp2x_text_out15(30, 180, "Use SELECT to change action");
+	gp2x_text_out15(30, 190, "Press a key to bind/unbind");
+	gp2x_text_out15(30, 200, "Select \"Done\" action and");
+	gp2x_text_out15(30, 210, "  press any key to finish");
+	gp2x_video_flip();
+}
+
+static void key_config_loop(int is_p2)
+{
+	int curr_act = 0, joy = 0, i;
+	unsigned long inp = 0;
+
+	for (;;)
+	{
+		draw_key_config(curr_act, is_p2);
+		inp = wait_for_input_usbjoy(CONFIGURABLE_KEYS, &joy);
+		// printf("got %08lX from joy %i\n", inp, joy);
+		if (joy == 0) {
+			if (inp & GP2X_SELECT) {
+				curr_act++;
+				while (!actionNames[curr_act] && curr_act < 32) curr_act++;
+				if (curr_act > 31) curr_act = 0;
+			}
+			inp &= CONFIGURABLE_KEYS;
+			inp &= ~GP2X_SELECT;
+		}
+		if (curr_act == 31 && inp) break;
+		if (joy == 0) {
+			for (i = 0; i < 32; i++)
+				if (inp & (1 << i)) {
+					currentConfig.KeyBinds[i] ^= (1 << curr_act);
+					if (is_p2) currentConfig.KeyBinds[i] |=  (1 << 16); // player 2 flag
+					else       currentConfig.KeyBinds[i] &= ~(1 << 16);
+				}
+		} else {
+			for (i = 0; i < 32; i++)
+				if (inp & (1 << i)) {
+					currentConfig.JoyBinds[joy-1][i] ^= (1 << curr_act);
+					if (is_p2) currentConfig.JoyBinds[joy-1][i] |=  (1 << 16);
+					else       currentConfig.JoyBinds[joy-1][i] &= ~(1 << 16);
+				}
+		}
+	}
+}
+
+static void draw_kc_sel(int menu_sel)
+{
+	int tl_x = 25+40, tl_y = 60, y, i;
+	char joyname[36];
+
+	y = tl_y;
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+	gp2x_text_out15(tl_x, y,       "Player 1");
+	gp2x_text_out15(tl_x, (y+=10), "Player 2");
+	gp2x_text_out15(tl_x, (y+=10), "Done");
+
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
+	tl_x = 25;
+	gp2x_text_out15(tl_x, (y=110), "USB joys detected:");
+	if (num_of_joys > 0) {
+		for (i = 0; i < num_of_joys; i++) {
+			strncpy(joyname, joy_name(joys[i]), 33); joyname[33] = 0;
+			gp2x_text_out15(tl_x, (y+=10), "%i: %s", i+1, joyname);
+		}
+	} else {
+		gp2x_text_out15(tl_x, (y+=10), "none");
+	}
+
+
+	gp2x_video_flip();
+}
+
+static void kc_sel_loop(void)
+{
+	int menu_sel = 2, menu_sel_max = 2;
+	unsigned long inp = 0;
+
+	for(;;)
+	{
+		draw_kc_sel(menu_sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_B|GP2X_X);
+		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max; }
+		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
+		if(inp & GP2X_B) {
+			switch (menu_sel) {
+				case 0: key_config_loop(0); return;
+				case 1: key_config_loop(1); return;
+				default: return;
+			}
+		}
+		if(inp & GP2X_X) return;
+	}
+}
+#endif
+
+
+
+// --------- advanced options ----------
+#if 0
+static void draw_amenu_options(int menu_sel)
+{
+	int tl_x = 25, tl_y = 60, y;
+	char *mms = mmuhack_status ? "active)  " : "inactive)";
+
+	y = tl_y;
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+
+	gp2x_text_out15(tl_x, y,       "Gamma correction           %i.%02i", currentConfig.gamma / 100, currentConfig.gamma%100); // 0
+	gp2x_text_out15(tl_x, (y+=10), "Don't save last used ROM   %s", (currentConfig.EmuOpt &0x020)?"ON":"OFF"); // 5
+	gp2x_text_out15(tl_x, (y+=10), "needs restart:");
+	gp2x_text_out15(tl_x, (y+=10), "craigix's RAM timings      %s", (currentConfig.EmuOpt &0x100)?"ON":"OFF"); // 7
+	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, (currentConfig.EmuOpt &0x010)?"ON":"OFF"); // 8
+	gp2x_text_out15(tl_x, (y+=10), "Done");
+
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
+	gp2x_video_flip();
+}
+
+static void amenu_loop_options(void)
+{
+	int menu_sel = 0, menu_sel_max = 9;
+	unsigned long inp = 0;
+
+	for(;;)
+	{
+		draw_amenu_options(menu_sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_B|GP2X_X|GP2X_A);
+		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max; }
+		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
+		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
+			switch (menu_sel) {
+				case  1: break;
+				case  9: return;
+			}
+		}
+		if(inp & (GP2X_X|GP2X_A)) return;
+		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
+			switch (menu_sel) {
+				case 0:
+					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
+						currentConfig.gamma += (inp & GP2X_LEFT) ? -1 : 1;
+						if (currentConfig.gamma <   1) currentConfig.gamma =   1;
+						if (currentConfig.gamma > 300) currentConfig.gamma = 300;
+						draw_amenu_options(menu_sel);
+						usleep(18*1000);
+					}
+					break;
+			}
+		}
+	}
+}
+#endif
+
+// -------------- options --------------
+
+static void draw_menu_options(int menu_sel)
+{
+	int tl_x = 25, tl_y = 32, y;
+	char monostereo[8], strframeskip[8], *strscaling, *strssconfirm;
+
+	//strcpy(monostereo, (currentConfig.PicoOpt&0x08)?"stereo":"mono");
+	if (Settings.frameskip < 0)
+	     strcpy(strframeskip, "Auto");
+	else sprintf(strframeskip, "%i", Settings.frameskip);
+	switch (Settings.scaling) {
+		default: strscaling = "            OFF";   break;
+		case 1:  strscaling = "hw horizontal";     break;
+		case 2:  strscaling = "hw horiz. + vert."; break;
+		case 3:  strscaling = "sw horizontal";     break;
+	}
+	switch (Settings.sstate_confirm) {
+		default: strssconfirm = "OFF";    break;
+		case 1:  strssconfirm = "writes"; break;
+		case 2:  strssconfirm = "loads";  break;
+		case 3:  strssconfirm = "both";   break;
+	}
+
+	y = tl_y;
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+
+	gp2x_text_out15(tl_x, (y+=10), "Scaling:       %s", strscaling);				// 0
+	gp2x_text_out15(tl_x, (y+=10), "Show FPS                   %s", Settings.showfps?"ON":"OFF");	// 1
+	gp2x_text_out15(tl_x, (y+=10), "Frameskip                  %s", strframeskip);			// 2
+	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", /*(currentConfig.EmuOpt &0x004)?"ON":*/"OFF"); // 3
+	gp2x_text_out15(tl_x, (y+=10), "Sound Quality:     %5iHz %s",   0, "" /*currentConfig.PsndRate, monostereo*/); // 4
+	gp2x_text_out15(tl_x, (y+=10), "Region:              %s",
+		Settings.region_force == 2 ? "NTSC" : Settings.region_force == 1 ? "PAL" : "OFF");	// 5
+	gp2x_text_out15(tl_x, (y+=10), "Use SRAM savestates        %s", "OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);
+	gp2x_text_out15(tl_x, (y+=10), "Save slot                  %i", 0/*state_slot*/);		// 8
+	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);
+	gp2x_text_out15(tl_x, (y+=10), "[advanced options]");						// 10
+	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");
+	if (fceugi)
+		gp2x_text_out15(tl_x, (y+=10), "Save cfg for current game only");
+
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
+	gp2x_video_flip();
+}
+
+/*
+static int sndrate_prevnext(int rate, int dir)
+{
+	int i, rates[] = { 8000, 11025, 16000, 22050, 44100 };
+
+	for (i = 0; i < 5; i++)
+		if (rates[i] == rate) break;
+
+	i += dir ? 1 : -1;
+	if (i > 4) return dir ? 44100 : 22050;
+	if (i < 0) return dir ? 11025 : 8000;
+	return rates[i];
+}
+*/
+static void int_incdec(int *p, int inc, int min, int max)
+{
+	*p += inc;
+	if      (*p < min) *p = min;
+	else if (*p > max) *p = max;
+}
+
+static int menu_loop_options(void)
+{
+	int menu_sel = 0, menu_sel_max = 11;
+	unsigned long inp = 0;
+
+	if (fceugi) menu_sel_max++;
+
+	for(;;)
+	{
+		draw_menu_options(menu_sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_B|GP2X_X|GP2X_A);
+		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max; }
+		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
+		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
+			switch (menu_sel) {
+				case  1: Settings.showfps = !Settings.showfps; break;
+				//case  6: Settings. = !Settings.showfps; break;
+				//case 16: amenu_loop_options();    break;
+				case 17: // done (update and write)
+					//if (emu_WriteConfig(0)) strcpy(menuErrorMsg, "config saved");
+					//else strcpy(menuErrorMsg, "failed to write config");
+					return 1;
+				case 18: // done (update and write for current game)
+					//if (emu_WriteConfig(1)) strcpy(menuErrorMsg, "config saved");
+					//else strcpy(menuErrorMsg, "failed to write config");
+					return 1;
+			}
+		}
+		if(inp & (GP2X_X|GP2X_A)) {
+			return 0;  // done (update, no write)
+		}
+		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
+			switch (menu_sel) {
+				case  0: int_incdec(&Settings.scaling,   (inp & GP2X_LEFT) ? -1 : 1,  0,  3); break;
+				case  2: int_incdec(&Settings.frameskip, (inp & GP2X_LEFT) ? -1 : 1, -1, 32); break;
+/*
+				case  4:
+					if ((inp & GP2X_RIGHT) && currentConfig.PsndRate == 44100 && !(currentConfig.PicoOpt&0x08)) {
+						currentConfig.PsndRate = 8000;  currentConfig.PicoOpt|= 0x08;
+					} else if ((inp & GP2X_LEFT) && currentConfig.PsndRate == 8000 && (currentConfig.PicoOpt&0x08)) {
+						currentConfig.PsndRate = 44100; currentConfig.PicoOpt&=~0x08;
+					} else currentConfig.PsndRate = sndrate_prevnext(currentConfig.PsndRate, inp & GP2X_RIGHT);
+					break;
+*/
+				case  5: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
+				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
+				//case  8: int_incdec(&Settings., (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
+				case 14:
+					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
+						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
+						if (Settings.cpuclock < 1) Settings.cpuclock = 1;
+						draw_menu_options(menu_sel);
+						usleep(50*1000);
+					}
+					break;
+			}
+		}
+	}
+}
+
+// -------------- credits --------------
+
+static void draw_menu_credits(void)
+{
+	int tl_x = 15, tl_y = 70, y;
+	//memset(gp2x_screen, 0, 320*240);
+	gp2x_fceu_copy_bg();
+
+	// TODO
+
+	gp2x_video_flip();
+}
+
+
+// -------------- root menu --------------
+
+static void draw_menu_root(int menu_sel)
+{
+	int tl_x = 70, tl_y = 70, y;
+	gp2x_fceu_copy_bg();
+
+	y = tl_y;
+	if (fceugi) {
+		gp2x_text_out15(tl_x, y,       "Resume game");
+		gp2x_text_out15(tl_x, (y+=10), "Save State");
+		gp2x_text_out15(tl_x, (y+=10), "Load State");
+		gp2x_text_out15(tl_x, (y+=10), "Reset game");
+	} else {
+		y += 30;
+	}
+	gp2x_text_out15(tl_x, (y+=10), "Load new ROM");
+	gp2x_text_out15(tl_x, (y+=10), "Change options");
+	gp2x_text_out15(tl_x, (y+=10), "Configure controls");
+	gp2x_text_out15(tl_x, (y+=10), "Credits");
+	gp2x_text_out15(tl_x, (y+=10), "Exit");
+// TODO
+//	if (PicoPatches)
+//		gp2x_text_out15(tl_x, (y+=10), "Patches / GameGenie");
+
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+	// error
+	if (menuErrorMsg[0]) gp2x_text_out15(5, 226, menuErrorMsg);
+	gp2x_video_flip();
+}
+
+
+static int menu_loop_root(void)
+{
+	int ret, menu_sel = 4, menu_sel_max = 8, menu_sel_min = 4;
+	unsigned long inp = 0;
+	char curr_path[PATH_MAX], *selfname;
+	FILE *tstf;
+
+	if ( (tstf = fopen(lastLoadedGameName, "rb")) )
+	{
+		fclose(tstf);
+		strncpy(curr_path, lastLoadedGameName, sizeof(curr_path));
+		curr_path[sizeof(curr_path)-1] = 0;
+	}
+	else
+	{
+		getcwd(curr_path, PATH_MAX);
+	}
+
+	if (fceugi) menu_sel = menu_sel_min = 0;
+// TODO	if (PicoPatches) menu_sel_max = 9;
+
+	/* make sure action buttons are not pressed on entering menu */
+	draw_menu_root(menu_sel);
+	while (gp2x_joystick_read(1) & (GP2X_B|GP2X_X|GP2X_SELECT)) usleep(50*1000);
+
+	for (;;)
+	{
+		draw_menu_root(menu_sel);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_B|GP2X_X);
+		if(inp & GP2X_UP  )  { menu_sel--; if (menu_sel < menu_sel_min) menu_sel = menu_sel_max; }
+		if(inp & GP2X_DOWN)  { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = menu_sel_min; }
+		if(inp &(GP2X_SELECT|GP2X_X)){
+			if (fceugi) {
+				while (gp2x_joystick_read(1) & GP2X_X) usleep(50*1000); // wait until X is released
+				Exit = 0;
+				return 0;
+			}
+		}
+		if(inp & GP2X_B   )  {
+			switch (menu_sel) {
+				case 0: // resume game
+					if (fceugi) {
+						while (gp2x_joystick_read(1) & GP2X_B) usleep(50*1000);
+						Exit = 0;
+						return 0;
+					}
+					break;
+				case 1: // save state
+					if (fceugi) {
+						/*if(savestate_menu_loop(0))
+							continue;*/
+						return 0;
+					}
+					break;
+				case 2: // load state
+					if (fceugi) {
+						/*if(savestate_menu_loop(1))
+							continue;*/
+						return 0;
+					}
+					break;
+				case 3: // reset game
+					if (fceugi) {
+						return 0;
+					}
+					break;
+				case 4: // select rom
+					selfname = romsel_loop(curr_path);
+					if (selfname) {
+						printf("selected file: %s\n", selfname);
+						return 2;
+					}
+					break;
+				case 5: // options
+					ret = menu_loop_options();
+					if (ret == 1) continue; // status update
+					break;
+				case 6: // controls
+					// TODO kc_sel_loop();
+					break;
+				case 7: // credits
+					draw_menu_credits();
+					usleep(500*1000);
+					inp = wait_for_input(GP2X_B|GP2X_X);
+					break;
+				case 8: // exit
+					return 1;
+				case 9: // patches/gg
+					break;
+			}
+		}
+		menuErrorMsg[0] = 0; // clear error msg
+	}
+}
+
+
+static void menu_prepare_bg(void)
+{
+	// TODO...
+}
+
+static void menu_gfx_prepare(void)
+{
+	menu_prepare_bg();
+
+	// switch bpp
+	gp2x_video_changemode(16);
+	gp2x_video_RGB_setscaling(0, 320, 240);
+	gp2x_video_flip();
+}
+
+
+int gp2x_menu_do(void)
+{
+	int ret;
+
+	menu_gfx_prepare();
+
+	ret = menu_loop_root();
+
+	menuErrorMsg[0] = 0;
+
+	return ret;
+}
+
+

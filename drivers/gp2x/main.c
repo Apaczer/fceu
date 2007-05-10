@@ -37,6 +37,8 @@
 
 #include "main.h"
 #include "throttle.h"
+#include "menu.h"
+#include "gp2x.h"
 
 #include "../common/config.h"
 #include "../common/args.h"
@@ -49,6 +51,12 @@
 #include "../../fce.h"
 #include "../../ines.h"
 
+// internals
+extern char lastLoadedGameName[2048];
+extern uint8 Exit; // exit emu loop flag
+void CloseGame(void);
+
+FCEUGI *fceugi = NULL;
 static int ntsccol=0,ntschue=-1,ntsctint=-1;
 int soundvol=70;
 int inited=0;
@@ -56,9 +64,7 @@ int swapbuttons=0;
 int showfps=0;
 
 int srendlinev[2]={0,0};
-//int srendlinev[2]={0,0};
 int erendlinev[2]={239,239};
-//int erendlinev[2]={231,239};
 int srendline,erendline;
 
 
@@ -123,6 +129,7 @@ static CFGSTRUCT fceuconfig[]={
 	AC(eoptions),
 	ACA(srendlinev),
 	ACA(erendlinev),
+	ACA(lastLoadedGameName),
 	ADDCFGSTRUCT(DriverConfig),
 	ENDCFGSTRUCT
 };
@@ -193,7 +200,7 @@ static void CloseStuff(int signum)
         exit(1);
 }
 
-static void DoArgs(int argc, char *argv[])
+static int DoArgs(int argc, char *argv[])
 {
         static char *cortab[5]={"none","gamepad","zapper","powerpad","arkanoid"};
         static int cortabi[5]={SI_NONE,SI_GAMEPAD,
@@ -202,7 +209,7 @@ static void DoArgs(int argc, char *argv[])
 	static int fccortabi[5]={SIFC_NONE,SIFC_ARKANOID,SIFC_SHADOW,
 			         SIFC_4PLAYER,SIFC_FKB};
 
-	int x;
+	int x, ret;
 	static char *inputa[2]={0,0};
 	static char *fcexp=0;
 	static int docheckie[4];
@@ -232,7 +239,7 @@ static void DoArgs(int argc, char *argv[])
         };
 
         memset(docheckie,0,sizeof(docheckie));
-	ParseArguments(argc, argv, FCEUArgs);
+	ret=ParseArguments(argc, argv, FCEUArgs);
 	if(cpalette)
 	{
   	 if(cpalette[0]=='0')
@@ -299,62 +306,97 @@ static void DoArgs(int argc, char *argv[])
 	  }
 	 }
 	}
+	return ret;
 }
 
 #include "usage.h"
 
 int CLImain(int argc, char *argv[])
 {
-	FCEUGI *tmp;
-	int ret;
-
-        if(argc<=1)
+	int last_arg_parsed;
+        /* TODO if(argc<=1)
         {
          ShowUsage(argv[0]);
          return 1;
-        }
+        }*/
 
         if(!DriverInitialize())
         {
 	 return 1;
         }
 
-	if(!(ret=FCEUI_Initialize()))
+	if(!FCEUI_Initialize())
          return(1);
         GetBaseDirectory(BaseDirectory);
 	FCEUI_SetBaseDirectory(BaseDirectory);
+	lastLoadedGameName[0] = 0;
 
 	CreateDirs();
         LoadConfig();
-        DoArgs(argc-2,&argv[1]);
+	gp2x_opt_setup();
+        last_arg_parsed=DoArgs(argc-1,&argv[1]);
 	if(cpalette)
 	 LoadCPalette();
 	if(InitSound())
 	 inited|=1;
 
-        if(!(tmp=FCEUI_LoadGame(argv[argc-1])))
-        {
-         ret=0;
-         goto dk;
-        }
-	ParseGI(tmp);
-	//RefreshThrottleFPS();
-	InitOtherInput();
-
-	// additional print for gpfce
+	if (argc > 1 && !last_arg_parsed)
 	{
-	 int MapperNo;
-	 iNES_HEADER *head = iNESGetHead();
-         MapperNo = (head->ROM_type>>4);
-         MapperNo|=(head->ROM_type2&0xF0);
-	 FCEU_DispMessage("%s, Mapper: %d%s%s", PAL?"PAL":"NTSC", MapperNo, (head->ROM_type&2)?", BB":"", (head->ROM_type&4)?", T":"");
+	 strncpy(lastLoadedGameName, argv[argc-1], sizeof(lastLoadedGameName));
+	 lastLoadedGameName[sizeof(lastLoadedGameName)-1] = 0;
+	 Exit = 0;
+	}
+	else
+	{
+	 lastLoadedGameName[0] = 0;
+	 Exit = 1;
 	}
 
-	FCEUI_Emulate();
+	while (1)
+	{
+	 if(!Exit)
+	 {
+	  if (fceugi)
+	   CloseGame();
+          fceugi=FCEUI_LoadGame(lastLoadedGameName);
+	  if (fceugi)
+	  {
+	   ParseGI(fceugi);
+	   //RefreshThrottleFPS();
+	   InitOtherInput();
 
-	dk:
+	   // additional print for gpfce
+	   // TODO: handlers for other formats then iNES
+	   {
+	  int MapperNo;
+	  iNES_HEADER *head = iNESGetHead();
+          MapperNo = (head->ROM_type>>4);
+          MapperNo|=(head->ROM_type2&0xF0);
+	  FCEU_DispMessage("%s, Mapper: %d%s%s", PAL?"PAL":"NTSC", MapperNo, (head->ROM_type&2)?", BB":"", (head->ROM_type&4)?", T":"");
+	   }
+	  }
+	  else
+	   strcpy(menuErrorMsg, "failed to load ROM");
+	 }
+         if(Exit || !fceugi)
+         {
+          int ret;
+	  ret = gp2x_menu_do();
+	  if (ret == 1) break;		// exit emu
+	  if (ret == 2) {		// reload ROM
+	   Exit = 0;
+	   continue;
+	  }
+         }
+
+	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
+         gp2x_video_RGB_setscaling(0, 320, 240);
+	 gp2x_start_sound(22050, 16, 0);
+	 FCEUI_Emulate();
+	}
+
 	DriverKill();
-        return(ret?0:1);
+        return 0;
 }
 
 static int DriverInitialize(void)

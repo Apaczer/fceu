@@ -28,10 +28,10 @@ gpfce: fceu
 
 include zlib/Makefile
 
-OBJDRIVER	 = ${B}minimal.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
-		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o \
+OBJDRIVER	 = ${B}minimal.o ${B}cpuctrl.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
+		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}lnx-joystick.o ${B}usbjoy.o ${B}menu.o ${B}fonts.o \
 		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o movie.o
-LDRIVER		+= -L /mnt/sd/lib  -L/mnt/sd/gp2x/usr/lib -lm -lz -static -Wl,-Map=fceu.map
+LDRIVER		+= -L /mnt/sd/lib -L/mnt/sd/gp2x/usr/lib -lm -lz -static -Wl,-Map=fceu.map
 
 ifeq ($(asm_6502),1)
 TFLAGS  += -DASM_6502

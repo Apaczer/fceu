@@ -28,3 +28,5 @@ extern int eoptions;
 #define EO_NOTHROTTLE	64
 extern int srendline,erendline,srendlinev[2],erendlinev[2];
 extern int NoWaiting;
+
+extern FCEUGI *fceugi;

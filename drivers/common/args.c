@@ -33,15 +33,15 @@
 #include "../../types.h"
 #include "args.h"
 
-void ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
+static int ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
 {
-  int y=0;
+  int y=0,ret=0;
 
   do
   {
    if(!argsps[y].name)
    {
-    ParseEA(x,argc,argv,(void *)argsps[y].var);
+    ret = ParseEA(x,argc,argv,(void *)argsps[y].var);
     y++;
     continue;
    }
@@ -50,7 +50,7 @@ void ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
     if(argsps[y].subs)
     {
      if((x+1)>=argc)
-      break;
+      return 0;
      if(argsps[y].substype&0x8000)
      {
       *(int *)argsps[y].subs&=~(argsps[y].substype&(~0x8000));
@@ -69,23 +69,34 @@ void ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
 		free(*(char **)argsps[y].subs);
 	       if(!( *(char **)argsps[y].subs=malloc(strlen(argv[x+1])+1) ))
 		break;
-	      }	
+	      }
 	      strcpy(*(char **)argsps[y].subs,argv[x+1]);
 	      break;
       }
+     ret=2;
     }
-    if(argsps[y].var)
+    else if(argsps[y].var)
+    {
      *argsps[y].var=1;
+     ret=1;
+    }
    }
    y++;
   } while(argsps[y].var || argsps[y].subs);
+  return ret;
 }
 
-void ParseArguments(int argc, char *argv[], ARGPSTRUCT *argsps)
+/* returns 1 if last arg was usccessfully parsed */
+int ParseArguments(int argc, char *argv[], ARGPSTRUCT *argsps)
 {
- int x;
+ int x, ret=0;
 
  for(x=0;x<argc;x++)
-  ParseEA(x,argc,argv,argsps);
+ {
+  ret = ParseEA(x,argc,argv,argsps);
+  if (ret == 2) x++;
+ }
+
+ return ret;
 }
 
