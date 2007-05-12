@@ -22,6 +22,13 @@ void InitializeInput(void);
 extern void (*PStrobe[2])(void);
 extern void (*InputScanlineHook)(uint8 *buf, int line);
 
+#define FCEUNPCMD_RESET   0x01
+#define FCEUNPCMD_POWER   0x02
+
+#define FCEUNPCMD_VSUNICOIN     0x07
+#define FCEUNPCMD_VSUNIDIP0     0x08
+#define FCEUNPCMD_FDSINSERT     0x18
+#define FCEUNPCMD_FDSSELECT     0x1A
 void FCEU_DoSimpleCommand(int cmd);
 
 void FCEUI_FDSSelect(void);

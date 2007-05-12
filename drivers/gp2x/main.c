@@ -1,8 +1,5 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,11 +14,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-/*  This file contains or coordinates all of the code necessary to compile
-    on a UNIX system that can use svgalib, such as FreeBSD and Linux.
-    This code is not guaranteed to compile on FreeBSD, though.
-*/
 
 
 #include <unistd.h>
@@ -60,8 +52,6 @@ FCEUGI *fceugi = NULL;
 static int ntsccol=0,ntschue=-1,ntsctint=-1;
 int soundvol=70;
 int inited=0;
-int swapbuttons=0;
-int showfps=0;
 
 int srendlinev[2]={0,0};
 int erendlinev[2]={239,239};
@@ -134,19 +124,23 @@ static CFGSTRUCT fceuconfig[]={
 	ENDCFGSTRUCT
 };
 
-static void SaveConfig(void)
+void SaveConfig(const char *name)
 {
 	char tdir[2048];
-	sprintf(tdir,"%s"PSS"fceu.cfg",BaseDirectory);
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
         DriverInterface(DES_GETNTSCTINT,&ntsctint);
         DriverInterface(DES_GETNTSCHUE,&ntschue);
         SaveFCEUConfig(tdir,fceuconfig);
 }
 
-static void LoadConfig(void)
+static void LoadConfig(const char *name)
 {
 	char tdir[2048];
-        sprintf(tdir,"%s"PSS"fceu.cfg",BaseDirectory);
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
         LoadFCEUConfig(tdir,fceuconfig);
         if(ntsctint>=0) DriverInterface(DES_SETNTSCTINT,&ntsctint);
         if(ntschue>=0) DriverInterface(DES_SETNTSCHUE,&ntschue);
@@ -154,12 +148,12 @@ static void LoadConfig(void)
 
 static void CreateDirs(void)
 {
- char *subs[5]={"fcs","snaps","gameinfo","sav","cheats"};
+ char *subs[]={"fcs","snaps","gameinfo","sav","cheats","cfg"};
  char tdir[2048];
  int x;
 
  mkdir(BaseDirectory,S_IRWXU);
- for(x=0;x<5;x++)
+ for(x=0;x<sizeof(subs)/sizeof(subs[0]);x++)
  {
   sprintf(tdir,"%s"PSS"%s",BaseDirectory,subs[x]);
   mkdir(tdir,S_IRWXU);
@@ -232,8 +226,6 @@ static int DoArgs(int argc, char *argv[])
 	 {"-nothrottle",0,&eoptions,0x8000|EO_NOTHROTTLE},
          {"-slstart",0,&srendlinev[0],0},{"-slend",0,&erendlinev[0],0},
          {"-slstartp",0,&srendlinev[1],0},{"-slendp",0,&erendlinev[1],0},
-	     {"-swapbuttons",&swapbuttons, 0, 0},
-	     {"-showfps",&showfps, 0, 0},
 	 {0,(void *)DriverArgs,0,0},
 	 {0,0,0,0}
         };
@@ -309,6 +301,7 @@ static int DoArgs(int argc, char *argv[])
 	return ret;
 }
 
+
 #include "usage.h"
 
 int CLImain(int argc, char *argv[])
@@ -332,9 +325,10 @@ int CLImain(int argc, char *argv[])
 	lastLoadedGameName[0] = 0;
 
 	CreateDirs();
-        LoadConfig();
-	gp2x_opt_setup();
+        LoadConfig(NULL);
         last_arg_parsed=DoArgs(argc-1,&argv[1]);
+	gp2x_opt_setup();
+	gp2x_cpuclock_update();
 	if(cpalette)
 	 LoadCPalette();
 	if(InitSound())
@@ -348,7 +342,6 @@ int CLImain(int argc, char *argv[])
 	}
 	else
 	{
-	 lastLoadedGameName[0] = 0;
 	 Exit = 1;
 	}
 
@@ -361,6 +354,7 @@ int CLImain(int argc, char *argv[])
           fceugi=FCEUI_LoadGame(lastLoadedGameName);
 	  if (fceugi)
 	  {
+	   LoadConfig(lastLoadedGameName);
 	   ParseGI(fceugi);
 	   //RefreshThrottleFPS();
 	   InitOtherInput();
@@ -395,6 +389,9 @@ int CLImain(int argc, char *argv[])
 	 FCEUI_Emulate();
 	}
 
+	if (fceugi)
+	 CloseGame();
+
 	DriverKill();
         return 0;
 }
@@ -414,7 +411,7 @@ static int DriverInitialize(void)
 
 static void DriverKill(void)
 {
- SaveConfig();
+ SaveConfig(NULL);
  SetSignals(SIG_IGN);
 
  if(inited&2)

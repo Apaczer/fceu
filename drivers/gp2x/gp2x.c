@@ -19,14 +19,13 @@ int CLImain(int argc, char *argv[]);
 
 //#define SOUND_RATE 44100
 #define SOUND_RATE 22050
-#define GP2X_PORT_VERSION "0.4"
 
 DSETTINGS Settings;
 CFGSTRUCT DriverConfig[]={
+        ACA(Settings.KeyBinds),
+	ACA(Settings.JoyBinds),
+        AC(Settings.turbo_rate_add),
         AC(Settings.sound),
-        ACA(Settings.joyBMap),
-	ACA(Settings.joyAMap),
-        ACA(Settings.joy),
 	AC(Settings.showfps),
 	AC(Settings.scaling),
 	AC(Settings.frameskip),
@@ -35,6 +34,7 @@ CFGSTRUCT DriverConfig[]={
 	AC(Settings.cpuclock),
 	AC(Settings.mmuhack),
 	AC(Settings.ramtimings),
+	AC(Settings.gamma),
 	// TODO
         ENDCFGSTRUCT
 };
@@ -60,8 +60,6 @@ char *DriverUsage=
 static int docheckie[2]={0,0};
 #endif
 ARGPSTRUCT DriverArgs[]={
-         {"-joy1",0,&Settings.joy[0],0},{"-joy2",0,&Settings.joy[1],0},
-         {"-joy3",0,&Settings.joy[2],0},{"-joy4",0,&Settings.joy[3],0},
          {"-sound",0,&Settings.sound,0},
          {"-showfps",0,&Settings.showfps,0},
          {"-mmuhack",0,&Settings.mmuhack,0},
@@ -89,13 +87,22 @@ static void SetDefaults(void)
  Settings.cpuclock = 150;
  Settings.frameskip = -1; // auto
  Settings.mmuhack = 1;
- Settings.sound=SOUND_RATE;
+ Settings.sound = SOUND_RATE;
+ // default controls, RLDU SEBA
+ Settings.KeyBinds[ 0] = 0x010; // GP2X_UP
+ Settings.KeyBinds[ 4] = 0x020; // GP2X_DOWN
+ Settings.KeyBinds[ 2] = 0x040; // GP2X_LEFT
+ Settings.KeyBinds[ 6] = 0x080; // GP2X_RIGHT
+ Settings.KeyBinds[13] = 0x001; // GP2X_B
+ Settings.KeyBinds[14] = 0x002; // GP2X_X
+ Settings.KeyBinds[15] = 0x100; // GP2X_Y
+ Settings.KeyBinds[12] = 0x200; // GP2X_A
+ Settings.KeyBinds[ 8] = 0x008; // GP2X_START
+ Settings.KeyBinds[ 9] = 0x004; // GP2X_SELECT
 }
 
 void DoDriverArgs(void)
 {
-        int x;
-
 	#ifdef NETWORK
         if(docheckie[0])
          netplay=2;
@@ -105,13 +112,6 @@ void DoDriverArgs(void)
         if(netplay)
          FCEUI_SetNetworkPlay(netplay);
 	#endif
-
-        for(x=0;x<4;x++)
-         if(!Settings.joy[x])
-	 {
-	  memset(Settings.joyBMap[x],0,sizeof(Settings.joyBMap[0]));
-	  memset(Settings.joyAMap[x],0,sizeof(Settings.joyAMap[0]));
-	 }
 }
 
 int InitMouse(void)
@@ -145,8 +145,9 @@ char *GetKeyboard(void)
  return NULL;
 }
 
-extern int swapbuttons; // TODO: rm
+
 char **g_argv;
+int mmuhack_status = 0;
 
 
 // TODO: cleanup
@@ -163,16 +164,15 @@ int main(int argc, char *argv[])
     	gp2x_init();
 	cpuctrl_init();
 
-        // unscale the screen, in case this is bad.
-	gp2x_video_changemode(8);
-        gp2x_video_RGB_setscaling(0, 320, 240);
-
         SetDefaults();
 
         ret = CLImain(argc,argv);
 
         // unscale the screen, in case this is bad.
         gp2x_video_RGB_setscaling(0, 320, 240);
+
+	if (mmuhack_status > 0)
+		mmuunhack();
 
 	cpuctrl_deinit();
         gp2x_deinit();
@@ -181,14 +181,13 @@ int main(int argc, char *argv[])
 }
 
 
-int mmuhack_status = 0;
-
 /* optional GP2X stuff to be done after config is loaded */
 void gp2x_opt_setup(void)
 {
 	if (Settings.mmuhack) {
 		int ret = mmuhack();
-		printf("squidge hack code finished and returned %i\n", ret); fflush(stdout);
+		printf("squidge hack code finished and returned %s\n", ret > 0 ? "ok" : "fail");
+		fflush(stdout);
 		mmuhack_status = ret;
 	}
 	if (Settings.ramtimings) {
@@ -198,4 +197,15 @@ void gp2x_opt_setup(void)
 		printf("done.\n"); fflush(stdout);
 	}
 }
+
+void gp2x_cpuclock_update(void)
+{
+	static int prev_cpuclock = 200;
+	if (Settings.cpuclock != 0 && Settings.cpuclock != prev_cpuclock)
+	{
+		set_FCLK(Settings.cpuclock);
+		prev_cpuclock = Settings.cpuclock;
+	}
+}
+
 

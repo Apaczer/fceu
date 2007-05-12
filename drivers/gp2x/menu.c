@@ -18,14 +18,23 @@
 #include "fonts.h"
 #include "gp2x.h"
 
+#include "../../input.h"
+#include "../../state.h"
+
 #ifndef _DIRENT_HAVE_D_TYPE
 #error "need d_type for file browser
 #endif
+
+static int GP2X_PORT_REV =
+#include "rev.h"
+;
 
 extern char lastLoadedGameName[PATH_MAX];
 extern int  mmuhack_status;
 //extern int  state_slot; // TODO
 extern uint8 Exit; // exit emu loop flag
+
+#define CONFIGURABLE_KEYS (GP2X_UP|GP2X_LEFT|GP2X_DOWN|GP2X_RIGHT|GP2X_START|GP2X_SELECT|GP2X_L|GP2X_R|GP2X_A|GP2X_B|GP2X_X|GP2X_Y|GP2X_PUSH)
 
 static char *gp2xKeyNames[] = {
 	"UP",    "01???",  "LEFT", "03???", "DOWN", "05???", "RIGHT",    "07???",
@@ -262,9 +271,7 @@ static int scandir_cmp(const void *p1, const void *p2)
 }
 
 static char *filter_exts[] = {
-	// TODO
-	".mp3", ".MP3", ".srm", ".brm", "s.gz", ".mds",	"bcfg", ".txt", ".htm", "html",
-	".jpg", ".gpe", ".cue"
+	".gpe", ".png", "ck.o", ".txt"
 };
 
 static int scandir_filter(const struct dirent *ent)
@@ -573,6 +580,7 @@ static int savestate_menu_loop(int is_loading)
 		if(inp & GP2X_X) return 1;
 	}
 }
+#endif
 
 // -------------- key config --------------
 
@@ -590,17 +598,17 @@ static char *usb_joy_key_name(int joy, int num)
 	return name;
 }
 
-static void draw_key_config(int curr_act, int is_p2)
+static char *action_binds(int player_idx, int action_mask)
 {
-	char strkeys[32*5];
+	static char strkeys[32*5];
 	int joy, i;
 
 	strkeys[0] = 0;
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < 32; i++) // i is key index
 	{
-		if (currentConfig.KeyBinds[i] & (1 << curr_act))
+		if (Settings.KeyBinds[i] & action_mask)
 		{
-			if (curr_act < 16 && (currentConfig.KeyBinds[i] & (1 << 16)) != (is_p2 << 16)) continue;
+			if (player_idx >= 0 && ((Settings.KeyBinds[i] >> 16) & 3) != player_idx) continue;
 			if (strkeys[0]) { strcat(strkeys, " + "); strcat(strkeys, gp2xKeyNames[i]); break; }
 			else strcpy(strkeys, gp2xKeyNames[i]);
 		}
@@ -609,9 +617,9 @@ static void draw_key_config(int curr_act, int is_p2)
 	{
 		for (i = 0; i < 32; i++)
 		{
-			if (currentConfig.JoyBinds[joy][i] & (1 << curr_act))
+			if (Settings.JoyBinds[joy][i] & action_mask)
 			{
-				if (curr_act < 16 && (currentConfig.JoyBinds[joy][i] & (1 << 16)) != (is_p2 << 16)) continue;
+				if (player_idx >= 0 && ((Settings.KeyBinds[i] >> 16) & 3) != player_idx) continue;
 				if (strkeys[0]) {
 					strcat(strkeys, ", "); strcat(strkeys, usb_joy_key_name(joy + 1, i));
 					break;
@@ -621,51 +629,121 @@ static void draw_key_config(int curr_act, int is_p2)
 		}
 	}
 
-	//memset(gp2x_screen, 0, 320*240);
-	gp2x_fceu_copy_bg();
-	gp2x_text_out15(60, 40, "Action: %s", actionNames[curr_act]);
-	gp2x_text_out15(60, 60, "Keys: %s", strkeys);
+	return strkeys;
+}
 
-	gp2x_text_out15(30, 180, "Use SELECT to change action");
-	gp2x_text_out15(30, 190, "Press a key to bind/unbind");
-	gp2x_text_out15(30, 200, "Select \"Done\" action and");
-	gp2x_text_out15(30, 210, "  press any key to finish");
+static void unbind_action(int action)
+{
+	int i, u;
+
+	for (i = 0; i < 32; i++)
+		Settings.KeyBinds[i] &= ~action;
+	for (u = 0; u < 4; u++)
+		for (i = 0; i < 32; i++)
+			Settings.JoyBinds[u][i] &= ~action;
+}
+
+static int count_bound_keys(int action, int is_joy)
+{
+	int i, u, keys = 0;
+
+	if (is_joy)
+	{
+		for (u = 0; u < 4; u++)
+			for (i = 0; i < 32; i++)
+				if (Settings.JoyBinds[u][i] & action) keys++;
+	}
+	else
+	{
+		for (i = 0; i < 32; i++)
+			if (Settings.KeyBinds[i] & action) keys++;
+	}
+	return keys;
+}
+
+typedef struct { char *name; int mask; } bind_action_t;
+
+// b_turbo,a_turbo  RLDU SEBA
+static bind_action_t ctrl_actions[] =
+{
+	{ "UP     ", 0x010 },
+	{ "DOWN   ", 0x020 },
+	{ "LEFT   ", 0x040 },
+	{ "RIGHT  ", 0x080 },
+	{ "A      ", 0x001 },
+	{ "B      ", 0x002 },
+	{ "A TURBO", 0x100 },
+	{ "B TURBO", 0x200 },
+	{ "START  ", 0x008 },
+	{ "SELECT ", 0x004 },
+};
+
+static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_idx, int sel)
+{
+	int x, y, tl_y = 40, i;
+
+	gp2x_fceu_copy_bg();
+	gp2x_text_out15(80, 20, "Player %i controls", player_idx + 1);
+
+	x = 40; y = tl_y;
+	for (i = 0; i < opt_cnt; i++, y+=10)
+		gp2x_text_out15(x, y, "%s : %s", opts[i].name, action_binds(player_idx, opts[i].mask));
+
+	gp2x_text_out15(x, y, "Done");
+
+	// draw cursor
+	gp2x_text_out15(x - 16, tl_y + sel*10, ">");
+
+	if (sel < 10) {
+		gp2x_text_out15(30, 190, "Press a button to bind/unbind");
+		gp2x_text_out15(30, 200, "Use VOL+ to clear");
+		gp2x_text_out15(30, 210, "To bind UP/DOWN, hold VOL-");
+		gp2x_text_out15(30, 220, "Select \"Done\" to exit");
+	} else {
+		gp2x_text_out15(30, 220, "Press B or X to exit");
+	}
 	gp2x_video_flip();
 }
 
-static void key_config_loop(int is_p2)
+static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_idx)
 {
-	int curr_act = 0, joy = 0, i;
+	int joy = 0, sel = 0, menu_sel_max = opt_cnt, i;
 	unsigned long inp = 0;
 
 	for (;;)
 	{
-		draw_key_config(curr_act, is_p2);
-		inp = wait_for_input_usbjoy(CONFIGURABLE_KEYS, &joy);
+		draw_key_config(opts, opt_cnt, player_idx, sel);
+		inp = wait_for_input_usbjoy(CONFIGURABLE_KEYS|GP2X_VOL_DOWN|GP2X_VOL_UP, &joy);
 		// printf("got %08lX from joy %i\n", inp, joy);
 		if (joy == 0) {
-			if (inp & GP2X_SELECT) {
-				curr_act++;
-				while (!actionNames[curr_act] && curr_act < 32) curr_act++;
-				if (curr_act > 31) curr_act = 0;
+			if (!(inp & GP2X_VOL_DOWN)) {
+				if(inp & GP2X_UP  ) { sel--; if (sel < 0) sel = menu_sel_max; continue; }
+				if(inp & GP2X_DOWN) { sel++; if (sel > menu_sel_max) sel = 0; continue; }
 			}
+			if (sel >= opt_cnt) {
+				if (inp & (GP2X_B|GP2X_X)) break;
+				else continue;
+			}
+			// if we are here, we want to bind/unbind something
+			if (inp & GP2X_VOL_UP)
+				unbind_action(opts[sel].mask);
 			inp &= CONFIGURABLE_KEYS;
-			inp &= ~GP2X_SELECT;
-		}
-		if (curr_act == 31 && inp) break;
-		if (joy == 0) {
 			for (i = 0; i < 32; i++)
 				if (inp & (1 << i)) {
-					currentConfig.KeyBinds[i] ^= (1 << curr_act);
-					if (is_p2) currentConfig.KeyBinds[i] |=  (1 << 16); // player 2 flag
-					else       currentConfig.KeyBinds[i] &= ~(1 << 16);
+					if (count_bound_keys(opts[sel].mask, 0) >= 2)
+					     Settings.KeyBinds[i] &= ~opts[sel].mask; // allow to unbind only
+					else Settings.KeyBinds[i] ^=  opts[sel].mask;
+					Settings.KeyBinds[i] &= ~(3 << 16);
+					Settings.KeyBinds[i] |= player_idx << 16;
 				}
-		} else {
+		} else if (sel < opt_cnt) {
 			for (i = 0; i < 32; i++)
 				if (inp & (1 << i)) {
-					currentConfig.JoyBinds[joy-1][i] ^= (1 << curr_act);
-					if (is_p2) currentConfig.JoyBinds[joy-1][i] |=  (1 << 16);
-					else       currentConfig.JoyBinds[joy-1][i] &= ~(1 << 16);
+					if (count_bound_keys(opts[sel].mask, 1) >= 1) // disallow combos for usbjoy
+					     Settings.JoyBinds[joy-1][i] &= ~opts[sel].mask;
+					else Settings.JoyBinds[joy-1][i] ^=  opts[sel].mask;
+					Settings.JoyBinds[joy-1][i] &= ~(3 << 16);
+					Settings.JoyBinds[joy-1][i] |= player_idx << 16;
 				}
 		}
 	}
@@ -677,10 +755,10 @@ static void draw_kc_sel(int menu_sel)
 	char joyname[36];
 
 	y = tl_y;
-	//memset(gp2x_screen, 0, 320*240);
 	gp2x_fceu_copy_bg();
 	gp2x_text_out15(tl_x, y,       "Player 1");
 	gp2x_text_out15(tl_x, (y+=10), "Player 2");
+	gp2x_text_out15(tl_x, (y+=10), "Emulator controls");
 	gp2x_text_out15(tl_x, (y+=10), "Done");
 
 	// draw cursor
@@ -697,13 +775,12 @@ static void draw_kc_sel(int menu_sel)
 		gp2x_text_out15(tl_x, (y+=10), "none");
 	}
 
-
 	gp2x_video_flip();
 }
 
 static void kc_sel_loop(void)
 {
-	int menu_sel = 2, menu_sel_max = 2;
+	int menu_sel = 3, menu_sel_max = 3;
 	unsigned long inp = 0;
 
 	for(;;)
@@ -714,15 +791,14 @@ static void kc_sel_loop(void)
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if(inp & GP2X_B) {
 			switch (menu_sel) {
-				case 0: key_config_loop(0); return;
-				case 1: key_config_loop(1); return;
+				case 0: key_config_loop(ctrl_actions, 10, 0); return;
+				case 1: key_config_loop(ctrl_actions,  8, 1); return;
 				default: return;
 			}
 		}
 		if(inp & GP2X_X) return;
 	}
 }
-#endif
 
 
 
@@ -790,7 +866,7 @@ static void amenu_loop_options(void)
 static void draw_menu_options(int menu_sel)
 {
 	int tl_x = 25, tl_y = 32, y;
-	char monostereo[8], strframeskip[8], *strscaling, *strssconfirm;
+	char /*monostereo[8],*/ strframeskip[8], *strscaling, *strssconfirm;
 
 	//strcpy(monostereo, (currentConfig.PicoOpt&0x08)?"stereo":"mono");
 	if (Settings.frameskip < 0)
@@ -813,12 +889,12 @@ static void draw_menu_options(int menu_sel)
 	//memset(gp2x_screen, 0, 320*240);
 	gp2x_fceu_copy_bg();
 
-	gp2x_text_out15(tl_x, (y+=10), "Scaling:       %s", strscaling);				// 0
+	gp2x_text_out15(tl_x,  y,      "Scaling:       %s", strscaling);				// 0
 	gp2x_text_out15(tl_x, (y+=10), "Show FPS                   %s", Settings.showfps?"ON":"OFF");	// 1
 	gp2x_text_out15(tl_x, (y+=10), "Frameskip                  %s", strframeskip);			// 2
 	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", /*(currentConfig.EmuOpt &0x004)?"ON":*/"OFF"); // 3
 	gp2x_text_out15(tl_x, (y+=10), "Sound Quality:     %5iHz %s",   0, "" /*currentConfig.PsndRate, monostereo*/); // 4
-	gp2x_text_out15(tl_x, (y+=10), "Region:              %s",
+	gp2x_text_out15(tl_x, (y+=10), "Region:                    %s",
 		Settings.region_force == 2 ? "NTSC" : Settings.region_force == 1 ? "PAL" : "OFF");	// 5
 	gp2x_text_out15(tl_x, (y+=10), "Use SRAM savestates        %s", "OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);
@@ -873,18 +949,20 @@ static int menu_loop_options(void)
 			switch (menu_sel) {
 				case  1: Settings.showfps = !Settings.showfps; break;
 				//case  6: Settings. = !Settings.showfps; break;
-				//case 16: amenu_loop_options();    break;
-				case 17: // done (update and write)
-					//if (emu_WriteConfig(0)) strcpy(menuErrorMsg, "config saved");
-					//else strcpy(menuErrorMsg, "failed to write config");
+				//case 10: amenu_loop_options();    break;
+				case 11: // done (update and write)
+					gp2x_cpuclock_update();
+					SaveConfig(NULL);
 					return 1;
-				case 18: // done (update and write for current game)
-					//if (emu_WriteConfig(1)) strcpy(menuErrorMsg, "config saved");
-					//else strcpy(menuErrorMsg, "failed to write config");
+				case 12: // done (update and write for current game)
+					gp2x_cpuclock_update();
+					if (lastLoadedGameName[0])
+						SaveConfig(lastLoadedGameName);
 					return 1;
 			}
 		}
 		if(inp & (GP2X_X|GP2X_A)) {
+			gp2x_cpuclock_update();
 			return 0;  // done (update, no write)
 		}
 		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
@@ -902,11 +980,11 @@ static int menu_loop_options(void)
 */
 				case  5: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
 				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
-				//case  8: int_incdec(&Settings., (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
-				case 14:
+				case  8: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
+				case  9:
 					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
 						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
-						if (Settings.cpuclock < 1) Settings.cpuclock = 1;
+						if (Settings.cpuclock < 0) Settings.cpuclock = 0; // 0 ~ do not change
 						draw_menu_options(menu_sel);
 						usleep(50*1000);
 					}
@@ -920,8 +998,7 @@ static int menu_loop_options(void)
 
 static void draw_menu_credits(void)
 {
-	int tl_x = 15, tl_y = 70, y;
-	//memset(gp2x_screen, 0, 320*240);
+	//int tl_x = 15, tl_y = 70;
 	gp2x_fceu_copy_bg();
 
 	// TODO
@@ -934,7 +1011,7 @@ static void draw_menu_credits(void)
 
 static void draw_menu_root(int menu_sel)
 {
-	int tl_x = 70, tl_y = 70, y;
+	int tl_x = 30, tl_y = 128, y;
 	gp2x_fceu_copy_bg();
 
 	y = tl_y;
@@ -947,8 +1024,8 @@ static void draw_menu_root(int menu_sel)
 		y += 30;
 	}
 	gp2x_text_out15(tl_x, (y+=10), "Load new ROM");
-	gp2x_text_out15(tl_x, (y+=10), "Change options");
-	gp2x_text_out15(tl_x, (y+=10), "Configure controls");
+	gp2x_text_out15(tl_x, (y+=10), "Options");
+	gp2x_text_out15(tl_x, (y+=10), "Controls");
 	gp2x_text_out15(tl_x, (y+=10), "Credits");
 	gp2x_text_out15(tl_x, (y+=10), "Exit");
 // TODO
@@ -958,14 +1035,20 @@ static void draw_menu_root(int menu_sel)
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 	// error
-	if (menuErrorMsg[0]) gp2x_text_out15(5, 226, menuErrorMsg);
+	if (menuErrorMsg[0]) gp2x_text_out15(1, 230, menuErrorMsg);
+	else {
+		char vstr[16];
+		sprintf(vstr, "v" GP2X_PORT_VERSION " r%i", GP2X_PORT_REV);
+		gp2x_text_out15(320-strlen(vstr)*8-1, 230, vstr);
+	}
 	gp2x_video_flip();
 }
 
 
 static int menu_loop_root(void)
 {
-	int ret, menu_sel = 4, menu_sel_max = 8, menu_sel_min = 4;
+	int ret, menu_sel_max = 8, menu_sel_min = 4;
+	static int menu_sel = 4;
 	unsigned long inp = 0;
 	char curr_path[PATH_MAX], *selfname;
 	FILE *tstf;
@@ -981,8 +1064,10 @@ static int menu_loop_root(void)
 		getcwd(curr_path, PATH_MAX);
 	}
 
-	if (fceugi) menu_sel = menu_sel_min = 0;
+	if (fceugi) menu_sel_min = 0;
 // TODO	if (PicoPatches) menu_sel_max = 9;
+	if (menu_sel < menu_sel_min || menu_sel > menu_sel_max)
+		menu_sel = menu_sel_min;
 
 	/* make sure action buttons are not pressed on entering menu */
 	draw_menu_root(menu_sel);
@@ -1014,6 +1099,7 @@ static int menu_loop_root(void)
 					if (fceugi) {
 						/*if(savestate_menu_loop(0))
 							continue;*/
+						FCEUI_SaveState();
 						return 0;
 					}
 					break;
@@ -1021,11 +1107,14 @@ static int menu_loop_root(void)
 					if (fceugi) {
 						/*if(savestate_menu_loop(1))
 							continue;*/
+						FCEUI_LoadState();
 						return 0;
 					}
 					break;
 				case 3: // reset game
 					if (fceugi) {
+						FCEU_DoSimpleCommand(FCEUNPCMD_RESET);
+						Exit = 0;
 						return 0;
 					}
 					break;
@@ -1041,7 +1130,7 @@ static int menu_loop_root(void)
 					if (ret == 1) continue; // status update
 					break;
 				case 6: // controls
-					// TODO kc_sel_loop();
+					kc_sel_loop();
 					break;
 				case 7: // credits
 					draw_menu_credits();

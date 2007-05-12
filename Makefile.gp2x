@@ -54,12 +54,22 @@ include Makefile.base
 ${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
 ${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h
 ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
+${B}menu.o:		${B}rev.h
 ppu.o:			ppu.c ppu.h
 
-include Makefile.common
+${B}rev.h: FORCE
+	@if [ -f $@ ]; then prevrev=`cat $@`; else prevrev="00"; fi; \
+	if [ "`which svn`" != "" ]; then \
+		rev=`svn update|tail -n 1|sed 's/.*\ \(.*\)\./\1/g'|sed "s/'//g"`; \
+	fi; \
+	if [ "$$rev"  = "" ]; then rev="0"; fi; \
+	if [ "$$rev" != "$$prevrev" ]; then \
+		echo "$$rev" > $@; \
+	fi
 
-#x6502.o:	x6502.c x6502.h ops.h fce.h sound.h
-#	$(CC) $(CFLAGS) -finline-limit=60000 -c $< -o $@
+.PHONY: FORCE
+
+include Makefile.common
 
 up: fceu
 	cp -v fceu /mnt/gp2x/mnt/sd/emus/Gpfce_v02/gpfce

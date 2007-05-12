@@ -348,16 +348,6 @@ void FCEUI_SetInputFC(int type, void *ptr, int attrib)
  SetInputStuffFC();
 }
 
-// quick paste
-#define FCEUNPCMD_RESET   0x01
-#define FCEUNPCMD_POWER   0x02
-
-#define FCEUNPCMD_VSUNICOIN     0x07
-#define FCEUNPCMD_VSUNIDIP0     0x08
-#define FCEUNPCMD_FDSINSERT     0x18
-#define FCEUNPCMD_FDSSELECT     0x1A
-
-
 void FCEU_DoSimpleCommand(int cmd)
 {
  switch(cmd)

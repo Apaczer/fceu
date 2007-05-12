@@ -31,9 +31,7 @@
 
 extern uint8 Exit; // exit emu loop
 
-extern int swapbuttons;
 extern int scaled_display;
-extern int FSkip_setting;
 
 
 
@@ -64,12 +62,6 @@ char soundvolmeter[21];
 int soundvolIndex=0;
 int L_count=0;
 int R_count=0;
-extern int CurrentState;
-int TurboFireOff=1;
-int TurboFireTop=0;  // 0 is none  // 1 is  A & X turbo  // 2 is Y & B turbo
-int TurboFireBottom=0;
-int turbo_toggle_A=0;
-int turbo_toggle_B=0;
 
 
 static void setsoundvol(int soundvolume)
@@ -97,259 +89,60 @@ static void setsoundvol(int soundvolume)
 
 void FCEUD_UpdateInput(void)
 {
-  long lastpad2=lastpad;
-  unsigned long pad=gp2x_joystick_read(1); // TODO: USB joys and stuff
-  uint32 JS=0;
+	static int volpushed_frames = 0;
+	long lastpad2 = lastpad;
+	unsigned long keys = gp2x_joystick_read(0);
+	uint32 JS = 0; // RLDU SEBA
+	int i;
 
-#define down(b) (pad & GP2X_##b)
-#define last_down(b) (lastpad & GP2X_##b)
-#define L_down (pad & GP2X_L)
-#define R_down (pad & GP2X_R)
-#define last_L_down (lastpad & GP2X_L)
-#define last_R_down (lastpad & GP2X_R)
-#define shift      ((pad     & GP2X_PUSH) || ((pad     & (GP2X_VOL_UP|GP2X_VOL_DOWN)) == (GP2X_VOL_UP|GP2X_VOL_DOWN)))
-#define last_shift ((lastpad & GP2X_PUSH) || ((lastpad & (GP2X_VOL_UP|GP2X_VOL_DOWN)) == (GP2X_VOL_UP|GP2X_VOL_DOWN)))
-
-  if (L_down && R_down && !(pad & GP2X_PUSH) && !(last_R_down && last_L_down))
-  {
-     ResetNES();
-     puts("Reset");
-     goto no_pad;
-  }
-
-  if (down(VOL_UP) && !down(VOL_DOWN))
-  {
-    soundvol+=1;
-    if (soundvol >= 100) soundvol=100;
-    //FCEUI_SetSoundVolume(soundvol);
-    setsoundvol(soundvol);
-  }
-  else if (down(VOL_DOWN) && !down(VOL_UP))
-  {
-    soundvol-=1;
-    if (soundvol < 0) soundvol=0;
-    //FCEUI_SetSoundVolume(soundvol);
-    setsoundvol(soundvol);
-  }
-  else if (down(VOL_DOWN) && down(VOL_UP))
-  {
-    Exit = 1;
-  }
-
-  if (shift)
-  {
-    // only if it's something else then last time, and not moving around the joystick
-    if (!(pad & (GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT)))
-    {
-      if (down(SELECT))
-      {
-        if (last_down(SELECT) && last_shift)
+	#define down(b) (keys & GP2X_##b)
+	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
 	{
-          // still pressed down from stretching from last one
-          goto no_pad;
+		Exit = 1;
+		JSreturn = 0;
+		return;
 	}
-        scaled_display = !scaled_display;
-
-        if (scaled_display)
+	else if (down(VOL_UP))
 	{
-	  gp2x_video_RGB_setscaling(0, 256, 240);
+		/* wait for at least 10 updates, because user may be just trying to enter menu */
+		if (volpushed_frames++ > 10) {
+			soundvol++;
+			if (soundvol > 100) soundvol=100;
+			//FCEUI_SetSoundVolume(soundvol);
+			setsoundvol(soundvol);
+		}
 	}
-        else
+	else if (down(VOL_DOWN))
 	{
-          gp2x_video_RGB_setscaling(0, 320, 240);
+		if (volpushed_frames++ > 10) {
+			soundvol-=1;
+			if (soundvol < 0) soundvol=0;
+			//FCEUI_SetSoundVolume(soundvol);
+			setsoundvol(soundvol);
+		}
+	}
+	else
+	{
+		volpushed_frames = 0;
 	}
 
-        goto no_pad;
-      }
-      else if (L_down && R_down)
-      {
-        FCEUI_CloseGame();
-        puts("Quit");
-        goto no_pad;
-      }
-      else if (R_down && !(last_R_down && last_shift))
-      {
-       FCEUI_LoadState();
-       goto no_pad;
-      }
-      else if (L_down && !(last_L_down && last_shift))
-      {
-       FCEUI_SaveState();
-       goto no_pad;
-      }
-      else if (down(A) && !(last_down(A) && last_shift))
-      {
-       FSkip_setting--;
-       if (FSkip_setting < 0) {
-        FSkip_setting = -1;
-        FCEUI_DispMessage("Auto frameskip");
-       }
-       else
-        FCEUI_DispMessage("Frameskip: %i", FSkip_setting);
-       goto no_pad;
-      }
-      else if (down(Y) && !(last_down(Y) && last_shift))
-      {
-       FSkip_setting++;
-       if (FSkip_setting > 8) FSkip_setting = 8;
-       FCEUI_DispMessage("Frameskip: %i", FSkip_setting);
-       goto no_pad;
-      }
-    }
-  }
 
-  // r is toggle savestate
-  if (R_down)
-  {
-  	if (last_R_down)
-  	{
-  	  R_count++;
-      if ((R_count & 31)== 31)
-      {
-  		CurrentState=(CurrentState+1) % 10;
-  		FCEUI_DispMessage("Now Using Save State %d", CurrentState);
-  	  }
-  	}
-  }
-  else
-  {
-    R_count=0;
-  }
-
-  // l is toggle turbo
-  if (L_down)
-  {
-  	if (last_L_down)
-  	{
-  	  L_count++;
-      if ((L_count & 31)== 31)
-      {
-       // 0 is none  // 1 is  Y & B turbo  // 2 is X & A turbo
-        if ((!TurboFireTop) && (!TurboFireBottom))
-        {
-        	// was off
-        	TurboFireTop=1;
-        	TurboFireBottom=0;
-        	if (swapbuttons)
-        	{
- 	     	  FCEUI_DispMessage("Turbo A and Y");
-        	}
-        	else
-        	{
- 	     	  FCEUI_DispMessage("Turbo Y and B");
-        	}
-        }
-        else if (TurboFireTop)
-        {
-        	TurboFireTop=0;
-        	TurboFireBottom=1;
-        	if (swapbuttons)
-        	{
-       		  FCEUI_DispMessage("Turbo X and B");
-        	}
-        	else
-        	{
-       		  FCEUI_DispMessage("Turbo A and X");
-        	}
-        }
-        else
-        {
-        	TurboFireTop=0;
-        	TurboFireBottom=0;
-        	FCEUI_DispMessage("Turbo Off");
-        }
-
-  	  }
-  	}
-  }
-  else
-  {
-    L_count=0;
-  }
-
-  //unsigned long padTmp=0;
-  // shift the bits in
-  // up
-  //padTmp=(pad & GP2X_UP) ;  // 1 is 2^0,
-  JS |= ((pad & GP2X_UP) << (4-0));  // 0x10 is 2^4
-
-  //padTmp=(pad & GP2X_DOWN);  // 0x10 is 2^4,
-  JS |= ((pad & GP2X_DOWN) << (5-4));  // 0x20 is 2^5
-
-  //padTmp=(pad & GP2X_LEFT);  // 0x4 is 2^2,
-  JS |= ((pad & GP2X_LEFT) << (6-2));  // 0x40 is 2^6
-
-  //padTmp=(pad & GP2X_RIGHT);  // 0x40 is 2^6,
-  JS |= ((pad & GP2X_RIGHT) << (7-6));  // 0x80 is 2^7
+	for (i = 0; i < 32; i++)
+	{
+		if (keys & (1 << i)) {
+			int acts = Settings.KeyBinds[i];
+			if (!acts) continue;
+			JS |= acts & 0xff;
+		}
+	}
 
 
-#define  A_down (pad & GP2X_A)
-#define  B_down (pad & GP2X_B)
-#define  X_down (pad & GP2X_X)
-#define  Y_down (pad & GP2X_Y)
+	JSreturn = JS;
+	lastpad=keys;
 
-  // should be 2 cycles held, 1 cycle release
-  turbo_toggle_A=(turbo_toggle_A+1) % 3;
-  turbo_toggle_B=(turbo_toggle_B+1) % 3;
+	//JSreturn=(JS&0xFF000000)|(JS&0xFF)|((JS&0xFF0000)>>8)|((JS&0xFF00)<<8);
 
-   // 0 is none  // 1 is  Y & B turbo  // 2 is X & A turbo
-  // B or X are both considered A
-  //padTmp=B_down >> 13;  // 2^13,
-
-   if (!(TurboFireTop && (!turbo_toggle_A)))
-   {
-    JS |= ((B_down >> 13) << 0);  // 0x1 is 2^0
-   }
-   // A or Y are both considered B
-   //padTmp=A_down >> 12;  // 2^13,
-   if (!(TurboFireBottom && (!turbo_toggle_B)))
-   {
-    JS |= ((A_down >> 12) << 1);  // 0x2 is 2^1
-   }
-
-  if (swapbuttons)
-  {
-   //padTmp=X_down >> 14;  // 2^13,
-   if (!(TurboFireBottom && (!turbo_toggle_A)))
-   {
-//    JS |= ((X_down >> 14) << 0);  // 0x1 is 2^0
-    JS |= ((Y_down >> 15) << 0);  // 0x1 is 2^0
-   }
-
-   //padTmp=Y_down >> 15;  // 2^13,
-   if (!(TurboFireTop && (!turbo_toggle_B)))
-   {
-    JS |= ((X_down >> 14) << 1);  // 0x2 is 2^1
-   }
-  }
-  else
-  {
-   //padTmp=X_down >> 14;  // 2^13,
-   if (!(TurboFireBottom && (!turbo_toggle_A)))
-   {
-    JS |= ((X_down >> 14) << 0);  // 0x1 is 2^0
-   }
-
-   //padTmp=Y_down >> 15;  // 2^13,
-   if (!(TurboFireTop && (!turbo_toggle_B)))
-   {
-    JS |= ((Y_down >> 15) << 1);  // 0x2 is 2^1
-   }
-  }
-
-  // select
-  //padTmp=(pad & GP2X_SELECT) >> 9;  // 0x40 is 2^9,
-  JS |= (((pad & GP2X_SELECT) >> 9) << 2);  // 0x4 is 2^2
-
-  // start
-  //padTmp=(pad & GP2X_START) >> 8;  //   2^8,
-  JS |= (((pad & GP2X_START) >> 8) << 3);  // 0x8 is 2^3
-
-  JSreturn = JS;
-  lastpad=pad;
-
-  //JSreturn=(JS&0xFF000000)|(JS&0xFF)|((JS&0xFF0000)>>8)|((JS&0xFF00)<<8);
-
+#define pad keys
 
   //  JSreturn=(JSreturn&0xFF000000)|(JSreturn&0xFF)|((JSreturn&0xFF0000)>>8)|((JSreturn&0xFF00)<<8);
   // TODO: make these bindable, use new interface
@@ -370,10 +163,6 @@ void FCEUD_UpdateInput(void)
   	}
   }
   return;
-
-no_pad:
-  JSreturn=0;
-  lastpad=pad;
 }
 
 

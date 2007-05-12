@@ -562,7 +562,6 @@ void BGRender(uint8 *target)
 }
 
 #ifdef FRAMESKIP
-int FSkip_setting=-1; // auto
 int FSkip=0;
 void FCEUI_FrameSkip(int x)
 {

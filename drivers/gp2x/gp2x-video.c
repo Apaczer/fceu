@@ -26,8 +26,6 @@
 #include "minimal.h"
 #include "fonts.h"
 
-extern int showfps;
-
 static char fps_str[32];
 static int framesEmulated, framesRendered;
 
@@ -149,7 +147,7 @@ static INLINE void printFps(uint8 *screen)
 				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
 				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
 			}
-			if (showfps)
+			if (Settings.showfps)
 			{
 				int sep;
 				for (sep=1; sep < 5; sep++)
@@ -163,7 +161,7 @@ static INLINE void printFps(uint8 *screen)
 	}
 	else
 	{
-		if (showfps)
+		if (Settings.showfps)
 		{
 			gp2x_text(screen+32, 0, 0, fps_str, FPS_COLOR, 0);
 		}
