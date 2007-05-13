@@ -40,6 +40,7 @@ volatile unsigned short *gp2x_memregs;
 volatile unsigned long  *gp2x_memregl;
 static void *gp2x_screens[4];
 static int screensel = 0;
+static int gp2x_screen_offs = 0;
 //static
 int memdev = 0;
 static int sounddev = 0, mixerdev = 0;
@@ -57,16 +58,13 @@ static int gp2x_screenaddrs_use[4];
 static unsigned short gp2x_screenaddr_old[4];
 
 
-// hack to simplify thing for fceu
-static int scaling_enabled = 0;
-
 /* video stuff */
 void gp2x_video_flip(void)
 {
 	unsigned short lsw, msw;
 	int addr = gp2x_screenaddrs_use[screensel&3];
 
-	if (scaling_enabled) addr += 32;
+	addr += gp2x_screen_offs;
 
 	// since we are using the mmu hack, we must flush the cache first
 	// (the params are most likely wrong, but they seem to work somehow)
@@ -133,9 +131,6 @@ void gp2x_video_RGB_setscaling(int ln_offs, int W, int H)
 	int bpp = (gp2x_memregs[0x28DA>>1]>>9)&0x3;
 	unsigned short scalw;
 
-	// fceu hack
-	scaling_enabled = (W == 320) ? 0 : 1;
-
 	// set offset
 	gp2x_screenaddrs_use[0] = gp2x_screenaddrs[0] + ln_offs * 320 * bpp;
 	gp2x_screenaddrs_use[1] = gp2x_screenaddrs[1] + ln_offs * 320 * bpp;
@@ -163,6 +158,10 @@ void gp2x_video_RGB_setscaling(int ln_offs, int W, int H)
 	gp2x_memregl[0x2908>>2]=(unsigned long)((float)escalah *bpp *(H/240.0));
 }
 
+void gp2x_video_set_offs(int offs)
+{
+	gp2x_screen_offs = offs;
+}
 
 void gp2x_memcpy_buffers(int buffers, void *data, int offset, int len)
 {

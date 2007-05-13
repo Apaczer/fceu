@@ -31,9 +31,6 @@
 
 extern uint8 Exit; // exit emu loop
 
-extern int scaled_display;
-
-
 
 /* UsrInputType[] is user-specified.  InputType[] is current
 	(game loading can override user settings)
@@ -55,13 +52,8 @@ static uint32 MouseData[3];
 static uint8 fkbkeys[0x48];
 unsigned long lastpad=0;
 
-extern void ResetNES(void);
-extern void CleanSurface(void);
-
 char soundvolmeter[21];
 int soundvolIndex=0;
-int L_count=0;
-int R_count=0;
 
 
 static void setsoundvol(int soundvolume)
@@ -90,6 +82,7 @@ static void setsoundvol(int soundvolume)
 void FCEUD_UpdateInput(void)
 {
 	static int volpushed_frames = 0;
+	static int turbo_rate_cnt_a = 0, turbo_rate_cnt_b = 0;
 	long lastpad2 = lastpad;
 	unsigned long keys = gp2x_joystick_read(0);
 	uint32 JS = 0; // RLDU SEBA
@@ -133,6 +126,14 @@ void FCEUD_UpdateInput(void)
 			int acts = Settings.KeyBinds[i];
 			if (!acts) continue;
 			JS |= acts & 0xff;
+			if (acts & 0x100) {		// A turbo
+				turbo_rate_cnt_a += Settings.turbo_rate_add;
+				JS |= (turbo_rate_cnt_a >> 24) & 1;
+			}
+			if (acts & 0x200) {		// B turbo
+				turbo_rate_cnt_b += Settings.turbo_rate_add;
+				JS |= (turbo_rate_cnt_b >> 23) & 2;
+			}
 		}
 	}
 

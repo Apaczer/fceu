@@ -104,6 +104,7 @@ void FCEUI_SaveExtraDataUnderBase(int a);
 
 /* name=path and file to load.  returns 0 on failure, 1 on success */
 FCEUGI *FCEUI_LoadGame(char *name);
+extern int LoadGameLastError;
 
 /* allocates memory.  0 on failure, 1 on success. */
 int FCEUI_Initialize(void);

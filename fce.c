@@ -1080,6 +1080,7 @@ void ResetGameLoaded(void)
 }
 
 char lastLoadedGameName [2048];
+int LoadGameLastError = 0;
 int UNIFLoad(const char *name, int fp);
 int iNESLoad(const char *name, int fp);
 int FDSLoad(const char *name, int fp);
@@ -1092,6 +1093,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
         int fp;
 
         //Exit=1;
+	LoadGameLastError = 0;
         ResetGameLoaded();
 
 	strncpy(name2, name, sizeof(name2));
@@ -1101,6 +1103,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
 	if(!fp)
         {
  	 FCEU_PrintError("Error opening \"%s\"!",name);
+	 LoadGameLastError = 1;
 	 return 0;
 	}
 
@@ -1117,13 +1120,12 @@ FCEUGI *FCEUI_LoadGame(char *name)
 	  fp=FCEU_fopen(name2,"rb");
 	  if (!fp) {
 	   printf("no ROM for movie\n");
+	   LoadGameLastError = 2;
 	   return 0;
 	  }
 	  have_movie = 1;
 	 }
 	}
-
-	strcpy(lastLoadedGameName, name2);
 
         GetFileBase(name2);
         if(iNESLoad(name2,fp))
@@ -1137,6 +1139,8 @@ FCEUGI *FCEUI_LoadGame(char *name)
 
         FCEU_PrintError("An error occurred while loading the file.");
         FCEU_fclose(fp);
+	// format handlers may set LoadGameLastError themselves.
+	if (LoadGameLastError == 0) LoadGameLastError = 3;
         return 0;
 
         endlseq:
@@ -1164,6 +1168,9 @@ FCEUGI *FCEUI_LoadGame(char *name)
 
 	if (have_movie)
 		FCEUI_LoadMovie(name, 1);
+
+	strcpy(lastLoadedGameName, name2);
+
         return(&FCEUGameInfo);
 }
 

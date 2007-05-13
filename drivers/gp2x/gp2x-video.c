@@ -25,13 +25,14 @@
 #include "gp2x.h"
 #include "minimal.h"
 #include "fonts.h"
+#include "asmutils.h"
 
 static char fps_str[32];
 static int framesEmulated, framesRendered;
 
 int gp2x_palette[256];
+unsigned short gp2x_palette16[256];
 
-int scaled_display=0;
 int paletterefresh;
 
 #define FPS_COLOR 1
@@ -101,9 +102,11 @@ void ToggleFS(void)
 }
 
 
+// 16: rrrr rggg gggb bbbb
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {
 	gp2x_palette[index] = (r << 16) | (g << 8) | b;
+	gp2x_palette16[index] = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
 	gp2x_video_setpalette(gp2x_palette, index + 1);
 
 	paletterefresh = 1;
@@ -133,7 +136,7 @@ static INLINE void printFps(uint8 *screen)
 		prevsec = tv_now.tv_sec;
 	}
 
-	if (!scaled_display)
+	if (Settings.scaling == 0)
 	{
 		if (needfpsflip)
 		{
@@ -163,7 +166,7 @@ static INLINE void printFps(uint8 *screen)
 	{
 		if (Settings.showfps)
 		{
-			gp2x_text(screen+32, 0, 0, fps_str, FPS_COLOR, 0);
+			gp2x_text(screen+32, 0, 0, fps_str, FPS_COLOR, 0); // TODO: firstline
 		}
 	}
 }
@@ -178,6 +181,10 @@ void BlitScreen(uint8 *buf)
 	framesRendered++;
 
 	printFps(gp2x_screen);
+
+	if (Settings.scaling == 3)
+		soft_scale((char *)gp2x_screen + 32, gp2x_palette16, 0, 240);
+
 	gp2x_video_flip();
 	XBuf = gp2x_screen;
 }

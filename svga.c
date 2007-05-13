@@ -78,7 +78,8 @@ void FCEU_DispMessage(char *format, ...)
  va_end(ap);
 
  howlong=180;
- printf("%s\n", errmsg);
+ if (errmsg[0] != '|')
+  printf("%s\n", errmsg);
 }
 
 void FCEUI_SetRenderedLines(int ntscf, int ntscl, int palf, int pall)

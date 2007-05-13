@@ -37,12 +37,10 @@ void SilenceSound(int n)
 	soundvol=0;
 }
 
-int InitSound(FCEUGI *gi)
+int InitSound(void)
 {
-	Settings.sound=22050;
-	FCEUI_Sound(Settings.sound);
+	FCEUI_Sound(Settings.sound_rate);
 	gp2x_sound_volume(soundvol, soundvol);
-	printf("InitSound() sound_rate: %d\n", Settings.sound);
 	return 1;
 }
 

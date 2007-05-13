@@ -431,7 +431,7 @@ strcpy(origname,fname);
   {
 	  // attempt to load previous version's format
 	  fclose(fp);
-	  printf("trying movie v1\n");
+	  printf("movie: trying movie v1\n");
 	  FCEUI_LoadMovie_v1(fname, _read_only);
 	  return;
   }

@@ -119,7 +119,6 @@ static CFGSTRUCT fceuconfig[]={
 	AC(eoptions),
 	ACA(srendlinev),
 	ACA(erendlinev),
-	ACA(lastLoadedGameName),
 	ADDCFGSTRUCT(DriverConfig),
 	ENDCFGSTRUCT
 };
@@ -145,6 +144,40 @@ static void LoadConfig(const char *name)
         if(ntsctint>=0) DriverInterface(DES_SETNTSCTINT,&ntsctint);
         if(ntschue>=0) DriverInterface(DES_SETNTSCHUE,&ntschue);
 }
+
+static void LoadLLGN(void)
+{
+ char tdir[2048];
+ FILE *f;
+ int len;
+ sprintf(tdir,"%s"PSS"last_rom.txt",BaseDirectory);
+ f=fopen(tdir, "r");
+ if(f)
+ {
+  len = fread(lastLoadedGameName, 1, sizeof(lastLoadedGameName)-1, f);
+  lastLoadedGameName[len] = 0;
+  fclose(f);
+ }
+}
+
+static void SaveLLGN(void)
+{
+ // save last loaded game name
+ if (lastLoadedGameName[0])
+ {
+  char tdir[2048];
+  FILE *f;
+  sprintf(tdir,"%s"PSS"last_rom.txt",BaseDirectory);
+  f=fopen(tdir, "w");
+  if(f)
+  {
+   fwrite(lastLoadedGameName, 1, strlen(lastLoadedGameName), f);
+   fclose(f);
+   sync();
+  }
+ }
+}
+
 
 static void CreateDirs(void)
 {
@@ -242,7 +275,7 @@ static int DoArgs(int argc, char *argv[])
 	  }
 	}
 	if(docheckie[0])
-	 FCEUI_SetVidSystem(1);
+	 Settings.region_force=2;
 	if(docheckie[1])
 	 FCEUI_SetGameGenie(1);
         FCEUI_DisableSpriteLimitation(1);
@@ -328,7 +361,8 @@ int CLImain(int argc, char *argv[])
         LoadConfig(NULL);
         last_arg_parsed=DoArgs(argc-1,&argv[1]);
 	gp2x_opt_setup();
-	gp2x_cpuclock_update();
+	gp2x_cpuclock_gamma_update();
+	LoadLLGN();
 	if(cpalette)
 	 LoadCPalette();
 	if(InitSound())
@@ -355,6 +389,8 @@ int CLImain(int argc, char *argv[])
 	  if (fceugi)
 	  {
 	   LoadConfig(lastLoadedGameName);
+	   if (Settings.region_force)
+	    FCEUI_SetVidSystem(Settings.region_force - 1);
 	   ParseGI(fceugi);
 	   //RefreshThrottleFPS();
 	   InitOtherInput();
@@ -370,7 +406,14 @@ int CLImain(int argc, char *argv[])
 	   }
 	  }
 	  else
-	   strcpy(menuErrorMsg, "failed to load ROM");
+	  {
+	   switch(LoadGameLastError) {
+	    default: strcpy(menuErrorMsg, "failed to load ROM"); break;
+	    case  2: strcpy(menuErrorMsg, "Can't find a ROM for movie"); break;
+	    case 10: strcpy(menuErrorMsg, "FDS BIOS ROM is missing, read docs"); break;
+	    case 11: strcpy(menuErrorMsg, "Error reading auxillary FDS file"); break;
+	   }
+	  }
 	 }
          if(Exit || !fceugi)
          {
@@ -384,14 +427,20 @@ int CLImain(int argc, char *argv[])
          }
 
 	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
-         gp2x_video_RGB_setscaling(0, 320, 240);
-	 gp2x_start_sound(22050, 16, 0);
+	 switch (Settings.scaling & 3) {
+		 case 0: gp2x_video_RGB_setscaling(0, 320, 240); gp2x_video_set_offs(0); break;
+		 case 1: gp2x_video_RGB_setscaling(0, 256, 240); gp2x_video_set_offs(32); break;
+		 case 2: gp2x_video_RGB_setscaling(0, 256, 240); gp2x_video_set_offs(32); break; // TODO
+		 case 3: gp2x_video_RGB_setscaling(0, 320, 240); gp2x_video_set_offs(32); break;
+	 }
+	 gp2x_start_sound(Settings.sound_rate, 16, 0);
 	 FCEUI_Emulate();
 	}
 
 	if (fceugi)
 	 CloseGame();
 
+	SaveLLGN();
 	DriverKill();
         return 0;
 }
@@ -411,7 +460,7 @@ static int DriverInitialize(void)
 
 static void DriverKill(void)
 {
- SaveConfig(NULL);
+ // SaveConfig(NULL); // done explicitly in menu now
  SetSignals(SIG_IGN);
 
  if(inited&2)

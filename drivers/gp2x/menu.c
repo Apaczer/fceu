@@ -30,9 +30,10 @@ static int GP2X_PORT_REV =
 ;
 
 extern char lastLoadedGameName[PATH_MAX];
-extern int  mmuhack_status;
-//extern int  state_slot; // TODO
+extern int mmuhack_status;
+extern int soundvol;
 extern uint8 Exit; // exit emu loop flag
+extern int InitSound(void);
 
 #define CONFIGURABLE_KEYS (GP2X_UP|GP2X_LEFT|GP2X_DOWN|GP2X_RIGHT|GP2X_START|GP2X_SELECT|GP2X_L|GP2X_R|GP2X_A|GP2X_B|GP2X_X|GP2X_Y|GP2X_PUSH)
 
@@ -663,27 +664,14 @@ static int count_bound_keys(int action, int is_joy)
 
 typedef struct { char *name; int mask; } bind_action_t;
 
-// b_turbo,a_turbo  RLDU SEBA
-static bind_action_t ctrl_actions[] =
-{
-	{ "UP     ", 0x010 },
-	{ "DOWN   ", 0x020 },
-	{ "LEFT   ", 0x040 },
-	{ "RIGHT  ", 0x080 },
-	{ "A      ", 0x001 },
-	{ "B      ", 0x002 },
-	{ "A TURBO", 0x100 },
-	{ "B TURBO", 0x200 },
-	{ "START  ", 0x008 },
-	{ "SELECT ", 0x004 },
-};
-
 static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_idx, int sel)
 {
 	int x, y, tl_y = 40, i;
 
 	gp2x_fceu_copy_bg();
-	gp2x_text_out15(80, 20, "Player %i controls", player_idx + 1);
+	if (player_idx >= 0)
+	     gp2x_text_out15(80, 20, "Player %i controls", player_idx + 1);
+	else gp2x_text_out15(80, 20, "Emulator controls");
 
 	x = 40; y = tl_y;
 	for (i = 0; i < opt_cnt; i++, y+=10)
@@ -733,8 +721,10 @@ static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_i
 					if (count_bound_keys(opts[sel].mask, 0) >= 2)
 					     Settings.KeyBinds[i] &= ~opts[sel].mask; // allow to unbind only
 					else Settings.KeyBinds[i] ^=  opts[sel].mask;
-					Settings.KeyBinds[i] &= ~(3 << 16);
-					Settings.KeyBinds[i] |= player_idx << 16;
+					if (player_idx >= 0) {
+						Settings.KeyBinds[i] &= ~(3 << 16);
+						Settings.KeyBinds[i] |= player_idx << 16;
+					}
 				}
 		} else if (sel < opt_cnt) {
 			for (i = 0; i < 32; i++)
@@ -742,8 +732,10 @@ static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_i
 					if (count_bound_keys(opts[sel].mask, 1) >= 1) // disallow combos for usbjoy
 					     Settings.JoyBinds[joy-1][i] &= ~opts[sel].mask;
 					else Settings.JoyBinds[joy-1][i] ^=  opts[sel].mask;
-					Settings.JoyBinds[joy-1][i] &= ~(3 << 16);
-					Settings.JoyBinds[joy-1][i] |= player_idx << 16;
+					if (player_idx >= 0) {
+						Settings.JoyBinds[joy-1][i] &= ~(3 << 16);
+						Settings.JoyBinds[joy-1][i] |= player_idx << 16;
+					}
 				}
 		}
 	}
@@ -778,6 +770,27 @@ static void draw_kc_sel(int menu_sel)
 	gp2x_video_flip();
 }
 
+// b_turbo,a_turbo  RLDU SEBA
+static bind_action_t ctrl_actions[] =
+{
+	{ "UP     ", 0x010 },
+	{ "DOWN   ", 0x020 },
+	{ "LEFT   ", 0x040 },
+	{ "RIGHT  ", 0x080 },
+	{ "A      ", 0x001 },
+	{ "B      ", 0x002 },
+	{ "A TURBO", 0x100 },
+	{ "B TURBO", 0x200 },
+	{ "START  ", 0x008 },
+	{ "SELECT ", 0x004 },
+};
+
+static bind_action_t emuctrl_actions[] =
+{
+	{ "Save State  ", 1<<31 },
+	{ "Load State  ", 1<<30 },
+};
+
 static void kc_sel_loop(void)
 {
 	int menu_sel = 3, menu_sel_max = 3;
@@ -793,6 +806,8 @@ static void kc_sel_loop(void)
 			switch (menu_sel) {
 				case 0: key_config_loop(ctrl_actions, 10, 0); return;
 				case 1: key_config_loop(ctrl_actions,  8, 1); return;
+				case 2: key_config_loop(emuctrl_actions,
+						sizeof(emuctrl_actions)/sizeof(emuctrl_actions[0]), -1); return;
 				default: return;
 			}
 		}
@@ -801,23 +816,16 @@ static void kc_sel_loop(void)
 }
 
 
+// --------- FCEU options ----------
 
-// --------- advanced options ----------
-#if 0
-static void draw_amenu_options(int menu_sel)
+static void draw_fcemenu_options(int menu_sel)
 {
 	int tl_x = 25, tl_y = 60, y;
-	char *mms = mmuhack_status ? "active)  " : "inactive)";
 
 	y = tl_y;
-	//memset(gp2x_screen, 0, 320*240);
 	gp2x_fceu_copy_bg();
 
-	gp2x_text_out15(tl_x, y,       "Gamma correction           %i.%02i", currentConfig.gamma / 100, currentConfig.gamma%100); // 0
-	gp2x_text_out15(tl_x, (y+=10), "Don't save last used ROM   %s", (currentConfig.EmuOpt &0x020)?"ON":"OFF"); // 5
-	gp2x_text_out15(tl_x, (y+=10), "needs restart:");
-	gp2x_text_out15(tl_x, (y+=10), "craigix's RAM timings      %s", (currentConfig.EmuOpt &0x100)?"ON":"OFF"); // 7
-	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, (currentConfig.EmuOpt &0x010)?"ON":"OFF"); // 8
+	gp2x_text_out15(tl_x,  y,      "                           %s", "OFF"); // 0
 	gp2x_text_out15(tl_x, (y+=10), "Done");
 
 	// draw cursor
@@ -826,49 +834,41 @@ static void draw_amenu_options(int menu_sel)
 	gp2x_video_flip();
 }
 
-static void amenu_loop_options(void)
+static void fcemenu_loop_options(void)
 {
-	int menu_sel = 0, menu_sel_max = 9;
+	int menu_sel = 0, menu_sel_max = 1;
 	unsigned long inp = 0;
 
 	for(;;)
 	{
-		draw_amenu_options(menu_sel);
+		draw_fcemenu_options(menu_sel);
 		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_B|GP2X_X|GP2X_A);
 		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max; }
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
-				case  1: break;
-				case  9: return;
+				case  0: break;
+				case  1: return;
 			}
 		}
 		if(inp & (GP2X_X|GP2X_A)) return;
 		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
 			switch (menu_sel) {
 				case 0:
-					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
-						currentConfig.gamma += (inp & GP2X_LEFT) ? -1 : 1;
-						if (currentConfig.gamma <   1) currentConfig.gamma =   1;
-						if (currentConfig.gamma > 300) currentConfig.gamma = 300;
-						draw_amenu_options(menu_sel);
-						usleep(18*1000);
-					}
 					break;
 			}
 		}
 	}
 }
-#endif
 
 // -------------- options --------------
 
 static void draw_menu_options(int menu_sel)
 {
 	int tl_x = 25, tl_y = 32, y;
-	char /*monostereo[8],*/ strframeskip[8], *strscaling, *strssconfirm;
+	char strframeskip[8], *strscaling, *strssconfirm;
+	char *mms = mmuhack_status ? "active)  " : "inactive)";
 
-	//strcpy(monostereo, (currentConfig.PicoOpt&0x08)?"stereo":"mono");
 	if (Settings.frameskip < 0)
 	     strcpy(strframeskip, "Auto");
 	else sprintf(strframeskip, "%i", Settings.frameskip);
@@ -886,21 +886,24 @@ static void draw_menu_options(int menu_sel)
 	}
 
 	y = tl_y;
-	//memset(gp2x_screen, 0, 320*240);
 	gp2x_fceu_copy_bg();
 
 	gp2x_text_out15(tl_x,  y,      "Scaling:       %s", strscaling);				// 0
 	gp2x_text_out15(tl_x, (y+=10), "Show FPS                   %s", Settings.showfps?"ON":"OFF");	// 1
 	gp2x_text_out15(tl_x, (y+=10), "Frameskip                  %s", strframeskip);			// 2
-	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", /*(currentConfig.EmuOpt &0x004)?"ON":*/"OFF"); // 3
-	gp2x_text_out15(tl_x, (y+=10), "Sound Quality:     %5iHz %s",   0, "" /*currentConfig.PsndRate, monostereo*/); // 4
-	gp2x_text_out15(tl_x, (y+=10), "Region:                    %s",
-		Settings.region_force == 2 ? "NTSC" : Settings.region_force == 1 ? "PAL" : "OFF");	// 5
+	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", soundvol?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Sound Rate:           %5iHz", Settings.sound_rate);		// 4
+	gp2x_text_out15(tl_x, (y+=10), "Force Region:              %s",
+		Settings.region_force == 2 ? "PAL" : Settings.region_force == 1 ? "NTSC" : "OFF");	// 5
 	gp2x_text_out15(tl_x, (y+=10), "Use SRAM savestates        %s", "OFF");
-	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);
-	gp2x_text_out15(tl_x, (y+=10), "Save slot                  %i", 0/*state_slot*/);		// 8
-	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);
-	gp2x_text_out15(tl_x, (y+=10), "[advanced options]");						// 10
+	gp2x_text_out15(tl_x, (y+=10), "Turbo rate                 %iHz", (Settings.turbo_rate_add*60/2) >> 24);
+	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);			// 8
+	gp2x_text_out15(tl_x, (y+=10), "Save slot                  %i", CurrentState);
+	gp2x_text_out15(tl_x, (y+=10), "Faster RAM timings         %s", Settings.ramtimings?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 11
+	gp2x_text_out15(tl_x, (y+=10), "Gamma correction           %i.%02i", Settings.gamma / 100, Settings.gamma%100);
+	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 13
+	gp2x_text_out15(tl_x, (y+=10), "[FCE Ultra options]");
 	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");
 	if (fceugi)
 		gp2x_text_out15(tl_x, (y+=10), "Save cfg for current game only");
@@ -911,7 +914,6 @@ static void draw_menu_options(int menu_sel)
 	gp2x_video_flip();
 }
 
-/*
 static int sndrate_prevnext(int rate, int dir)
 {
 	int i, rates[] = { 8000, 11025, 16000, 22050, 44100 };
@@ -924,7 +926,7 @@ static int sndrate_prevnext(int rate, int dir)
 	if (i < 0) return dir ? 11025 : 8000;
 	return rates[i];
 }
-*/
+
 static void int_incdec(int *p, int inc, int min, int max)
 {
 	*p += inc;
@@ -932,9 +934,17 @@ static void int_incdec(int *p, int inc, int min, int max)
 	else if (*p > max) *p = max;
 }
 
+static void config_commit(void)
+{
+	gp2x_cpuclock_gamma_update();
+	if (Settings.region_force)
+		FCEUI_SetVidSystem(Settings.region_force - 1);
+}
+
 static int menu_loop_options(void)
 {
-	int menu_sel = 0, menu_sel_max = 11;
+	static int menu_sel = 0;
+	int menu_sel_max = 15;
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_max++;
@@ -947,41 +957,45 @@ static int menu_loop_options(void)
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
-				case  1: Settings.showfps = !Settings.showfps; break;
-				//case  6: Settings. = !Settings.showfps; break;
-				//case 10: amenu_loop_options();    break;
-				case 11: // done (update and write)
-					gp2x_cpuclock_update();
+				case  1: Settings.showfps    = !Settings.showfps; break;
+				case  3: soundvol = soundvol ? 0 : 100; break;
+				case 10: Settings.ramtimings = !Settings.ramtimings; break;
+				case 11: Settings.mmuhack    = !Settings.mmuhack; break;
+				case 14: fcemenu_loop_options(); break;
+				case 15: // done (update and write)
+					config_commit();
 					SaveConfig(NULL);
 					return 1;
-				case 12: // done (update and write for current game)
-					gp2x_cpuclock_update();
+				case 16: // done (update and write for current game)
+					config_commit();
 					if (lastLoadedGameName[0])
 						SaveConfig(lastLoadedGameName);
 					return 1;
 			}
 		}
 		if(inp & (GP2X_X|GP2X_A)) {
-			gp2x_cpuclock_update();
+			config_commit();
 			return 0;  // done (update, no write)
 		}
 		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
 			switch (menu_sel) {
 				case  0: int_incdec(&Settings.scaling,   (inp & GP2X_LEFT) ? -1 : 1,  0,  3); break;
 				case  2: int_incdec(&Settings.frameskip, (inp & GP2X_LEFT) ? -1 : 1, -1, 32); break;
-/*
 				case  4:
-					if ((inp & GP2X_RIGHT) && currentConfig.PsndRate == 44100 && !(currentConfig.PicoOpt&0x08)) {
-						currentConfig.PsndRate = 8000;  currentConfig.PicoOpt|= 0x08;
-					} else if ((inp & GP2X_LEFT) && currentConfig.PsndRate == 8000 && (currentConfig.PicoOpt&0x08)) {
-						currentConfig.PsndRate = 44100; currentConfig.PicoOpt&=~0x08;
-					} else currentConfig.PsndRate = sndrate_prevnext(currentConfig.PsndRate, inp & GP2X_RIGHT);
+					Settings.sound_rate = sndrate_prevnext(Settings.sound_rate, inp & GP2X_RIGHT);
+					InitSound();
 					break;
-*/
 				case  5: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
-				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
-				case  8: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
-				case  9:
+				case  7: {
+					int hz = Settings.turbo_rate_add*60/2 >> 24;
+					int_incdec(&hz, (inp & GP2X_LEFT) ? -1 : 1, 1, 30);
+					Settings.turbo_rate_add = (hz*2 << 24) / 60 + 1;
+					break;
+				}
+				case  8: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
+				case  9: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
+				case 12: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
+				case 13:
 					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
 						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
 						if (Settings.cpuclock < 0) Settings.cpuclock = 0; // 0 ~ do not change
@@ -1159,6 +1173,7 @@ static void menu_gfx_prepare(void)
 
 	// switch bpp
 	gp2x_video_changemode(16);
+	gp2x_video_set_offs(0);
 	gp2x_video_RGB_setscaling(0, 320, 240);
 	gp2x_video_flip();
 }

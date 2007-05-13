@@ -819,6 +819,7 @@ int FDSLoad(const char *name, int fp)
   FCEU_PrintError("FDS BIOS ROM image missing!");
   FreeFDSMemory();
   free(fn);
+  LoadGameLastError = 10;
   return 0;
  }
 
@@ -829,6 +830,7 @@ int FDSLoad(const char *name, int fp)
   fclose(zp);
   FreeFDSMemory();
   FCEU_PrintError("Error reading FDS BIOS ROM image.");
+  LoadGameLastError = 10;
   return 0;
  }
 
@@ -853,6 +855,7 @@ int FDSLoad(const char *name, int fp)
    {
     FCEU_PrintError("Error reading auxillary FDS file.");
     free(fn);
+    LoadGameLastError = 11;
     return(0);
    }
    FCEU_fclose(tp);

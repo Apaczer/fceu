@@ -25,7 +25,7 @@ CFGSTRUCT DriverConfig[]={
         ACA(Settings.KeyBinds),
 	ACA(Settings.JoyBinds),
         AC(Settings.turbo_rate_add),
-        AC(Settings.sound),
+        AC(Settings.sound_rate),
 	AC(Settings.showfps),
 	AC(Settings.scaling),
 	AC(Settings.frameskip),
@@ -60,7 +60,7 @@ char *DriverUsage=
 static int docheckie[2]={0,0};
 #endif
 ARGPSTRUCT DriverArgs[]={
-         {"-sound",0,&Settings.sound,0},
+         {"-sound",0,&Settings.sound_rate,0},
          {"-showfps",0,&Settings.showfps,0},
          {"-mmuhack",0,&Settings.mmuhack,0},
          {"-ramtimings",0,&Settings.ramtimings,0},
@@ -87,7 +87,9 @@ static void SetDefaults(void)
  Settings.cpuclock = 150;
  Settings.frameskip = -1; // auto
  Settings.mmuhack = 1;
- Settings.sound = SOUND_RATE;
+ Settings.sound_rate = SOUND_RATE;
+ Settings.turbo_rate_add = (8*2 << 24) / 60 + 1; // 8Hz turbofire
+ Settings.gamma = 100;
  // default controls, RLDU SEBA
  Settings.KeyBinds[ 0] = 0x010; // GP2X_UP
  Settings.KeyBinds[ 4] = 0x020; // GP2X_DOWN
@@ -95,8 +97,8 @@ static void SetDefaults(void)
  Settings.KeyBinds[ 6] = 0x080; // GP2X_RIGHT
  Settings.KeyBinds[13] = 0x001; // GP2X_B
  Settings.KeyBinds[14] = 0x002; // GP2X_X
- Settings.KeyBinds[15] = 0x100; // GP2X_Y
- Settings.KeyBinds[12] = 0x200; // GP2X_A
+ Settings.KeyBinds[12] = 0x100; // GP2X_A
+ Settings.KeyBinds[15] = 0x200; // GP2X_Y
  Settings.KeyBinds[ 8] = 0x008; // GP2X_START
  Settings.KeyBinds[ 9] = 0x004; // GP2X_SELECT
 }
@@ -174,6 +176,7 @@ int main(int argc, char *argv[])
 	if (mmuhack_status > 0)
 		mmuunhack();
 
+	set_gamma(100);
 	cpuctrl_deinit();
         gp2x_deinit();
 
@@ -198,13 +201,19 @@ void gp2x_opt_setup(void)
 	}
 }
 
-void gp2x_cpuclock_update(void)
+void gp2x_cpuclock_gamma_update(void)
 {
-	static int prev_cpuclock = 200;
+	static int prev_cpuclock = 200, prev_gamma = 100;
 	if (Settings.cpuclock != 0 && Settings.cpuclock != prev_cpuclock)
 	{
 		set_FCLK(Settings.cpuclock);
 		prev_cpuclock = Settings.cpuclock;
+	}
+
+	if (Settings.gamma != 0 && Settings.gamma != prev_gamma)
+	{
+		set_gamma(Settings.gamma);
+		prev_gamma = Settings.gamma;
 	}
 }
 
