@@ -56,7 +56,7 @@ uint8 decvolume[3];
 uint8 realvolume[3];
 
 static int32 count[5];
-static int64 sqacc[2]={0,0};
+static int32 sqacc[2]={0,0};
 uint8 sqnon=0;
 
 uint32 soundtsoffs=0;
@@ -82,7 +82,7 @@ static const uint32 SNoiseFreqTable[0x10]=
 };
 static uint32 NoiseFreqTable[0x10];
 
-int64 nesincsizeLL;
+static int32 nesincsize32;
 int64 nesincsize;
 
 static const uint8 NTSCPCMTable[0x10]=
@@ -105,7 +105,7 @@ uint32 PSG_base;
 // $4013        -        Size register:  Size in bytes = (V+1)*64
 
 
-static int64 PCMacc=0;
+static int32 PCMacc=0;
 static int PCMfreq;
 int32 PCMIRQCount;
 uint8 PCMBitIndex=0;
@@ -155,7 +155,7 @@ static void PrepDPCM()
   PCMfreq=PALPCMTable[PSG[0x10]&0xF];
  else
   PCMfreq=NTSCPCMTable[PSG[0x10]&0xF];
- PCMacc=(int64)PCMfreq<<50;
+ PCMacc=PCMfreq<<18;
 }
 
 uint8 sweepon[2]={0,0};
@@ -227,7 +227,7 @@ static DECLFW(Write_PSG)
 	   DecCountTo1[0]=(PSG[0]&0xF)+1;
            SweepCount[0]=((PSG[0x1]>>4)&7)+1;
 	   DutyCount[0]=0;
-           sqacc[0]=((int64)curfreq[0]+1)<<50;
+           sqacc[0]=((int32)curfreq[0]+1)<<18;
            break;
 
   case 0x4:
@@ -256,7 +256,7 @@ static DECLFW(Write_PSG)
  	  DecCountTo1[1]=(PSG[0x4]&0xF)+1;
           SweepCount[1]=((PSG[0x5]>>4)&7)+1;
           DutyCount[1]=0;
-          sqacc[1]=((int64)curfreq[1]+1)<<50;
+          sqacc[1]=((int32)curfreq[1]+1)<<18;
           break;
   case 0x8:
           DoTriangle();
@@ -559,7 +559,7 @@ static void RDoPCM(void)
 {
    int32 V;
    int32 start,end;
-   int64 freq;
+   int32 freq;
    uint32 out=PSG[0x11]<<3;
 
    start=ChannelBC[4];
@@ -570,11 +570,11 @@ static void RDoPCM(void)
    if(PSG[0x15]&0x10)
    {
       freq=PCMfreq;
-      freq<<=50;
+      freq<<=18;
 
       for(V=start;V<end;V++)
       {
-       PCMacc-=nesincsizeLL;
+       PCMacc-=nesincsize32;
        if(PCMacc<=0)
        {
 	if(!PCMBitIndex)
@@ -639,7 +639,7 @@ static void RDoSQ1(void)
 {
    int32 V;
    int32 start,end;
-   int64 freq;
+   int32 freq;
 
    CalcRectAmp(0);
    start=ChannelBC[0];
@@ -657,11 +657,11 @@ static void RDoSQ1(void)
     uint32 out=RectAmp[0][DutyCount[0]];
     freq=curfreq[0]+1;
     {
-      freq<<=50;
+      freq<<=18;
       for(V=start;V<end;V++)
       {
        Wave[V>>4]+=out;
-       sqacc[0]-=nesincsizeLL;
+       sqacc[0]-=nesincsize32;
        if(sqacc[0]<=0)
        {
         rea:
@@ -682,7 +682,7 @@ static void RDoSQ2(void)
 {
    int32 V;
    int32 start,end;
-   int64 freq;
+   int32 freq;
 
    CalcRectAmp(1);
    start=ChannelBC[1];
@@ -701,11 +701,11 @@ static void RDoSQ2(void)
     freq=curfreq[1]+1;
 
     {
-      freq<<=50;
+      freq<<=18;
       for(V=start;V<end;V++)
       {
        Wave[V>>4]+=out;
-       sqacc[1]-=nesincsizeLL;
+       sqacc[1]-=nesincsize32;
        if(sqacc[1]<=0)
        {
         rea:
@@ -716,7 +716,6 @@ static void RDoSQ2(void)
         DutyCount[1]&=7;
 	out=RectAmp[1][DutyCount[1]];
        }
-
       }
      }
     }
@@ -728,7 +727,7 @@ static void RDoTriangle(void)
    static uint32 tcout=0;
    int32 V;
    int32 start,end; //,freq;
-   int64 freq=(((PSG[0xa]|((PSG[0xb]&7)<<8))+1));
+   int32 freq=(((PSG[0xa]|((PSG[0xb]&7)<<8))+1));
 
    start=ChannelBC[2];
    end=(SOUNDTS<<16)/soundtsinc;
@@ -754,13 +753,13 @@ static void RDoTriangle(void)
     }
     else
     {
-     static int64 triacc=0;
+     static int32 triacc=0;
      static uint8 tc=0;
 
-      freq<<=49;
+      freq<<=17;
       for(V=start;V<end;V++)
       {
-       triacc-=nesincsizeLL;
+       triacc-=nesincsize32;
        if(triacc<=0)
        {
         rea:
@@ -874,52 +873,21 @@ int32 lowp;                    // 0 through 65536, 65536 = max low pass(total at
 				// 65536 = no low pass
 static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
 {
- static int64 acc=0, acc2=0;
- //int index=0;
- //int16* tmp;
- //int16* outorig=out;
- //int32 prev=-99999;
- for(;count;count--,in++)//,out++)//,index++)
+ static int32 acc=0, acc2=0;
+
+ for(;count;count--,in++,outMono++)
  {
-  int64 diff;
+  int32 diff;
 
-  diff=((int64)*in<<24)-acc;
+  diff = *in - acc;
 
-  acc+=(diff*highp)>>16;
-  acc2+=((diff-acc2)*lowp)>>16;
+  acc += (diff*highp)>>16;
+  acc2+= (int32) (((int64)((diff-acc2)*lowp))>>16);
   *in=0;
 
-  // don't change the sound here
-//  *out=(acc2*(int64)FSettings.SoundVolume)>>(24+16);
-  // volume, 4 times louder by default??
-//  *out = acc2 >> 24;
- // just a bit louder.  Hope it's okay
- /*
-  *out = acc2 >> 22;
-  if(*out<-32767) *out=-32767;
-  if(*out>32767) *out=32767;
-  // go one back
-
-  // do MONO
-  tmp=(int16 *)(out-1);
-  // don't do this the first time
-  if (prev == -99999) continue;
-  // the middle one should be interpolated
-  tmp[1]=(int16)((*out + prev) >> 1);
-  prev = *out;
-  */
-  //outMono[index] = (int16)*out;
-  *outMono = (int16)(acc2 >> 24);
-  //if(*outMono<-16384) *outMono=-16384;
-  //if(*outMono>16384) *outMono=16384;
-  outMono++;
-
-  // out=((int64)(acc2>>24)*(int64)FSettings.SoundVolume)>>16; //acc2>>24;
-
+  *outMono = (int16)acc2;
  }
- // do one more
 }
-
 
 
 
@@ -1033,8 +1001,9 @@ void SetSoundVariables(void)
   if(GameExpSound.RChange)
    GameExpSound.RChange();
 
-  nesincsizeLL=(int64)((int64)562949953421312*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
+  // nesincsizeLL=(int64)((int64)562949953421312*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
   nesincsize=(int64)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16));
+  nesincsize32=(int32)nesincsize;
   PSG_base=(uint32)(PAL?(long double)PAL_CPU/16:(long double)NTSC_CPU/16);
 
   for(x=0;x<0x10;x++)
@@ -1050,7 +1019,7 @@ void SetSoundVariables(void)
   for(x=0;x<5;x++)
    ChannelBC[x]=0;
   highp=(250<<16)/FSettings.SndRate;  // Arbitrary
-  lowp=((int64)25000<<16)/FSettings.SndRate; // Arbitrary
+  lowp=(25000<<16)/FSettings.SndRate; // Arbitrary
 
   if(highp>(1<<16)) highp=1<<16;
   if(lowp>(1<<16)) lowp=1<<16;
