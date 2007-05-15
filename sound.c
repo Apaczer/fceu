@@ -43,7 +43,6 @@ uint32 soundtsinc;
 uint32 soundtsi;
 
 uint32 Wave[2048];
-int32 WaveFinal[2048];
 int16 WaveFinalMono[2048];
 
 EXPSOUND GameExpSound={0,0,0};
@@ -114,13 +113,13 @@ int32 PCMSizeIndex=0;
 uint8 PCMBuffer=0;
 int vdis=0;
 
-static void Dummyfunc(void) {};
+static void Dummyfunc(int end) {};
 
-static void (*DoNoise)(void)=Dummyfunc;
-static void (*DoTriangle)(void)=Dummyfunc;
-static void (*DoPCM)(void)=Dummyfunc;
-static void (*DoSQ1)(void)=Dummyfunc;
-static void (*DoSQ2)(void)=Dummyfunc;
+static void (*DoNoise)(int end)=Dummyfunc;
+static void (*DoTriangle)(int end)=Dummyfunc;
+static void (*DoPCM)(int end)=Dummyfunc;
+static void (*DoSQ1)(int end)=Dummyfunc;
+static void (*DoSQ2)(int end)=Dummyfunc;
 
 static void CalcDPCMIRQ(void)
 {
@@ -188,7 +187,7 @@ static int FASTAPASS(2) CheckFreq(uint32 cf, uint8 sr)
 
 static DECLFW(Write0x11)
 {
- DoPCM();
+ DoPCM(0);
  PSG[0x11]=V&0x7F;
 }
 
@@ -202,7 +201,7 @@ static DECLFW(Write_PSG)
  switch(A)
  {
   case 0x0:
-           DoSQ1();
+           DoSQ1(0);
            if(V&0x10)
             realvolume[0]=V&0xF;
            break;
@@ -210,14 +209,14 @@ static DECLFW(Write_PSG)
            sweepon[0]=V&0x80;
            break;
   case 0x2:
-           DoSQ1();
+           DoSQ1(0);
            curfreq[0]&=0xFF00;
            curfreq[0]|=V;
            break;
   case 0x3:
            if(PSG[0x15]&1)
            {
-            DoSQ1();
+            DoSQ1(0);
             lengthcount[0]=lengthtable[(V>>3)&0x1f];
             sqnon|=1;
 	   }
@@ -231,7 +230,7 @@ static DECLFW(Write_PSG)
            break;
 
   case 0x4:
-	   DoSQ2();
+	   DoSQ2(0);
            if(V&0x10)
             realvolume[1]=V&0xF;
 	   break;
@@ -239,14 +238,14 @@ static DECLFW(Write_PSG)
           sweepon[1]=V&0x80;
           break;
   case 0x6:
-          DoSQ2();
+          DoSQ2(0);
           curfreq[1]&=0xFF00;
           curfreq[1]|=V;
           break;
   case 0x7:
           if(PSG[0x15]&2)
           {
-	   DoSQ2();
+	   DoSQ2(0);
 	   lengthcount[1]=lengthtable[(V>>3)&0x1f];
            sqnon|=2;
 	  }
@@ -259,7 +258,7 @@ static DECLFW(Write_PSG)
           sqacc[1]=((int32)curfreq[1]+1)<<18;
           break;
   case 0x8:
-          DoTriangle();
+          DoTriangle(0);
 	  if(laster&0x80)
 	  {
             tricoop=V&0x7F;
@@ -269,12 +268,12 @@ static DECLFW(Write_PSG)
            tricoop=0;
           laster=V&0x80;
           break;
-  case 0xa:DoTriangle();
+  case 0xa:DoTriangle(0);
 	   break;
   case 0xb:
 	  if(PSG[0x15]&0x4)
 	  {
-	   DoTriangle();
+	   DoTriangle(0);
            sqnon|=4;
            lengthcount[2]=lengthtable[(V>>3)&0x1f];
 	  }
@@ -282,22 +281,22 @@ static DECLFW(Write_PSG)
           tricoop=PSG[0x8]&0x7f;
           trimode=PSG[0x8]&0x80;
           break;
-  case 0xC:DoNoise();
+  case 0xC:DoNoise(0);
            if(V&0x10)
             realvolume[2]=V&0xF;
            break;
-  case 0xE:DoNoise();break;
+  case 0xE:DoNoise(0);break;
   case 0xF:
            if(PSG[0x15]&8)
            {
-	    DoNoise();
+	    DoNoise(0);
             sqnon|=8;
 	    lengthcount[3]=lengthtable[(V>>3)&0x1f];
 	   }
            decvolume[2]=0xF;
 	   DecCountTo1[2]=(PSG[0xC]&0xF)+1;
            break;
- case 0x10:DoPCM();
+ case 0x10:DoPCM(0);
 	   if(!(V&0x80))
 	    X6502_IRQEnd(FCEU_IQDPCM);
 	   break;
@@ -306,15 +305,15 @@ static DECLFW(Write_PSG)
 	    int t=V^PSG[0x15];
 
             if(t&1)
-             DoSQ1();
+             DoSQ1(0);
             if(t&2)
-             DoSQ2();
+             DoSQ2(0);
             if(t&4)
-             DoTriangle();
+             DoTriangle(0);
             if(t&8)
-             DoNoise();
+             DoNoise(0);
             if(t&0x10)
-             DoPCM();
+             DoPCM(0);
             sqnon&=V;
             if(V&0x10)
             {
@@ -339,7 +338,7 @@ DECLFR(Read_PSG)
 {
    uint8 ret;
    if(PSG[0x15]&0x10)
-    DoPCM();
+    DoPCM(0);
    ret=(PSG[0x15]&(sqnon|0x10))|SIRQStat;
    SIRQStat&=~0x40;
    X6502_IRQEnd(/*FCEU_IQDPCM|*/FCEU_IQFCOUNT);
@@ -359,10 +358,11 @@ DECLFR(Read_PSGDummy)
 static void FASTAPASS(1) FrameSoundStuff(int V)
 {
  int P;
+ uint32 end = (SOUNDTS<<16)/soundtsinc;
 
- DoSQ1();
- DoSQ2();
- DoNoise();
+ DoSQ1(end);
+ DoSQ2(end);
+ DoNoise(end);
 
  switch((V&1))
  {
@@ -375,7 +375,7 @@ static void FASTAPASS(1) FrameSoundStuff(int V)
             lengthcount[2]--;
             if(lengthcount[2]<=0)
              {
-              DoTriangle();
+              DoTriangle(0);
               sqnon&=~4;
              }
            }
@@ -460,7 +460,7 @@ static void FASTAPASS(1) FrameSoundStuff(int V)
            laster=0;
            if(tricoop)
            {
-            if(tricoop==1) DoTriangle();
+            if(tricoop==1) DoTriangle(0);
             tricoop--;
            }
          }
@@ -555,15 +555,15 @@ static void FASTAPASS(1) CalcRectAmp(int P)
    *b=V;
 }
 
-static void RDoPCM(void)
+static void RDoPCM(int32 end)
 {
    int32 V;
-   int32 start,end;
+   int32 start;
    int32 freq;
    uint32 out=PSG[0x11]<<3;
 
    start=ChannelBC[4];
-   end=(SOUNDTS<<16)/soundtsinc;
+   if(end==0) end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[4]=end;
 
@@ -635,24 +635,27 @@ static void RDoPCM(void)
     endopcmo:;
 }
 
-static void RDoSQ1(void)
+static void RDoSQ1(int32 end)
 {
    int32 V;
-   int32 start,end;
+   int32 start;
    int32 freq;
 
-   CalcRectAmp(0);
    start=ChannelBC[0];
-   end=(SOUNDTS<<16)/soundtsinc;
+   if(end==0) end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[0]=end;
+
+   if(!(PSG[0x15]&1 && sqnon&1))
+    return;
 
    if(curfreq[0]<8 || curfreq[0]>0x7ff)
     return;
    if(!CheckFreq(curfreq[0],PSG[0x1]))
     return;
 
-   if(PSG[0x15]&1 && sqnon&1)
+   CalcRectAmp(0);
+
    {
     uint32 out=RectAmp[0][DutyCount[0]];
     freq=curfreq[0]+1;
@@ -672,30 +675,32 @@ static void RDoSQ1(void)
         DutyCount[0]&=7;
         out=RectAmp[0][DutyCount[0]];
        }
-
       }
-     }
     }
+   }
 }
 
-static void RDoSQ2(void)
+static void RDoSQ2(int32 end)
 {
    int32 V;
-   int32 start,end;
+   int32 start;
    int32 freq;
 
-   CalcRectAmp(1);
    start=ChannelBC[1];
-   end=(SOUNDTS<<16)/soundtsinc;
+   if(end==0) end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[1]=end;
+
+   if(!(PSG[0x15]&2 && sqnon&2))
+    return;
 
    if(curfreq[1]<8 || curfreq[1]>0x7ff)
     return;
    if(!CheckFreq(curfreq[1],PSG[0x5]))
     return;
 
-   if(PSG[0x15]&2 && sqnon&2)
+   CalcRectAmp(1);
+
    {
     uint32 out=RectAmp[1][DutyCount[1]];
     freq=curfreq[1]+1;
@@ -717,20 +722,20 @@ static void RDoSQ2(void)
 	out=RectAmp[1][DutyCount[1]];
        }
       }
-     }
     }
+   }
 }
 
 
-static void RDoTriangle(void)
+static void RDoTriangle(int32 end)
 {
    static uint32 tcout=0;
    int32 V;
-   int32 start,end; //,freq;
+   int32 start; //,freq;
    int32 freq=(((PSG[0xa]|((PSG[0xb]&7)<<8))+1));
 
    start=ChannelBC[2];
-   end=(SOUNDTS<<16)/soundtsinc;
+   if(end==0) end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[2]=end;
 
@@ -776,13 +781,13 @@ static void RDoTriangle(void)
     }
 }
 
-static void RDoNoise(void)
+static void RDoNoise(int32 end)
 {
    int32 inc,V;
-   int32 start,end;
+   int32 start;
 
    start=ChannelBC[3];
-   end=(SOUNDTS<<16)/soundtsinc;
+   if(end==0) end=(SOUNDTS<<16)/soundtsinc;
    if(end<=start) return;
    ChannelBC[3]=end;
 
@@ -838,7 +843,6 @@ static void RDoNoise(void)
          count[3]+=0x1000;
         }
       }
-
    }
 }
 
@@ -871,9 +875,10 @@ int32 highp;                   // 0 through 65536, 0 = no high pass, 65536 = max
 
 int32 lowp;                    // 0 through 65536, 65536 = max low pass(total attenuation)
 				// 65536 = no low pass
-static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
+static void FilterSound(uint32 *in, int16 *outMono, int count)
 {
  static int32 acc=0, acc2=0;
+// static int min=0, max=0;
 
  for(;count;count--,in++,outMono++)
  {
@@ -885,7 +890,9 @@ static void FilterSound(uint32 *in, int32 *out, int16 *outMono, int count)
   acc2+= (int32) (((int64)((diff-acc2)*lowp))>>16);
   *in=0;
 
-  *outMono = (int16)acc2;
+  *outMono = acc2*7 >> 2; // * 1.75
+//  if (acc2 < min) { printf("min: %i %04x\n", acc2, acc2); min = acc2; }
+//  if (acc2 > max) { printf("max: %i %04x\n", acc2, acc2); max = acc2; }
  }
 }
 
@@ -906,17 +913,16 @@ int FlushEmulateSound(void)
   }
 
   end=(SOUNDTS<<16)/soundtsinc;
-  DoSQ1();
-  DoSQ2();
-  DoTriangle();
-  DoNoise();
-  DoPCM();
+  DoSQ1(end);
+  DoSQ2(end);
+  DoTriangle(end);
+  DoNoise(end);
+  DoPCM(end);
 
   if(GameExpSound.Fill)
    GameExpSound.Fill(end&0xF);
 
-//  FilterSound(Wave,WaveFinal,end>>4);
-  FilterSound(Wave,WaveFinal,WaveFinalMono,end>>4);
+  FilterSound(Wave,WaveFinalMono,end>>4);
 //  printf("count %d, num ints %d\n", end, (end >> 4));
   if(FCEUGameInfo.type==GIT_NSF)
   {
@@ -1002,7 +1008,7 @@ void SetSoundVariables(void)
    GameExpSound.RChange();
 
   // nesincsizeLL=(int64)((int64)562949953421312*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
-  nesincsize=(int64)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16));
+  nesincsize=(int64)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16)); // 308845 - 1832727
   nesincsize32=(int32)nesincsize;
   PSG_base=(uint32)(PAL?(long double)PAL_CPU/16:(long double)NTSC_CPU/16);
 
@@ -1015,7 +1021,7 @@ void SetSoundVariables(void)
    NoiseFreqTable[x]=z;
   }
   soundtsinc=(uint32)((uint64)(PAL?(long double)PAL_CPU*65536:(long double)NTSC_CPU*65536)/(FSettings.SndRate OVERSAMPLE));
-  memset(Wave,0,2048*4);
+  memset(Wave,0,sizeof(Wave));
   for(x=0;x<5;x++)
    ChannelBC[x]=0;
   highp=(250<<16)/FSettings.SndRate;  // Arbitrary
