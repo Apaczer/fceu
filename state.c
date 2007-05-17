@@ -289,6 +289,7 @@ extern int geniestage;
 void SaveState(void)
 {
 	FILE *st=NULL;
+	char *fname;
 
 	TempAddrT=TempAddr;
 	RefreshAddrT=RefreshAddr;
@@ -299,7 +300,9 @@ void SaveState(void)
 	 return;
         }
 
-	 st=fopen(FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0),"wb");
+	 fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
+	 st=fopen(fname,"wb");
+	 free(fname);
 
 	 if(st!=NULL)
 	 {
@@ -386,6 +389,7 @@ int FCEUSS_LoadFP(FILE *st, int make_backup)
 void LoadState(void)
 {
 	FILE *st=NULL;
+	char *fname;
 
         if(geniestage==1)
         {
@@ -393,15 +397,24 @@ void LoadState(void)
          return;
         }
 
-	st=fopen(FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0),"rb");
+	fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
+	st=fopen(fname,"rb");
+	free(fname);
+
 	if (st)
 	{
 	 FCEUSS_LoadFP(st, 0);
 	 fclose(st);
 	}
+	else
+	{
+	 FCEU_DispMessage("State %d load error (no file).",CurrentState);
+	 SaveStateStatus[CurrentState]=0;
+	}
 }
 
 char SaveStateStatus[10];
+#if 0 // leaks memory
 void CheckStates(void)
 {
 	FILE *st=NULL;
@@ -420,6 +433,7 @@ void CheckStates(void)
            SaveStateStatus[ssel]=0;
 	 }
 }
+#endif
 
 void SaveStateRefresh(void)
 {

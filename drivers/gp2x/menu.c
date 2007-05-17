@@ -682,7 +682,7 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 	// draw cursor
 	gp2x_text_out15(x - 16, tl_y + sel*10, ">");
 
-	if (sel < 10) {
+	if (sel < opt_cnt) {
 		gp2x_text_out15(30, 190, "Press a button to bind/unbind");
 		gp2x_text_out15(30, 200, "Use VOL+ to clear");
 		gp2x_text_out15(30, 210, "To bind UP/DOWN, hold VOL-");
@@ -787,8 +787,9 @@ static bind_action_t ctrl_actions[] =
 
 static bind_action_t emuctrl_actions[] =
 {
-	{ "Save State  ", 1<<31 },
-	{ "Load State  ", 1<<30 },
+	{ "Save State     ", 1<<31 },
+	{ "Load State     ", 1<<30 },
+	{ "Next State Slot", 1<<29 },
 };
 
 static void kc_sel_loop(void)
@@ -1012,10 +1013,26 @@ static int menu_loop_options(void)
 
 static void draw_menu_credits(void)
 {
+	char vstr[16];
+
 	//int tl_x = 15, tl_y = 70;
 	gp2x_fceu_copy_bg();
 
-	// TODO
+	sprintf(vstr, "GPFCE v" GP2X_PORT_VERSION " rev%i", GP2X_PORT_REV);
+	gp2x_text_out15(20,  30, vstr);
+	gp2x_text_out15(20,  40, "(c) notaz, 2007");
+
+	gp2x_text_out15(20,  70, "Based on FCE Ultra versions");
+	gp2x_text_out15(20,  80, "0.81 and 0.98.15");
+
+	gp2x_text_out15(20, 110, "         - Credits - ");
+	gp2x_text_out15(20, 130, "Bero: FCE");
+	gp2x_text_out15(20, 140, "Xodnizel: FCE Ultra");
+	gp2x_text_out15(20, 150, "zzhu8192: original port");
+	gp2x_text_out15(20, 160, "rlyeh: minimal lib");
+	gp2x_text_out15(20, 170, "Hermes, theoddbot, god_at_hell:");
+	gp2x_text_out15(20, 180, "  cpuctrl, gamma libs");
+	gp2x_text_out15(20, 190, "Squidge: squidgehack");
 
 	gp2x_video_flip();
 }
@@ -1114,6 +1131,8 @@ static int menu_loop_root(void)
 						/*if(savestate_menu_loop(0))
 							continue;*/
 						FCEUI_SaveState();
+						Exit = 0;
+						while (gp2x_joystick_read(1) & GP2X_B) usleep(50*1000);
 						return 0;
 					}
 					break;
@@ -1122,6 +1141,8 @@ static int menu_loop_root(void)
 						/*if(savestate_menu_loop(1))
 							continue;*/
 						FCEUI_LoadState();
+						Exit = 0;
+						while (gp2x_joystick_read(1) & GP2X_B) usleep(50*1000);
 						return 0;
 					}
 					break;

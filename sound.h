@@ -36,7 +36,7 @@ typedef struct {
 
 extern EXPSOUND GameExpSound;
 
-extern int64 nesincsizeLL;
+//extern int64 nesincsizeLL;
 extern int64 nesincsize;
 extern uint8 PSG[];
 extern uint32 PSG_base;

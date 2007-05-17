@@ -23,8 +23,8 @@ asm_6502=1
 
 all:		fceu
 
-gpfce: fceu
-	cp fceu gpfce
+gpfce.gpe: fceu
+	cp fceu $@
 
 include zlib/Makefile
 
@@ -81,7 +81,7 @@ $(error need VER)
 endif
 endif
 
-rel: gpfce
-	zip -9 -j Gpfce_v$(VER).zip $^ drivers/gp2x/mmuhack.o out_gp2x/*
+rel: gpfce.gpe
+	zip -9 -j gpfce_v$(VER).zip $^ drivers/gp2x/mmuhack.o
 
 

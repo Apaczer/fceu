@@ -133,15 +133,10 @@ void FCEUI_SetGameGenie(int a)
 #define netplay 0
 #endif
 
-static uint8 StateShow=0;
-
 uint8 Exit=0;
 
 uint8 DIPS=0;
-//uint8 vsdip=0;
-//int coinon=0;
 
-//uint8 pale=0;
 uint8 CommandQueue=0;
 
 static int controlselect=0;
@@ -150,20 +145,6 @@ static int ntsctint=46+10;
 static int ntschue=72;
 static int controllength=0;
 
-#if 0
-pal *palo;
-static pal *palpoint[8]=
-     {
-     palette,
-     palettevscv,
-     palettevssmb,
-     palettevsmar,
-     palettevsgoon,
-     palettevsslalom,
-     palettevseb,
-     rp2c04001
-     };
-#endif
 
 void FCEUI_SetSnapName(int a)
 {
@@ -175,42 +156,28 @@ void FCEUI_SaveExtraDataUnderBase(int a)
  FSettings.SUnderBase=a;
 }
 
-#if 0
-void FCEUI_SetPaletteArray(uint8 *pal)
-{
- if(!pal)
-  palpoint[0]=palette;
- else
- {
-  int x;
-  palpoint[0]=palettec;
-  for(x=0;x<64;x++)
-  {
-   palpoint[0][x].r=*((uint8 *)pal+x+x+x);
-   palpoint[0][x].g=*((uint8 *)pal+x+x+x+1);
-   palpoint[0][x].b=*((uint8 *)pal+x+x+x+2);
-  }
- }
- FCEU_ResetPalette();
-}
-#endif
 
 void FCEUI_SelectState(int w)
 {
- if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
-  CommandQueue=42+w;
+ // if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
+ //  CommandQueue=42+w;
 }
 
 void FCEUI_SaveState(void)
 {
- if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
-  CommandQueue=40;
+ // if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
+ //  CommandQueue=40;
+
+ //CheckStates();
+ SaveState();
 }
 
 void FCEUI_LoadState(void)
 {
- if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
-  CommandQueue=41;
+ // if(netplay!=2 && FCEUGameInfo.type!=GIT_NSF)
+ //  CommandQueue=41;
+ //CheckStates();
+ LoadState();
 }
 
 int32 FCEUI_GetDesiredFPS(void)
@@ -308,122 +275,6 @@ void DriverInterface(int w, void *d)
   }
 }
 
-#if 0
-static uint8 lastd=0;
-void SetNESDeemph(uint8 d, int force)
-{
- static uint16 rtmul[7]={32768*1.239,32768*.794,32768*1.019,32768*.905,32768*1.023,32768*.741,32768*.75};
- static uint16 gtmul[7]={32768*.915,32768*1.086,32768*.98,32768*1.026,32768*.908,32768*.987,32768*.75};
- static uint16 btmul[7]={32768*.743,32768*.882,32768*.653,32768*1.277,32768*.979,32768*.101,32768*.75};
- uint32 r,g,b;
- int x;
-
- /* If it's not forced(only forced when the palette changes),
-    don't waste cpu time if the same deemphasis bits are set as the last call.
- */
- if(!force)
- {
-  if(d==lastd)
-   return;
- }
- else	/* Only set this when palette has changed. */
- {
-  r=rtmul[6];
-  g=rtmul[6];
-  b=rtmul[6];
-
-  for(x=0;x<0x40;x++)
-  {
-   uint32 m,n,o;
-   m=palo[x].r;
-   n=palo[x].g;
-   o=palo[x].b;
-   m=(m*r)>>15;
-   n=(n*g)>>15;
-   o=(o*b)>>15;
-   if(m>0xff) m=0xff;
-   if(n>0xff) n=0xff;
-   if(o>0xff) o=0xff;
-   FCEUD_SetPalette(x|0x40,m,n,o);
-
-
-  }
- }
- if(!d) return;	/* No deemphasis, so return. */
-
-  r=rtmul[d-1];
-  g=gtmul[d-1];
-  b=btmul[d-1];
-
-    for(x=0;x<0x40;x++)
-    {
-     uint32 m,n,o;
-
-     m=palo[x].r;
-     n=palo[x].g;
-     o=palo[x].b;
-     m=(m*r)>>15;
-     n=(n*g)>>15;
-     o=(o*b)>>15;
-     if(m>0xff) m=0xff;
-     if(n>0xff) n=0xff;
-     if(o>0xff) o=0xff;
-
-     FCEUD_SetPalette(x|0xC0,m,n,o);
-
-    }
-
- lastd=d;
-}
-
-#define HUEVAL  ((double)((double)ntschue/(double)2)+(double)300)
-#define TINTVAL ((double)((double)ntsctint/(double)128))
-
-static void CalculatePalette(void)
-{
- int x,z;
- int r,g,b;
- double s,y,theta;
- static uint8 cols[16]={0,24,21,18,15,12,9,6,3,0,33,30,27,0,0,0};
- static uint8 br1[4]={6,9,12,12};
- static double br2[4]={.29,.45,.73,.9};
- static double br3[4]={0,.24,.47,.77};
-
- for(x=0;x<=3;x++)
-  for(z=0;z<16;z++)
-  {
-   s=(double)TINTVAL;
-   y=(double)br2[x];
-   if(z==0)  {s=0;y=((double)br1[x])/12;}
-
-   if(z>=13)
-   {
-    s=y=0;
-    if(z==13)
-     y=(double)br3[x];
-   }
-
-   theta=(double)M_PI*(double)(((double)cols[z]*10+HUEVAL)/(double)180);
-   r=(int)(((double)y+(double)s*(double)sin(theta))*(double)256);
-   g=(int)(((double)y-(double)((double)27/(double)53)*s*(double)sin(theta)+(double)((double)10/(double)53)*s*cos(theta))*(double)256);
-   b=(int)(((double)y-(double)s*(double)cos(theta))*(double)256);
-
-   // TODO:  Fix RGB to compensate for phosphor changes(add to red??).
-
-   if(r>255) r=255;
-   if(g>255) g=255;
-   if(b>255) b=255;
-   if(r<0) r=0;
-   if(g<0) g=0;
-   if(b<0) b=0;
-
-   paletten[(x<<4)+z].r=r;
-   paletten[(x<<4)+z].g=g;
-   paletten[(x<<4)+z].b=b;
-  }
- WritePalette();
-}
-#endif
 
 #include "drawing.h"
 #ifdef FRAMESKIP
@@ -433,7 +284,6 @@ void FCEU_PutImageDummy(void)
  {
   if(controllength) controllength--;
  }
- if(StateShow) StateShow--; /* DrawState() */
  if(howlong) howlong--;	/* DrawMessage() */
  #ifdef FPS
  {
@@ -469,7 +319,6 @@ void FCEU_PutImage(void)
          }
 	 if(FCEUGameInfo.type==GIT_VSUNI)
 		 FCEU_VSUniDraw(XBuf);
-         //if(StateShow) DrawState();
 
 	 //FCEU_DrawSaveStates(XBuf);
 	 //FCEU_DrawMovies(XBuf);
@@ -489,73 +338,6 @@ void FCEU_PutImage(void)
 }
 
 #if 0
-static int ipalette=0;
-
-void LoadGamePalette(void)
-{
-  uint8 ptmp[192];
-  FILE *fp;
-  ipalette=0;
-  if((fp=fopen(FCEU_MakeFName(FCEUMKF_PALETTE,0,0),"rb")))
-  {
-   int x;
-   fread(ptmp,1,192,fp);
-   fclose(fp);
-   for(x=0;x<64;x++)
-   {
-    palettei[x].r=ptmp[x+x+x];
-    palettei[x].g=ptmp[x+x+x+1];
-    palettei[x].b=ptmp[x+x+x+2];
-   }
-   ipalette=1;
-  }
-}
-
-void FCEU_ResetPalette(void)
-{
-   ChoosePalette();
-   WritePalette();
-}
-
-static void ChoosePalette(void)
-{
-    if(FCEUGameInfo.type==GIT_NSF)
-     palo=NSFPalette;
-    else if(ipalette)
-     palo=palettei;
-    else if(ntsccol && !PAL && FCEUGameInfo.type!=GIT_VSUNI)
-     {
-      palo=paletten;
-      CalculatePalette();
-     }
-    else
-     palo=palpoint[pale];
-}
-
-void WritePalette(void)
-{
-    int x;
-
-    for(x=0;x<6;x++)
-     FCEUD_SetPalette(x+128,unvpalette[x].r,unvpalette[x].g,unvpalette[x].b);
-    if(FCEUGameInfo.type==GIT_NSF)
-    {
-     for(x=0;x<39;x++)
-      FCEUD_SetPalette(x,palo[x].r,palo[x].g,palo[x].b);
-    }
-    else
-    {
-     for(x=0;x<64;x++)
-      FCEUD_SetPalette(x,palo[x].r,palo[x].g,palo[x].b);
-     SetNESDeemph(lastd,1);
-    }
-}
-
-void FlushCommandQueue(void)
-{
-  if(!netplay && CommandQueue) {DoCommand(CommandQueue);CommandQueue=0;}
-}
-
 void DoCommand(uint8 c)
 {
  switch(c)

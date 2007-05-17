@@ -116,37 +116,6 @@ void DoDriverArgs(void)
 	#endif
 }
 
-int InitMouse(void)
-{
- return(0);
-}
-
-void KillMouse(void){}
-
-void GetMouseData(uint32 *d)
-{
-}
-
-int InitKeyboard(void)
-{
- return(1);
-}
-
-int UpdateKeyboard(void)
-{
- return(1);
-}
-
-void KillKeyboard(void)
-{
-
-}
-
-char *GetKeyboard(void)
-{
- return NULL;
-}
-
 
 char **g_argv;
 int mmuhack_status = 0;

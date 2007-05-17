@@ -28,6 +28,7 @@
 #include <stdlib.h>
 
 #include "main.h"
+#include "minimal.h"
 #include "throttle.h"
 #include "menu.h"
 #include "gp2x.h"
@@ -294,7 +295,7 @@ static int DoArgs(int argc, char *argv[])
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetRenderedLines(0,erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetSoundVolume(soundvol);
-	DriverInterface(DES_NTSCCOL,&ntsccol);
+	DriverInterface(DES_NTSCCOL,&ntsccol); // TODO
 	DoDriverArgs();
 
 	if(fcexp)
@@ -426,6 +427,7 @@ int CLImain(int argc, char *argv[])
 	  }
          }
 
+	 PrepareOtherInput();
 	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
 	 switch (Settings.scaling & 3) {
 		 case 0: gp2x_video_RGB_setscaling(0, 320, 240); gp2x_video_set_offs(0); break;
@@ -453,8 +455,6 @@ static int DriverInitialize(void)
     inited|=2;
    if(!InitVideo()) return 0;
    inited|=4;
-   if(!InitKeyboard()) return 0;
-   inited|=8;
    return 1;
 }
 
@@ -465,23 +465,19 @@ static void DriverKill(void)
 
  if(inited&2)
   KillJoysticks();
- if(inited&8)
-  KillKeyboard();
  if(inited&4)
   KillVideo();
  if(inited&1)
   KillSound();
- if(inited&16)
-  KillMouse();
  inited=0;
 }
 
 void FCEUD_Update(uint8 *xbuf, int16 *Buffer, int Count)
 {
- if(!Count && !NoWaiting && !(eoptions&EO_NOTHROTTLE))
+ if(!Count && !(eoptions&EO_NOTHROTTLE))
   SpeedThrottle();
  BlitScreen(xbuf);
- if(Count && !NoWaiting && !(eoptions&EO_NOTHROTTLE))
+ if(Count && !(eoptions&EO_NOTHROTTLE))
   WriteSound(Buffer,Count);
  FCEUD_UpdateInput();
 }

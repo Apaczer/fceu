@@ -1,8 +1,5 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -18,81 +15,100 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define JOY_A   1
-#define JOY_B   2
-#define JOY_SELECT      4
-#define JOY_START       8
-#define JOY_UP  0x10
-#define JOY_DOWN        0x20
-#define JOY_LEFT        0x40
-#define JOY_RIGHT       0x80
-
-#include "minimal.h"
-
-extern uint8 Exit; // exit emu loop
-
+#include "../../state.h"
+#include "../../general.h"
 
 /* UsrInputType[] is user-specified.  InputType[] is current
-	(game loading can override user settings)
+       (game loading can override user settings)
 */
 static int UsrInputType[2]={SI_GAMEPAD,SI_GAMEPAD};
-static int InputType[2];
-
 static int UsrInputTypeFC={SI_NONE};
+
+static int InputType[2];
 static int InputTypeFC;
 
 static uint32 JSreturn;
-int NoWaiting=0;
 
 static int powerpadsc[2][12];
 static int powerpadside=0;
 
-
 static uint32 MouseData[3];
 static uint8 fkbkeys[0x48];
-unsigned long lastpad=0;
 
-char soundvolmeter[21];
-int soundvolIndex=0;
+static uint32 combo_acts = 0, combo_keys = 0;
+static uint32 prev_emu_acts = 0;
 
 
 static void setsoundvol(int soundvolume)
 {
-    //FCEUI_SetSoundVolume(soundvol);
-    // draw on screen :D
-    gp2x_sound_volume(soundvolume, soundvolume);
-    int meterval=soundvolume/5;
-    for (soundvolIndex=0; soundvolIndex < 20; soundvolIndex++)
-    {
-       if (soundvolIndex < meterval)
-       {
-       	  soundvolmeter[soundvolIndex]='*';
-       }
-       else
-       {
-       	  soundvolmeter[soundvolIndex]='_';
-       }
-    }
-    soundvolmeter[20]=0;
-    FCEU_DispMessage("|%s|", soundvolmeter);
+	int soundvolIndex;
+	static char soundvolmeter[24];
+
+	// draw on screen :D
+	gp2x_sound_volume(soundvolume, soundvolume);
+	int meterval=soundvolume/5;
+	for (soundvolIndex = 0; soundvolIndex < 20; soundvolIndex++)
+	{
+		if (soundvolIndex < meterval)
+		{
+			soundvolmeter[soundvolIndex]='*';
+		}
+		else
+		{
+			soundvolmeter[soundvolIndex]='_';
+		}
+	}
+	soundvolmeter[20]=0;
+	FCEU_DispMessage("|%s|", soundvolmeter);
 }
 
+
+static void do_emu_acts(uint32 acts)
+{
+	uint32 actsc = acts;
+	acts &= acts ^ prev_emu_acts;
+	prev_emu_acts = actsc;
+
+	if (acts & (3 << 30))
+	{
+		if (acts & (1 << 30))
+		{
+			FCEUI_LoadState();
+		}
+		else
+		{
+			FCEUI_SaveState();
+		}
+	}
+	else if (acts & (1 << 29))
+	{
+		FILE *st;
+		char *fname;
+
+		CurrentState++;
+		if (CurrentState > 9) CurrentState = 0;
+
+		fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
+		st=fopen(fname,"rb");
+		free(fname);
+		FCEU_DispMessage("[%s] State Slot %i", st ? "USED" : "FREE", CurrentState);
+		if (st) fclose(st);
+	}
+}
 
 
 void FCEUD_UpdateInput(void)
 {
 	static int volpushed_frames = 0;
 	static int turbo_rate_cnt_a = 0, turbo_rate_cnt_b = 0;
-	long lastpad2 = lastpad;
 	unsigned long keys = gp2x_joystick_read(0);
-	uint32 JS = 0; // RLDU SEBA
+	uint32 all_acts = 0;
 	int i;
 
 	#define down(b) (keys & GP2X_##b)
 	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
 	{
 		Exit = 1;
-		JSreturn = 0;
 		return;
 	}
 	else if (down(VOL_UP))
@@ -120,36 +136,53 @@ void FCEUD_UpdateInput(void)
 	}
 
 
+	JSreturn = 0; // RLDU SEBA
+
 	for (i = 0; i < 32; i++)
 	{
-		if (keys & (1 << i)) {
-			int acts = Settings.KeyBinds[i];
+		if (keys & (1 << i))
+		{
+			uint32 acts, u = 32;
+			acts = Settings.KeyBinds[i];
 			if (!acts) continue;
-			JS |= acts & 0xff;
-			if (acts & 0x100) {		// A turbo
-				turbo_rate_cnt_a += Settings.turbo_rate_add;
-				JS |= (turbo_rate_cnt_a >> 24) & 1;
+			if ((1 << i) & combo_keys)
+			{
+				// combo key detected, try to find if other is pressed
+				for (u = i+1; u < 32; u++)
+				{
+					if ((keys & (1 << u)) && (Settings.KeyBinds[u] & acts))
+					{
+						keys &= ~(1 << u);
+						break;
+					}
+				}
 			}
-			if (acts & 0x200) {		// B turbo
-				turbo_rate_cnt_b += Settings.turbo_rate_add;
-				JS |= (turbo_rate_cnt_b >> 23) & 2;
-			}
+			if (u != 32) acts &=  combo_acts; // other combo key pressed
+			else         acts &= ~combo_acts;
+			all_acts |= acts;
 		}
 	}
 
+	JSreturn |= all_acts & 0xff;
+	if (all_acts & 0x100) {		// A turbo
+		turbo_rate_cnt_a += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_a >> 24) & 1;
+	}
+	if (all_acts & 0x200) {		// B turbo
+		turbo_rate_cnt_b += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_b >> 23) & 2;
+	}
 
-	JSreturn = JS;
-	lastpad=keys;
+	do_emu_acts(all_acts);
+
 
 	//JSreturn=(JS&0xFF000000)|(JS&0xFF)|((JS&0xFF0000)>>8)|((JS&0xFF00)<<8);
 
-#define pad keys
-
   //  JSreturn=(JSreturn&0xFF000000)|(JSreturn&0xFF)|((JSreturn&0xFF0000)>>8)|((JSreturn&0xFF00)<<8);
   // TODO: make these bindable, use new interface
+  /*
   if(gametype==GIT_FDS)
   {
-    NoWaiting&=~1;
   	if ((pad & GP2X_PUSH) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_R)) && (!(lastpad2 & GP2X_PUSH)))
   	{
       DriverInterface(DES_FDSSELECT,0);
@@ -164,6 +197,7 @@ void FCEUD_UpdateInput(void)
   	}
   }
   return;
+  */
 }
 
 
@@ -205,9 +239,41 @@ static void InitOtherInput(void)
    FCEUI_SetInputFC(InputTypeFC,InputDPtr,attrib);
    FCEUI_DisableFourScore(eoptions&EO_NOFOURSCORE);
 
-   if(t && !(inited&16))
-   {
-    InitMouse();
-    inited|=16;
-   }
+   inited|=16;
 }
+
+
+static void PrepareOtherInput(void)
+{
+	uint32 act, key, seen_acts;
+
+	combo_acts = combo_keys = prev_emu_acts = seen_acts = 0;
+
+	// find combo_acts
+	for (act = 1; act; act <<= 1)
+	{
+		for (key = 1; key < 32; key++)
+		{
+			if (Settings.KeyBinds[key] & act)
+			{
+				if (seen_acts & act) combo_acts |= act;
+				else seen_acts |= act;
+			}
+		}
+	}
+
+	// find combo_keys
+	for (act = 1; act; act <<= 1)
+	{
+		for (key = 0; key < 32; key++)
+		{
+			if (Settings.KeyBinds[key] & combo_acts)
+			{
+				combo_keys |= 1 << key;
+			}
+		}
+	}
+
+	printf("generated combo_acts: %08x, combo_keys: %08x\n", combo_acts, combo_keys);
+}
+
