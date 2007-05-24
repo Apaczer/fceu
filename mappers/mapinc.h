@@ -9,5 +9,4 @@
 #include "../sound.h"
 #include "../state.h"
 #include "../svga.h"
-#include "../dprintf.h"
 #include <string.h>

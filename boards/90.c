@@ -2,6 +2,7 @@
  *
  * Copyright notice for this file:
  *  Copyright (C) 2002 Xodnizel
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +20,10 @@
  */
 
 #include "mapinc.h"
+//#define DEBUG90
 
 static int is209;
+static int is211;
 
 static uint8 IRQMode;        // from $c001
 static uint8 IRQPre;         // from $c004
@@ -61,20 +64,9 @@ static SFORMAT Tek_StateRegs[]={
   {0}
 };
 
-static DECLFR(M90Read)
-{
-  switch(A)
-  {
-    case 0x5800: return (mul[0]*mul[1]);
-    case 0x5801: return((mul[0]*mul[1])>>8);
-    case 0x5803: return (regie);
-    default: return(tekker);
-  }
-}
-
 static void mira(void)
 {
-  if(tkcom[0]&0x20 && is209)
+  if((tkcom[0]&0x20&&is209)||is211)
   {
     int x;
     if(tkcom[0]&0x40)        // Name tables are ROM-only
@@ -86,7 +78,7 @@ static void mira(void)
     {
       for(x=0;x<4;x++)
       {
-        if((tkcom[2]&0x80)==(names[x]&0x80))        // RAM selected.
+        if((tkcom[1]&0x80)==(names[x]&0x80))        // RAM selected.
           setntamem(NTARAM+((names[x]&0x1)<<10),1,x);
         else
           setntamem(CHRptr[0]+(((names[x])&CHRmask1[0])<<10),0,x);
@@ -108,37 +100,42 @@ static void mira(void)
 static void tekprom(void)
 {
   uint32 bankmode=((tkcom[3]&6)<<5);
-  switch(tkcom[0]&3)
+  switch(tkcom[0]&7)
   {
-    case 1:              // 16 KB
-         setprg16(0x8000,(prgb[0]&0x1F)|((tkcom[3]&6)<<4));
-         setprg16(0xC000,(prgb[2]&0x1F)|((tkcom[3]&6)<<4));
-         break;
-    case 2:              //2 = 8 KB ??
-         if(tkcom[0]&0x4)
-         {
-           setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
-           setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
-           setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
-           setprg8(0xe000,(prgb[3]&0x3F)|bankmode);
-         }
-         else
-         {
-           if(tkcom[0]&0x80)
-             setprg8(0x6000,(prgb[3]&0x3F)|bankmode);
-           setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
-           setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
-           setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
-           setprg8(0xe000,((~0)&0x3F)|bankmode);
-         }
-         break;
-    case 0:
-    case 3:
-         setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
-         setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
-         setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
-         setprg8(0xe000,(prgb[3]&0x3F)|bankmode);
-         break;
+    case 00: if(tkcom[0]&0x80)
+               setprg8(0x6000,(((prgb[3]<<2)+3)&0x3F)|bankmode);
+             setprg32(0x8000,0x0F|((tkcom[3]&6)<<3));
+             break;
+    case 01: if(tkcom[0]&0x80)
+               setprg8(0x6000,(((prgb[3]<<1)+1)&0x3F)|bankmode);
+             setprg16(0x8000,(prgb[1]&0x1F)|((tkcom[3]&6)<<4));
+             setprg16(0xC000,0x1F|((tkcom[3]&6)<<4));
+             break;
+    case 03: // bit reversion
+    case 02: if(tkcom[0]&0x80)
+               setprg8(0x6000,(prgb[3]&0x3F)|bankmode);
+             setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
+             setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
+             setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
+             setprg8(0xe000,0x3F|bankmode);
+             break;
+    case 04: if(tkcom[0]&0x80)
+               setprg8(0x6000,(((prgb[3]<<2)+3)&0x3F)|bankmode);
+             setprg32(0x8000,(prgb[3]&0x0F)|((tkcom[3]&6)<<3));
+             break;
+    case 05: if(tkcom[0]&0x80)
+               setprg8(0x6000,(((prgb[3]<<1)+1)&0x3F)|bankmode);
+             setprg16(0x8000,(prgb[1]&0x1F)|((tkcom[3]&6)<<4));
+             setprg16(0xC000,(prgb[3]&0x1F)|((tkcom[3]&6)<<4));
+             break;
+    case 07: // bit reversion
+    case 06: if(tkcom[0]&0x80)
+               setprg8(0x6000,(prgb[3]&0x3F)|bankmode);
+             setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
+             setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
+             setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
+             setprg8(0xe000,(prgb[3]&0x3F)|bankmode);
+             break;
   }
 }
 
@@ -176,89 +173,71 @@ static void tekvrom(void)
   }
 }
 
-static DECLFW(M90Write)
+static DECLFW(M90TekWrite)
 {
-  if(A==0x5800) mul[0]=V;
-  else if(A==0x5801) mul[1]=V;
-  else if(A==0x5803) regie=V;
+  switch(A)
+  {
+    case 0x5800: mul[0]=V; break;
+    case 0x5801: mul[1]=V; break;
+    case 0x5803: regie=V; break;
+  }
+}
 
-  A&=0xF007;
-  if(A>=0x8000 && A<=0x8003)
+static DECLFR(M90TekRead)
+{
+  switch(A)
   {
-    prgb[A&3]=V;
-    tekprom();
+    case 0x5800: return (mul[0]*mul[1]);
+    case 0x5801: return((mul[0]*mul[1])>>8);
+    case 0x5803: return (regie);
   }
-  else if(A>=0x9000 && A<=0x9007)
+  return(tekker);
+}
+
+static DECLFW(M90PRGWrite)
+{
+  prgb[A&3]=V;
+  tekprom();
+}
+
+static DECLFW(M90CHRlowWrite)
+{
+  chrlow[A&7]=V;
+  tekvrom();
+}
+
+static DECLFW(M90CHRhiWrite)
+{
+  chrhigh[A&7]=V;
+  tekvrom();
+}
+
+static DECLFW(M90NTWrite)
+{
+  if(A&4)
   {
-    chrlow[A&7]=V;
-    tekvrom();
+    names[A&3]&=0x00FF;
+    names[A&3]|=V<<8;
   }
-  else if(A>=0xa000 && A<=0xa007)
+  else
   {
-    chrhigh[A&7]=V;
-    tekvrom();
+    names[A&3]&=0xFF00;
+    names[A&3]|=V;
   }
-  else if(A>=0xb000 && A<=0xb007)
+  mira();
+}
+
+static DECLFW(M90IRQWrite)
+{
+  switch(A&7)
   {
-    if(A&4)
-    {
-      names[A&3]&=0x00FF;
-      names[A&3]|=V<<8;
-    }
-    else
-    {
-      names[A&3]&=0xFF00;
-      names[A&3]|=V;
-    }
-    mira();
-  }
-  else if(A>=0xd000 && A<=0xdfff)
-  {
-    tkcom[A&3]=V;
-    tekprom();
-    tekvrom();
-    mira();
-/*
-  switch (A&3)
-  {
-   case 00: FCEU_printf("Main Control Register:\n");
-            FCEU_printf("  PGR Banking mode: %d\n",V&7);
-            FCEU_printf("  CHR Banking mode: %d\n",(V>>3)&3);
-            FCEU_printf("  6000-7FFF addresses mapping: %s\n",(V&0x80)?"Yes":"No");
-            FCEU_printf("  Nametable control: %s\n",(V&0x20)?"Enabled":"Disabled");
-            if(V&0x20)
-               FCEU_printf("  Nametable can be: %s\n",(V&0x40)?"ROM Only":"RAM or ROM");
-            break;
-   case 01: FCEU_printf("Mirroring mode: ");
-            switch (V&3)
-            {
-             case 00: FCEU_printf("Vertical\n");break;
-             case 01: FCEU_printf("Horizontal\n");break;
-             case 02: FCEU_printf("Nametable 0 only\n");break;
-             case 03: FCEU_printf("Nametable 1 only\n");break;
-            }
-            FCEU_printf("Mirroring flag: %s\n",(V&0x80)?"On":"Off");
-            break;
-   case 02: if((((tkcom[0])>>5)&3)==1)
-              FCEU_printf("Nametable ROM/RAM select mode: %d\n",V>>7);
-            break;
-   case 03:
-            FCEU_printf("CHR Banking mode: %s\n",(V&0x20)?"Entire CHR ROM":"256Kb Switching mode");
-            if(!(V&0x20)) FCEU_printf("256K CHR bank number: %02x\n",(V&1)|((V&0x18)>>2));
-            FCEU_printf("512K PRG bank number: %d\n",(V&6)>>1);
-            FCEU_printf("CHR Bank mirroring: %s\n",(V&0x80)?"Swapped":"Normal operate");
-  }
-*/
-  }
-  else switch(A)
-  {
-    case 0xc000: //FCEU_printf("%s IRQ (C000)\n",V&1?"Enable":"Disable");
-                 IRQa=V&1;if(!(V&1)) X6502_IRQEnd(FCEU_IQEXT);break;
-    case 0xc002: //FCEU_printf("Disable IRQ (C002) scanline=%d\n", scanline);
-                 IRQa=0;X6502_IRQEnd(FCEU_IQEXT);break;
-    case 0xc003: //FCEU_printf("Enable IRQ (C003) scanline=%d\n", scanline);
-                 IRQa=1;break;
-    case 0xc001: IRQMode=V;
+    case 00: //FCEU_printf("%s IRQ (C000)\n",V&1?"Enable":"Disable");
+             IRQa=V&1;if(!(V&1)) X6502_IRQEnd(FCEU_IQEXT);break;
+    case 02: //FCEU_printf("Disable IRQ (C002) scanline=%d\n", scanline);
+             IRQa=0;X6502_IRQEnd(FCEU_IQEXT);break;
+    case 03: //FCEU_printf("Enable IRQ (C003) scanline=%d\n", scanline);
+             IRQa=1;break;
+    case 01: IRQMode=V;
 /*               FCEU_printf("IRQ Count method: ");
                switch (IRQMode&3)
                {
@@ -273,17 +252,57 @@ static DECLFW(M90Write)
                 else if((IRQMode>>6)==1) FCEU_printf("Counter Up\n");
                 else FCEU_printf("Counter Stopped\n");
 */               break;
-    case 0xc004: //FCEU_printf("Pre Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
-                 IRQPre=V^IRQXOR;break;
-    case 0xc005: //FCEU_printf("Main Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
-                 IRQCount=V^IRQXOR;break;
-    case 0xc006: //FCEU_printf("Xor Value: %d\n",V);
-                 IRQXOR=V;break;
-    case 0xc007: //if(!(IRQMode&8)) FCEU_printf("C001 is clear, no effect applied\n");
+    case 04: //FCEU_printf("Pre Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
+             IRQPre=V^IRQXOR;break;
+    case 05: //FCEU_printf("Main Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
+             IRQCount=V^IRQXOR;break;
+    case 06: //FCEU_printf("Xor Value: %d\n",V);
+             IRQXOR=V;break;
+    case 07: //if(!(IRQMode&8)) FCEU_printf("C001 is clear, no effect applied\n");
                  // else if(V==0xFF) FCEU_printf("Prescaler is changed for 12bits\n");
                  // else FCEU_printf("Counter Stopped\n");
-                 IRQPreSize=V;break;
+             IRQPreSize=V;break;
   }
+}
+
+static DECLFW(M90ModeWrite)
+{
+    tkcom[A&3]=V;
+    tekprom();
+    tekvrom();
+    mira();
+    
+#ifdef DEBUG90
+  switch (A&3)
+  {
+   case 00: FCEU_printf("Main Control Register:\n");
+            FCEU_printf("  PGR Banking mode: %d\n",V&7);
+            FCEU_printf("  CHR Banking mode: %d\n",(V>>3)&3);
+            FCEU_printf("  6000-7FFF addresses mapping: %s\n",(V&0x80)?"Yes":"No");
+            FCEU_printf("  Nametable control: %s\n",(V&0x20)?"Enabled":"Disabled");
+            if(V&0x20)
+               FCEU_printf("  Nametable can be: %s\n",(V&0x40)?"ROM Only":"RAM or ROM");
+            break;
+   case 01: FCEU_printf("Mirroring mode: ");
+            switch (V&3)
+            {
+             case 0: FCEU_printf("Vertical\n");break;
+             case 1: FCEU_printf("Horizontal\n");break;
+             case 2: FCEU_printf("Nametable 0 only\n");break;
+             case 3: FCEU_printf("Nametable 1 only\n");break;
+            }
+            FCEU_printf("Mirroring flag: %s\n",(V&0x80)?"On":"Off");
+            break;
+   case 02: if((((tkcom[0])>>5)&3)==1)
+              FCEU_printf("Nametable ROM/RAM select mode: %d\n",V>>7);
+            break;
+   case 03:
+            FCEU_printf("CHR Banking mode: %s\n",(V&0x20)?"Entire CHR ROM":"256Kb Switching mode");
+            if(!(V&0x20)) FCEU_printf("256K CHR bank number: %02x\n",(V&1)|((V&0x18)>>2));
+            FCEU_printf("512K PRG bank number: %d\n",(V&6)>>1);
+            FCEU_printf("CHR Bank mirroring: %s\n",(V&0x80)?"Swapped":"Normal operate");
+  }
+#endif
 }
 
 static void CCL(void)
@@ -292,13 +311,17 @@ static void CCL(void)
   {
     IRQCount++;
     if((IRQCount == 0) && IRQa)
+    {
       X6502_IRQBegin(FCEU_IQEXT);
+    }
   }
   else if((IRQMode>>6) == 2) // Count down
   {
     IRQCount--;
     if((IRQCount == 0xFF) && IRQa)
+    {
       X6502_IRQBegin(FCEU_IQEXT);
+    }
   }
 }
 
@@ -322,24 +345,37 @@ static void ClockCounter(void)
   }
 }
 
+void FP_FASTAPASS(1) CPUWrap(int a)
+{
+  int x;
+  if((IRQMode&3)==0) for(x=0;x<a;x++) ClockCounter();
+}
+
 static void SLWrap(void)
 {
   int x;
-  if((IRQMode&3)!=2) for(x=0;x<8;x++) ClockCounter();
+  if((IRQMode&3)==1) for(x=0;x<8;x++) ClockCounter();
 }
 
 static uint32 lastread;
 static void FP_FASTAPASS(1) M90PPU(uint32 A)
 {
-  if(lastread!=A)
+  if((IRQMode&3)==2)
   {
-    lastread=A;
-    if((IRQMode&3)==2)
+    if(lastread!=A)
     {
       ClockCounter();
       ClockCounter();
     }
+    lastread=A;
   }
+//  else
+//  {
+//    if((!lastread)&&(A&0x1000))
+//      ClockCounter();
+//    lastread=A&0x1000;
+//  }
+
 }
 
 static void togglie()
@@ -351,7 +387,7 @@ static void togglie()
     tekker++;
   tekker<<=6;
   FCEU_printf("tekker=%04x\n",tekker);
-  memset(tkcom,0xff,sizeof(tkcom));
+  memset(tkcom,0x00,sizeof(tkcom));
   memset(prgb,0xff,sizeof(prgb));
   tekprom();
   tekvrom();
@@ -366,19 +402,29 @@ static void M90Restore(int version)
 
 static void M90Power(void)
 {
-  SetWriteHandler(0x5000,0xffff,M90Write);
-  SetReadHandler(0x5000,0x5fff,M90Read);
+  SetWriteHandler(0x5000,0x5fff,M90TekWrite);
+  SetWriteHandler(0x8000,0x8fff,M90PRGWrite);
+  SetWriteHandler(0x9000,0x9fff,M90CHRlowWrite);
+  SetWriteHandler(0xA000,0xAfff,M90CHRhiWrite);
+  SetWriteHandler(0xB000,0xBfff,M90NTWrite);
+  SetWriteHandler(0xC000,0xCfff,M90IRQWrite);
+  SetWriteHandler(0xD000,0xDfff,M90ModeWrite);
+
+  SetReadHandler(0x5000,0x5fff,M90TekRead);
   SetReadHandler(0x6000,0xffff,CartBR);
 
   mul[0]=mul[1]=regie=0xFF;
 
-  memset(tkcom,0xff,sizeof(tkcom));
+  memset(tkcom,0x00,sizeof(tkcom));
   memset(prgb,0xff,sizeof(prgb));
   memset(chrlow,0xff,sizeof(chrlow));
   memset(chrhigh,0xff,sizeof(chrhigh));
   memset(names,0x00,sizeof(names));
 
-  tekker=0;
+  if(is211)
+    tekker=0xC0;
+  else
+    tekker=0x00;
 
   tekprom();
   tekvrom();
@@ -387,22 +433,34 @@ static void M90Power(void)
 
 void Mapper90_Init(CartInfo *info)
 {
+  is211=0;
   is209=0;
   info->Reset=togglie;
   info->Power=M90Power;
-  PPU_hook = M90PPU;
-  GameHBIRQHook2 = SLWrap;
+  PPU_hook=M90PPU;
+  GameHBIRQHook2=SLWrap;
+  MapIRQHook=CPUWrap;
   GameStateRestore=M90Restore;
   AddExState(Tek_StateRegs, ~0, 0, 0);
 }
 
 void Mapper209_Init(CartInfo *info)
 {
+  is211=0;
   is209=1;
   info->Reset=togglie;
   info->Power=M90Power;
-  PPU_hook = M90PPU;
-  GameHBIRQHook2 = SLWrap;
+  GameHBIRQHook2=SLWrap;
+  GameStateRestore=M90Restore;
+  AddExState(Tek_StateRegs, ~0, 0, 0);
+}
+
+void Mapper211_Init(CartInfo *info)
+{
+  is211=1;
+  info->Reset=togglie;
+  info->Power=M90Power;
+  GameHBIRQHook2=SLWrap;
   GameStateRestore=M90Restore;
   AddExState(Tek_StateRegs, ~0, 0, 0);
 }

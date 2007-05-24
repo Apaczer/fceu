@@ -39,6 +39,7 @@ static void Fixerit(void)
 
 DECLFW(Mapper68_write)
 {
+// FCEU_printf("%04x,%04x\n",A,V);
  A&=0xF000;
 
  if(A>=0x8000 && A<=0xB000)

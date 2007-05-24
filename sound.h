@@ -84,3 +84,5 @@ void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
 
+DECLFW(Write_IRQFM);
+

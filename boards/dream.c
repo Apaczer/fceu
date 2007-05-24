@@ -20,37 +20,37 @@
 
 #include "mapinc.h"
 
-static uint8 latch;
+static uint8 latche;
 
-static void DoPRG(void)
+static void Sync(void)
 {
-  setprg16(0x8000,latch);
+  setprg16(0x8000,latche);
   setprg16(0xC000,8);
 }
 
 static DECLFW(DREAMWrite)
 {
-  latch=V&7;
-  DoPRG();
+  latche=V&7;
+  Sync();
 }
 
 static void DREAMPower(void)
 {
-  latch=0;
+  latche=0;
+  Sync();
+  setchr8(0);
   SetReadHandler(0x8000,0xFFFF,CartBR);
   SetWriteHandler(0x5020,0x5020,DREAMWrite);
-  setchr8(0);
-  DoPRG();
 }
 
 static void Restore(int version)
 {
-  DoPRG();
+  Sync();
 }
 
 void DreamTech01_Init(CartInfo *info)
 {
   GameStateRestore=Restore;
   info->Power=DREAMPower;
-  AddExState(&latch, 1, 0, "LATCH");
+  AddExState(&latche, 1, 0, "LATCH");
 }

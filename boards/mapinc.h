@@ -6,6 +6,7 @@
 #include "../sound.h"
 #include "../state.h"
 #include "../cart.h"
+#include "../ines.h"
 #include "../cheat.h"
 #include "../unif.h"
 #include "../svga.h"

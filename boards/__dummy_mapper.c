@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2005 CaH4e3
+ *  Copyright (C) 2006 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,56 +21,51 @@
 #include "mapinc.h"
 
 static uint8 reg[8];
-static uint8 mirror, cmd;
+/*
 static uint8 *WRAM=NULL;
+static uint32 WRAMSIZE;
+static uint8 *CHRRAM=NULL;
+static uint32 CHRRAMSIZE;
+*/
 
 static SFORMAT StateRegs[]=
 {
-  {&cmd, 1, "CMD"},
-  {&mirror, 1, "MIRR"},
   {reg, 8, "REGS"},
   {0}
 };
 
 static void Sync(void)
 {
-  setmirror(mirror^1);
-  setprg8(0x8000,reg[0]);
-  setprg8(0xA000,reg[1]);
-  setchr2(0x0000,reg[2]>>1);
-  setchr2(0x0800,reg[3]>>1);
-  setchr1(0x1000,reg[4]);
-  setchr1(0x1400,reg[5]);
-  setchr1(0x1800,reg[6]);
-  setchr1(0x1C00,reg[7]);
 }
 
-static DECLFW(M112Write)
+static DECLFW(MNNNWrite)
 {
-  switch(A)
-  {
-    case 0xe000: mirror=V&1; Sync(); ;break;
-    case 0x8000: cmd=V&7; break;
-    case 0xa000: reg[cmd]=V; Sync(); break;
-  }
-FCEU_printf("%04x:%04x %d\n",A,V,scanline);
 }
 
-static void M112Close(void)
+static void MNNNPower(void)
+{
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x8000,0xFFFF,MNNNWrite);
+}
+
+static void MNNNReset(void)
+{
+}
+
+/*
+static void MNNNClose(void)
 {
   if(WRAM)
     FCEU_gfree(WRAM);
-  WRAM = NULL;
+  if(CHRRAM)
+    FCEU_gfree(CHRRAM);
+  WRAM=CHRRAM=NULL;
 }
+*/
 
-static void M112Power(void)
+static void MNNNIRQHook(void)
 {
-  setprg16(0xC000,~0);
-  setprg8r(0x10,0x6000,0);
-  SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x8000,0xFFFF,M112Write);
-  SetReadHandler(0x6000,0x7FFF,CartBR);
-  SetWriteHandler(0x6000,0x7FFF,CartBW);
+  X6502_IRQBegin(FCEU_IQEXT);
 }
 
 static void StateRestore(int version)
@@ -78,13 +73,25 @@ static void StateRestore(int version)
   Sync();
 }
 
-void Mapper112_Init(CartInfo *info)
+void MapperNNN_Init(CartInfo *info)
 {
-  info->Power=M112Power;
-  info->Close=M112Close;
+  info->Reset=MNNNReset;
+  info->Power=MNNNPower;
+//  info->Close=MNNNClose;
+  GameHBIRQHook=MNNNIRQHook;
   GameStateRestore=StateRestore;
-  WRAM=(uint8*)FCEU_gmalloc(8192);
-  SetupCartPRGMapping(0x10,WRAM,8192,1);
-  AddExState(WRAM, 8192, 0, "WRAM");
+/*
+  CHRRAMSIZE=8192;
+  CHRRAM=(uint8*)FCEU_gmalloc(CHRRAMSIZE);
+  SetupCartPRGMapping(0x10,CHRRAM,CHRRAMSIZE,1);
+  AddExState(CHRRAM, CHRRAMSIZE, 0, "WRAM");
+*/
+/*
+  WRAMSIZE=8192;
+  WRAM=(uint8*)FCEU_gmalloc(WRAMSIZE);
+  SetupCartPRGMapping(0x10,WRAM,WRAMSIZE,1);
+  AddExState(WRAM, WRAMSIZE, 0, "WRAM");
+*/
   AddExState(&StateRegs, ~0, 0, 0);
 }
+

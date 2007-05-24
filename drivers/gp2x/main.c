@@ -400,7 +400,7 @@ int CLImain(int argc, char *argv[])
 	   // TODO: handlers for other formats then iNES
 	   {
 	  int MapperNo;
-	  iNES_HEADER *head = iNESGetHead();
+	  iNES_HEADER *head = iNESGetHead(); // TODO: ReMake
           MapperNo = (head->ROM_type>>4);
           MapperNo|=(head->ROM_type2&0xF0);
 	  FCEU_DispMessage("%s, Mapper: %d%s%s", PAL?"PAL":"NTSC", MapperNo, (head->ROM_type&2)?", BB":"", (head->ROM_type&4)?", T":"");

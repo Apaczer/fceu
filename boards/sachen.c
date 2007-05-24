@@ -23,7 +23,7 @@
 static uint8 cmd;
 static uint8 latch[8];
 
-static void MSync(uint8 mirr)
+static void S74LS374MSync(uint8 mirr)
 {
   switch(mirr&3)
   {
@@ -38,7 +38,7 @@ static void S74LS374NSynco(void)
 {
   setprg32(0x8000,latch[0]);
   setchr8(latch[1]|latch[3]|latch[4]);
-  MSync(latch[2]);
+  S74LS374MSync(latch[2]);
 }
 
 static DECLFW(S74LS374NWrite)
@@ -50,14 +50,24 @@ static DECLFW(S74LS374NWrite)
   {
     switch(cmd)
     {
-      case 2:latch[3]=(V&1)<<3;break;
+      case 2:latch[0]=V&1; latch[3]=(V&1)<<3;break;
       case 4:latch[4]=(V&1)<<2;break;
-      case 5:latch[0]=V&0x7;break;
+      case 5:latch[0]=V&7;break;
       case 6:latch[1]=V&3;break;
       case 7:latch[2]=V>>1;break;
     }
     S74LS374NSynco();
   }
+}
+
+static DECLFR(S74LS374NRead)
+{
+  uint8 ret;
+  if((A&0x4100)==0x4100)
+    ret=(X.DB&0xC0)|((~cmd)&0x3F);
+  else
+    ret=X.DB;
+  return ret;
 }
 
 static void S74LS374NPower(void)
@@ -66,6 +76,7 @@ static void S74LS374NPower(void)
    S74LS374NSynco();
    SetReadHandler(0x8000,0xFFFF,CartBR);
    SetWriteHandler(0x4100,0x7FFF,S74LS374NWrite);
+   SetReadHandler(0x4100,0x5fff,S74LS374NRead);
 }
 
 static void S74LS374NRestore(int version)
@@ -85,7 +96,7 @@ static void S74LS374NASynco(void)
 {
   setprg32(0x8000,latch[0]);
   setchr8(latch[1]);
-  MSync(latch[2]);
+  S74LS374MSync(latch[2]);
 }
 
 static DECLFW(S74LS374NAWrite)
@@ -104,7 +115,7 @@ static DECLFW(S74LS374NAWrite)
       case 6:latch[1]=(latch[1]&1)|latch[3]|((V&3)<<1);break;
       case 7:latch[2]=V&1;break;
     }
-    S74LS374NSynco();
+    S74LS374NASynco();
   }
 }
 
@@ -126,7 +137,6 @@ void S74LS374NA_Init(CartInfo *info)
 }
 
 static int type;
-//static int PPUbus;
 static void S8259Synco(void)
 {
   int x;
@@ -159,7 +169,10 @@ static void S8259Synco(void)
       }
     }
   }
-  MSync(latch[7]>>1);
+  if(!(latch[7]&1))
+    S74LS374MSync(latch[7]>>1);
+  else
+    setmirror(MI_V);
 }
 
 static DECLFW(S8259Write)
@@ -230,12 +243,6 @@ void S8259D_Init(CartInfo *info) // Kevin's Horton 137 mapper
 
 static void(*WSync)(void);
 
-static void SA0161MSynco()
-{
-  setprg32(0x8000,(latch[0]>>3)&1);
-  setchr8(latch[0]&7);
-}
-
 static DECLFW(SAWrite)
 {
   if(A&0x100)
@@ -245,7 +252,7 @@ static DECLFW(SAWrite)
   }
 }
 
-static void SAReset(void)
+static void SAPower(void)
 {
   latch[0]=0;
   WSync();
@@ -253,55 +260,9 @@ static void SAReset(void)
   SetWriteHandler(0x4100,0x5FFF,SAWrite);
 }
 
-static void SA0161MRestore(int version)
+static void SARestore(int version)
 {
-  SA0161MSynco();
-}
-
-void SA0161M_Init(CartInfo *info)
-{
-  WSync=SA0161MSynco;
-  GameStateRestore=SA0161MRestore;
-  info->Power=SAReset;
-  AddExState(&latch[0], 1, 0, "LATC");
-}
-
-static void SA72007Synco()
-{
-  setprg32(0x8000,0);
-  setchr8(latch[0]>>7);
-}
-
-static void SA72007Restore(int version)
-{
-  SA72007Synco();
-}
-
-void SA72007_Init(CartInfo *info)
-{
-  WSync=SA72007Synco;
-  GameStateRestore=SA72007Restore;
-  info->Power=SAReset;
-  AddExState(&latch[0], 1, 0, "LATC");
-}
-
-static void SA72008Synco()
-{
-  setprg32(0x8000,(latch[0]>>2)&1);
-  setchr8(latch[0]&3);
-}
-
-static void SA72008Restore(int version)
-{
-  SA72008Synco();
-}
-
-void SA72008_Init(CartInfo *info)
-{
-  WSync=SA72008Synco;
-  GameStateRestore=SA72008Restore;
-  info->Power=SAReset;
-  AddExState(&latch[0], 1, 0, "LATC");
+  WSync();
 }
 
 static DECLFW(SADWrite)
@@ -310,7 +271,7 @@ static DECLFW(SADWrite)
   WSync();
 }
 
-static void SADReset(void)
+static void SADPower(void)
 {
   latch[0]=0;
   WSync();
@@ -318,30 +279,61 @@ static void SADReset(void)
   SetWriteHandler(0x8000,0xFFFF,SADWrite);
 }
 
-static void SA0037Synco()
+static void SA0161MSynco()
 {
   setprg32(0x8000,(latch[0]>>3)&1);
   setchr8(latch[0]&7);
 }
 
-static void SA0037Restore(int version)
+static void SA72007Synco()
 {
-  SA0037Synco();
+  setprg32(0x8000,0);
+  setchr8(latch[0]>>7);
+}
+
+static void SA72008Synco()
+{
+  setprg32(0x8000,(latch[0]>>2)&1);
+  setchr8(latch[0]&3);
+}
+
+void SA0161M_Init(CartInfo *info)
+{
+  WSync=SA0161MSynco;
+  GameStateRestore=SARestore;
+  info->Power=SAPower;
+  AddExState(&latch[0], 1, 0, "LATC");
+}
+
+void SA72007_Init(CartInfo *info)
+{
+  WSync=SA72007Synco;
+  GameStateRestore=SARestore;
+  info->Power=SAPower;
+  AddExState(&latch[0], 1, 0, "LATC");
+}
+
+void SA72008_Init(CartInfo *info)
+{
+  WSync=SA72008Synco;
+  GameStateRestore=SARestore;
+  info->Power=SAPower;
+  AddExState(&latch[0], 1, 0, "LATC");
 }
 
 void SA0036_Init(CartInfo *info)
 {
   WSync=SA72007Synco;
-  GameStateRestore=SA72007Restore;
-  info->Power=SADReset;
+  GameStateRestore=SARestore;
+  info->Power=SADPower;
   AddExState(&latch[0], 1, 0, "LATC");
 }
 
 void SA0037_Init(CartInfo *info)
 {
-  WSync=SA0037Synco;
-  GameStateRestore=SA0037Restore;
-  info->Power=SADReset;
+  WSync=SA0161MSynco;
+  GameStateRestore=SARestore;
+  info->Power=SADPower;
   AddExState(&latch[0], 1, 0, "LATC");
 }
 
@@ -354,8 +346,10 @@ static void TCU01Synco()
 static DECLFW(TCWrite)
 {
   if((A&0x103)==0x102)
+  {
     latch[0]=V;
-  TCU01Synco();
+    TCU01Synco();
+  }
 }
 
 static void TCU01Reset(void)
@@ -401,3 +395,4 @@ void TCA01_Init(CartInfo *info)
 {
   info->Power=TCA01Reset;
 }
+

@@ -20,24 +20,42 @@
 
 #include "mapinc.h"
 
-static uint8 DReg;
-static SFORMAT StateRegs[]=
-{
-  {&DReg, 1, "DREG"},
-  {0}
-};
+extern uint32 ROM_size;
+static uint8 latche;
 
 static void Sync(void)
 {
-  if(DReg)
+  if(latche)
   {
-    if(DReg & 0x10)
-      setprg16(0x8000,(DReg&7));
+    if(latche&0x10)
+      setprg16(0x8000,(latche&7));
     else
-      setprg16(0x8000,(DReg&7)|8);
+      setprg16(0x8000,(latche&7)|8);
   }
   else
-    setprg16(0x8000,7);
+    setprg16(0x8000,7+(ROM_size>>4));
+}
+
+static DECLFW(M188Write)
+{
+  latche=V;
+  Sync();
+}
+
+static DECLFR(ExtDev)
+{
+  return(3);
+}
+
+static void Power(void)
+{
+  latche=0;
+  Sync();
+  setchr8(0);
+  setprg16(0xc000,0x7);
+  SetReadHandler(0x6000,0x7FFF,ExtDev);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x8000,0xFFFF,M188Write);
 }
 
 static void StateRestore(int version)
@@ -45,34 +63,9 @@ static void StateRestore(int version)
   Sync();
 }
 
-static DECLFW(M188Write)
-{
-  DReg=V;
-  Sync();
-}
-
-static DECLFR(testr)
-{
-  return(3);
-}
-
-
-static void Power(void)
-{
-  setchr8(0);
-  setprg8(0xc000,0xE);
-  setprg8(0xe000,0xF);
-  DReg = 0;
-  Sync();
-  SetReadHandler(0x6000,0x7FFF,testr);
-  SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x8000,0xFFFF,M188Write);
-}
-
-
 void Mapper188_Init(CartInfo *info)
 {
   info->Power=Power;
   GameStateRestore=StateRestore;
-  AddExState(&StateRegs, ~0, 0, 0);
+  AddExState(&latche, 1, 0, "LATCH");
 }

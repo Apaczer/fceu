@@ -56,11 +56,9 @@ static DECLFW(Mapper16_write)
                   IRQa=V&1;
                   IRQCount=IRQLatch;
                   break;
-         case 0xB:IRQLatch&=0xFF00;
-                  IRQLatch|=V;
+         case 0xB:IRQLatch&=0xFF00; IRQLatch|=V;
                   break;
-         case 0xC:IRQLatch&=0xFF;
-                  IRQLatch|=V<<8;
+         case 0xC:IRQLatch&=0xFF; IRQLatch|=V<<8;
                   break;
          case 0xD: break;/* Serial EEPROM control port */
  }

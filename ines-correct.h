@@ -1,7 +1,7 @@
     {0x9cbadc25,5,8},  /* JustBreed */
 
-{0x6e68e31a,16,8},     /* Dragon Ball 3*/
-{0x3f15d20d,153,8},    /* Famicom Jump 2 */
+    {0x6e68e31a,16,8},     /* Dragon Ball 3*/
+    {0x3f15d20d,153,8},    /* Famicom Jump 2 */
     {0x983d8175,157,8},  /* Datach Battle Rush */
     {0x894efdbc,157,8},  /* Datach Crayon Shin Chan */
     {0x19e81461,157,8},  /* Datach DBZ */
@@ -13,14 +13,13 @@
     {0xe62e3382,71,-1},  /* Mig-29 Soviet Fighter */
     {0x21a653c7,4,-1},  /* Super Sky Kid */
 
-{0xdd4d9a62,209,-1},   /* Shin Samurai Spirits 2 */
+    {0xdd4d9a62,209,-1},   /* Shin Samurai Spirits 2 */
     {0x063b1151,209,-1},  /* Power Rangers 4 */
     {0xdd8ced31,209,-1},  /* Power Rangers 3 */
 
-{0x60bfeb0c,90,-1},     /* MK 2*/
     {0x0c47946d,210,-1},  /* Chibi Maruko Chan */
     {0xbd523011,210,-1},  /* Dream Master */
-{0xc247cc80,210,-1},   /* Family Circuit '91 */
+    {0xc247cc80,210,-1},   /* Family Circuit '91 */
     {0x6ec51de5,210,-1},  /* Famista '92 */
     {0xadffd64f,210,-1},  /* Famista '93 */
     {0x429103c9,210,-1},  /* Famista '94 */
@@ -34,8 +33,8 @@
     {0x276237b3,206,0},  /* Karnov */
     {0x4e1c1e3c,206,0},  /* Karnov */
 
-	 /* Some entries to sort out the minor 33/48 mess. */
-{0xaebd6549,48,8},     /* Bakushou!! Jinsei Gekijou 3 */
+    /* Some entries to sort out the minor 33/48 mess. */
+    {0xaebd6549,48,8},     /* Bakushou!! Jinsei Gekijou 3 */
     {0x6cdc0cd9,48,8},  /* Bubble Bobble 2 */
     //{0x10e24006,48,8},  /* Flintstones 2 - bad dump? */
     {0x40c0ad47,48,8},  /* Flintstones 2 */
@@ -53,14 +52,14 @@
   {0xf518dd58,7,8},  /* Captain Skyhawk */
   {0x7ccb12a3,43,-1},  /* SMB2j */
   {0x6f12afc5,235,-1},  /* Golden Game 150-in-1 */
-	 {0xccc03440,156,-1},	
+  {0xccc03440,156,-1},
   {0xc9ee15a7,3,-1},  /* 3 is probably best.  41 WILL NOT WORK. */
 
     {0x3e1271d5,79,1},  /* Tiles of Fate */
   {0x8eab381c,113,1},  /* Death Bots */
 
   {0xd4a76b07,79,0},  /* F-15 City Wars*/
-	 {0xa4fbb438,79,0},
+  {0xa4fbb438,79,0},
 
   {0x1eb4a920,79,1},  /* Double Strike */
   {0x345d3a1a,11,1},  /* Castle of Deceit */
@@ -68,7 +67,7 @@
   {0x5caa3e61,144,1},  /* Death Race */
   {0xd2699893,88,0},  /*  Dragon Spirit */
 
-{0x2f27cdef,155,8},  /* Tatakae!! Rahmen Man */
+    {0x2f27cdef,155,8},  /* Tatakae!! Rahmen Man */
     {0xcfd4a281,155,8},  /* Money Game.  Yay for money! */
     {0xd1691028,154,8},  /* Devil Man */
 
@@ -80,7 +79,7 @@
 {0xc2730c30,34,0},  /* Deadly Towers */
 {0x932ff06e,34,1},  /* Classic Concentration */
 {0x4c7c1af3,34,1},  /* Caesar's Palace */
-	 
+
 {0x15141401,4,8},       /* Asmik Kun Land */
 {0x59280bec,4,8},       /* Jackie Chan */
 {0x4cccd878,4,8},  /* Cat Ninden Teyandee */
@@ -125,8 +124,8 @@
 {0x291bcd7d,1,8},      /* Pachio Kun 2 */
 {0xf74dfc91,1,-1},      /* Win, Lose, or Draw */
 
-	 {0x3f56a392,1,8},      /* Captain Ed (J) */
-	 {0x078ced30,1,8},      /* Choujin - Ultra Baseball */
+   {0x3f56a392,1,8},      /* Captain Ed (J) */
+   {0x078ced30,1,8},      /* Choujin - Ultra Baseball */
    {0x391aa1b8,1,8},  /* Bloody Warriors (J) */
    {0x61a852ea,1,8},  /* Battle Stadium - Senbatsu Pro Yakyuu */
    {0xfe364be5,1,8},  /* Deep Dungeon 4 */
@@ -156,18 +155,18 @@
    {0x5b837e8d,1,8},  /* Alien Syndrome */
    {0x283ad224,32,8},  /* Ai Sensei no Oshiete */
    {0x5555fca3,32,8},  /* "" ""    */
-	 {0x243a8735,32,0x10|4}, /* Major League */
+   {0x243a8735,32,0x10|4}, /* Major League */
 
-{0x6bc65d7e,66,1},  /* Youkai Club*/
-{0xc2df0a00,66,1},  /* Bio Senshi Dan(hacked) */
+{0x6bc65d7e,140,1},  /* Youkai Club*/
+{0xc2df0a00,140,1},  /* Bio Senshi Dan(hacked) */
 {0xbde3ae9b,66,1},  /* Doraemon */
 {0xd26efd78,66,1},  /* SMB Duck Hunt */
 {0x811f06d9,66,1},  /* Dragon Power */
-{0x3293afea,66,1},  /* Mississippi Satsujin Jiken */
+{0x3293afea,140,1},  /* Mississippi Satsujin Jiken */
 {0xe84274c5,66,1},  /* "" "" */
 {0x9552e8df,66,1},  /* Dragon Ball */
 
-	 {0xba51ac6f,78,2},
+   {0xba51ac6f,78,2},
    {0x3d1c3137,78,8},  /* Uchuusen - Cosmo Carrier */
 
    {0xbda8f8e4,152,8},  /* Gegege no Kitarou 2 */
@@ -183,12 +182,32 @@
    {0xb9b4d9e0,118,-1},  /* NES Play Action Football */
    {0x78b657ac,118,-1},  /* Armadillo */
    {0x37b62d04,118,-1},  /* Ys 3 */
-	 {0x07d92c31,118,-1},   /* RPG Jinsei Game */
+   {0x07d92c31,118,-1},   /* RPG Jinsei Game */
    {0x2705eaeb,234,-1},  /* Maxi 15 */
    {0x404b2e8b,4,2},  /* Rad Racer 2 */
-   {0x2cc381f6,191,-1},  /* Sugoro Quest - Dice no Senshitachi (As).nes */
-   {0x555a555e,191,-1},
    {0xa912b064,51|0x800,8},  /* 11-in-1 Ball Games(has CHR ROM when it shouldn't) */
    {0xc5e5c5b2,115,-1}, /* Bao Qing Tian (As).nes */
 
-	 {0,-1,-1}
+   {0xcfb224e6,-1,1}, /* Dragon Ninja (J) [p1][!].nes */
+   {0xf46ef39a,37,-1}, /* Super Mario Bros. + Tetris + Nintendo World Cup (E) [!] */
+   {0x0f05ff0a,181,-1}, /* Seicross  (redump) */
+   
+   {0x054bd3e9,74,-1}, /* Di 4 Ci - Ji Qi Ren Dai Zhan (As) */
+   {0x496ac8f7,74,-1}, /* Ji Jia Zhan Shi (As) */
+   {0xae854cef,74,-1}, /* Jia A Fung Yun (Chinese) */
+   {0x2cc381f6,191,-1},  /* Sugoro Quest - Dice no Senshitachi (As) */
+   {0x555a555e,191,-1},
+   {0x98c1cd4b,192,-1},/* Ying Lie Qun Xia Zhuan (Chinese) */
+   {0x442f1a29,192,-1},/* Young chivalry */
+   {0xa925226c,194,-1},/* Dai-2-Ji - Super Robot Taisen (As) */
+   {0xd5224fde,198,-1},/* [074]Crystalis (c) */
+   {0x1bc0be6c,198,-1},/* Captain Tsubasa Vol 2 - Super Striker (C) */
+   {0xdd431ba7,199,-1},/* Tenchi wo kurau 2 (c) */
+   {0x28192599,199,-1},
+   {0x700705f4,199,-1},
+   {0x9a2cf02c,199,-1},
+   {0xd8b401a7,199,-1},
+
+   {0x1f1326d4,218,-1},
+   {0xa1dc16c0,116,-1},
+   {0,-1,-1}

@@ -24,30 +24,30 @@ static uint8 cmd0, cmd1;
 
 static void DoSuper(void)
 {
- setprg8r((cmd0&0xC)>>2,0x6000,((cmd0&0x3)<<4)|0xF);
- if(cmd0&0x10)
- {
-  setprg16r((cmd0&0xC)>>2,0x8000,((cmd0&0x3)<<3)|(cmd1&7));
-  setprg16r((cmd0&0xC)>>2,0xc000,((cmd0&0x3)<<3)|7);
- }
- else
-  setprg32r(4,0x8000,0);
- setmirror(((cmd0&0x20)>>5)^1);
+  setprg8r((cmd0&0xC)>>2,0x6000,((cmd0&0x3)<<4)|0xF);
+  if(cmd0&0x10)
+  {
+    setprg16r((cmd0&0xC)>>2,0x8000,((cmd0&0x3)<<3)|(cmd1&7));
+    setprg16r((cmd0&0xC)>>2,0xc000,((cmd0&0x3)<<3)|7);
+  }
+  else
+    setprg32r(4,0x8000,0);
+  setmirror(((cmd0&0x20)>>5)^1);
 }
 
 static DECLFW(SuperWrite)
 {
- if(!(cmd0&0x10))
- {
-  cmd0=V;
-  DoSuper();
- }
+  if(!(cmd0&0x10))
+  {
+    cmd0=V;
+    DoSuper();
+  }
 }
 
 static DECLFW(SuperHi)
 {
- cmd1=V;
- DoSuper();
+  cmd1=V;
+  DoSuper();
 }
 
 static void SuperReset(void)
@@ -62,7 +62,7 @@ static void SuperReset(void)
 
 static void SuperRestore(int version)
 {
- DoSuper();
+  DoSuper();
 }
 
 void Supervision16_Init(CartInfo *info)

@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2003 Xodnizel
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,23 +19,9 @@
  */
 
 #include "mapinc.h"
+#include "mmc3.h"
 
-static uint8 PRGSel;
-static uint8 PBuf[4],PSel;
-static uint8 cmd;
-static uint8 DRegs[8];
-static uint32 count=0;
-static uint32 last=0;
-
-static DECLFW(M208Write1)
-{
- PRGSel=(V&0x1)|((V>>3)&0x2);
- setprg32(0x8000,PRGSel);
-}
-
-static DECLFW(M208Write2)
-{
- static uint8 lut[256]={
+static uint8 lut[256]={
   0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59,0x59, 0x49, 0x19, 0x09, 0x59, 0x49, 0x19, 0x09,
   0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59,0x51, 0x41, 0x11, 0x01, 0x51, 0x41, 0x11, 0x01,
   0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59, 0x59,0x59, 0x49, 0x19, 0x09, 0x59, 0x49, 0x19, 0x09,
@@ -52,88 +38,46 @@ static DECLFW(M208Write2)
   0x09, 0x19, 0x49, 0x59, 0x09, 0x19, 0x49, 0x59,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x01, 0x11, 0x41, 0x51, 0x01, 0x11, 0x41, 0x51,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x09, 0x19, 0x49, 0x59, 0x09, 0x19, 0x49, 0x59,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
- };
- if(A<=0x57FF) PSel=V;
- else
-  PBuf[(A&0x03)]=V^lut[PSel];
+static void M208PW(uint32 A, uint8 V)
+{
+  setprg32(0x8000,EXPREGS[5]);
 }
 
-static DECLFR(M208Read)
+static DECLFW(M208Write)
 {
- return(PBuf[(A&0x3)]);
+  EXPREGS[5]=(V&0x1)|((V>>3)&0x2);
+  FixMMC3PRG(MMC3_cmd);
 }
 
-static void Sync(void)
+static DECLFW(M208ProtWrite)
 {
- int x;
-
- setchr2(0x0000,DRegs[0]>>1);
- setchr2(0x0800,DRegs[1]>>1);
- for(x=0;x<4;x++)
-  setchr1(0x1000+x*0x400,DRegs[2+x]);
+  if(A<=0x57FF)
+    EXPREGS[4]=V;
+  else
+    EXPREGS[(A&0x03)]=V^lut[EXPREGS[4]];
 }
 
-static DECLFW(M208HWrite)
+static DECLFR(M208ProtRead)
 {
- switch(A&0xe001)
- {
-  case 0xc000:IRQLatch=IRQCount=V;break;
-  case 0xc001:IRQCount=IRQLatch;last=count=0;break;
-  case 0xe000:IRQa=0;X6502_IRQEnd(FCEU_IQEXT);break;
-  case 0xe001:IRQa=1;break;
-  case 0x8000:cmd=V;break;
-  case 0x8001:DRegs[cmd&7]=V;
-                Sync();
-                break;
-
- }
+  return(EXPREGS[(A&0x3)]);
 }
 
 static void M208Power(void)
 {
- PRGSel=3;
- setprg32(0x8000,3);
- SetWriteHandler(0x4800,0x4FFF,M208Write1);
- SetWriteHandler(0x5000,0x5fff,M208Write2);
- SetWriteHandler(0x8000,0xFFFF,M208HWrite);
- SetReadHandler(0x5800,0x5FFF,M208Read);
- SetReadHandler(0x8000,0xffff,CartBR);
-}
-
-static void sl(void)
-{
- if(IRQa)
- {
-  if(IRQCount>=0)
-  {
-   IRQCount--;
-   if(IRQCount<0)
-   {
-    X6502_IRQBegin(FCEU_IQEXT);
-   }
-  }
- }
-}
-
-static void FP_FASTAPASS(1) foo(uint32 A)
-{
- if((A&0x2000) && !(last&0x2000))
- {
-  count++;
-  if(count==42)
-  {
-   sl();
-   count=0;
-  }
- }
- last=A;
+  EXPREGS[5]=3;
+  GenMMC3Power();
+  SetWriteHandler(0x4800,0x4FFF,M208Write);
+  SetWriteHandler(0x5000,0x5fff,M208ProtWrite);
+  SetReadHandler(0x5800,0x5FFF,M208ProtRead);
+  SetReadHandler(0x8000,0xffff,CartBR);
 }
 
 void Mapper208_Init(CartInfo *info)
 {
- info->Power=M208Power;
- //GameHBIRQHook=sl;
- PPU_hook=foo;
+  GenMMC3_Init(info, 128, 256, 0, 0);
+  pwrap=M208PW;
+  info->Power=M208Power;
+  AddExState(EXPREGS, 6, 0, "EXPR");
 }
-

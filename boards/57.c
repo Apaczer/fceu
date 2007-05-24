@@ -16,65 +16,78 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  */
 
 #include "mapinc.h"
 
-static uint16 cmdreg;
-static uint8 invalid_data;
+static uint8 prg_reg;
+static uint8 chr_reg;
+static uint8 hrd_flag;
+
 static SFORMAT StateRegs[]=
 {
-  {&cmdreg, 2, "CMDREG"},
+  {&prg_reg, 1, "PRG"},
+  {&chr_reg, 1, "CHR"},
   {0}
 };
 
 static void Sync(void)
 {
-  setprg16r((cmdreg&0x060)>>5,0x8000,(cmdreg&0x01C)>>2);
-  setprg16r((cmdreg&0x060)>>5,0xC000,(cmdreg&0x200)?(~0):0);
-  setmirror(((cmdreg&2)>>1)^1);
-}
-
-static DECLFR(UNL8157Read)
-{
-  if(invalid_data&&cmdreg&0x100)
-    return 0xFF;
+  if(prg_reg&0x80)
+    setprg32(0x8000,prg_reg>>6);
   else
-    return CartBR(A);
+  {
+    setprg16(0x8000,(prg_reg>>5)&3);
+    setprg16(0xC000,(prg_reg>>5)&3);
+  }
+  setmirror((prg_reg&8)>>3);
+  setchr8((chr_reg&3)|(prg_reg&7)|((prg_reg&0x10)>>1));
 }
 
-static DECLFW(UNL8157Write)
+static DECLFR(M57Read)
 {
-  cmdreg=A;
+  return hrd_flag;
+}
+
+static DECLFW(M57Write)
+{
+  if((A&0x8800)==0x8800)
+    prg_reg=V;
+  else
+    chr_reg=V;
   Sync();
 }
 
-static void UNL8157Power(void)
+static void M57Power(void)
 {
-  setchr8(0);
-  SetWriteHandler(0x8000,0xFFFF,UNL8157Write);
-  SetReadHandler(0x8000,0xFFFF,UNL8157Read);
-  cmdreg=0x200;
-  invalid_data=1;
+  prg_reg=0;
+  chr_reg=0;
+  hrd_flag=0;
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x8000,0xFFFF,M57Write);
+  SetReadHandler(0x6000,0x6000,M57Read);
   Sync();
 }
 
-static void UNL8157Reset(void)
+static void M57Reset()
 {
-  cmdreg=0;
-  invalid_data^=1;
+  if(hrd_flag==3)
+    hrd_flag=0;
+  else
+    hrd_flag++;
+  FCEU_printf("Select Register = %02x\n",hrd_flag);
+}
+
+static void StateRestore(int version)
+{
   Sync();
 }
 
-static void UNL8157Restore(int version)
+void Mapper57_Init(CartInfo *info)
 {
-  Sync();
-}
-
-void UNL8157_Init(CartInfo *info)
-{
-  info->Power=UNL8157Power;
-  info->Reset=UNL8157Reset;
-  GameStateRestore=UNL8157Restore;
+  info->Power=M57Power;
+  info->Reset=M57Reset;
+  GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
 }

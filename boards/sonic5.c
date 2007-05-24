@@ -21,15 +21,15 @@
 #include "mapinc.h"
 #include "mmc3.h"
 
-extern uint8 m114_perm[8];
+//static uint8 m_perm[8] = {0, 1, 0, 3, 0, 5, 6, 7};
 
-static void H2288PW(uint32 A, uint8 V)
+static void UNLSonicPW(uint32 A, uint8 V)
 {
-  if(EXPREGS[0]&0x40)
+  if(EXPREGS[0]&0x80)
   {
-    uint8 bank=(EXPREGS[0]&5)|((EXPREGS[0]&8)>>2)|((EXPREGS[0]&0x20)>>2);
-    if(EXPREGS[0]&2)
-      setprg32(0x8000,bank>>1);
+    uint8 bank=EXPREGS[0]&0x1F;
+    if(EXPREGS[0]&0x20)
+      setprg32(0x8000,bank>>2);
     else
     {
       setprg16(0x8000,bank);
@@ -40,50 +40,34 @@ static void H2288PW(uint32 A, uint8 V)
     setprg8(A,V&0x3F);
 }
 
-static DECLFW(H2288WriteHi)
+/*
+static DECLFW(UNLSonicWrite8000)
 {
-  switch (A&0x8001)
-  {
-    case 0x8000: MMC3_CMDWrite(0x8000,(V&0xC0)|(m114_perm[V&7])); break;
-    case 0x8001: MMC3_CMDWrite(0x8001,V); break;
-  }
+  if(V&0x80)
+    MMC3_CMDWrite(A,V);
+  else
+    MMC3_CMDWrite(A,m_perm[V&7]);
+}
+*/
+
+static DECLFW(UNLSonicWriteLo)
+{
+  EXPREGS[0]=V;
+  FixMMC3PRG(MMC3_cmd);
 }
 
-static DECLFW(H2288WriteLo)
+static void UNLSonicPower(void)
 {
-  if(A&0x800)
-  {
-    if(A&1)
-      EXPREGS[1]=V;
-    else
-      EXPREGS[0]=V;
-    FixMMC3PRG(MMC3_cmd);
-  }
-}
-
-static DECLFR(H2288Read)
-{
-  int bit;
-  bit=(A&1)^1;
-  bit&=((A>>8)&1);
-  bit^=1;
-  return((X.DB&0xFE)|bit);
-}
-
-static void H2288Power(void)
-{
-  EXPREGS[0]=EXPREGS[1]=0;
+  EXPREGS[0]=EXPREGS[1]=EXPREGS[2]=0;
   GenMMC3Power();
-  SetReadHandler(0x5000,0x5FFF,H2288Read);
-  SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x5000,0x5FFF,H2288WriteLo);
-  SetWriteHandler(0x8000,0x8FFF,H2288WriteHi);
+  SetWriteHandler(0x5000,0x5FFF,UNLSonicWriteLo);
+//  SetWriteHandler(0x8000,0x8000,UNLSonicWrite8000);
 }
 
-void UNLH2288_Init(CartInfo *info)
+void UNLSonic_Init(CartInfo *info)
 {
   GenMMC3_Init(info, 256, 256, 0, 0);
-  pwrap=H2288PW;
-  info->Power=H2288Power;
-  AddExState(EXPREGS, 2, 0, "EXPR");
+  pwrap=UNLSonicPW;
+  info->Power=UNLSonicPower;
+  AddExState(EXPREGS, 3, 0, "EXPR");
 }

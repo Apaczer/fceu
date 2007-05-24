@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Xodnizel
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,25 +19,30 @@
  */
 
 #include "mapinc.h"
+#include "mmc3.h"
 
-static DECLFW(M58Write)
+static void M189PW(uint32 A, uint8 V)
 {
- //printf("$%04x:$%02x\n",A,V);
- if(A&0x40)
- {
-  ROM_BANK16(0x8000,(A&0x07));
-  ROM_BANK16(0xc000,(A&0x07));
- }
- else
-  ROM_BANK32((A&0x06)>>1);
-
- VROM_BANK8((A&0x38)>>3);
- MIRROR_SET2((V&2)>>1);
+  setprg32(0x8000,EXPREGS[0]&3);
 }
 
-void Mapper58_init(void)
+static DECLFW(M189Write)
 {
- ROM_BANK32(0);
- VROM_BANK8(0);
- SetWriteHandler(0x8000,0xFFFF,M58Write);
+  EXPREGS[0]=V|(V>>4); //actually, there is a two versions of 189 mapper with hi or lo bits bankswitching.
+  FixMMC3PRG(MMC3_cmd);
+}
+
+static void M189Power(void)
+{
+  EXPREGS[0]=EXPREGS[1]=0;
+  GenMMC3Power();
+  SetWriteHandler(0x4120,0x7FFF,M189Write);
+}
+
+void Mapper189_Init(CartInfo *info)
+{
+  GenMMC3_Init(info, 256, 256, 0, 0);
+  pwrap=M189PW;
+  info->Power=M189Power;
+  AddExState(EXPREGS, 2, 0, "EXPR");
 }

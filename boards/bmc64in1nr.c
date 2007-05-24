@@ -16,65 +16,78 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * BMC 42-in-1 reset switch
  */
 
 #include "mapinc.h"
 
-static uint16 cmdreg;
-static uint8 invalid_data;
+static uint8 regs[4];
+
 static SFORMAT StateRegs[]=
 {
-  {&cmdreg, 2, "CMDREG"},
+  {regs, 4, "REGS"},
   {0}
 };
 
 static void Sync(void)
 {
-  setprg16r((cmdreg&0x060)>>5,0x8000,(cmdreg&0x01C)>>2);
-  setprg16r((cmdreg&0x060)>>5,0xC000,(cmdreg&0x200)?(~0):0);
-  setmirror(((cmdreg&2)>>1)^1);
-}
-
-static DECLFR(UNL8157Read)
-{
-  if(invalid_data&&cmdreg&0x100)
-    return 0xFF;
+  if(regs[0]&0x80)
+  {
+    if(regs[1]&0x80)
+      setprg32(0x8000,regs[1]&0x1F);
+    else
+    {
+      int bank=((regs[1]&0x1f)<<1)|((regs[1]>>6)&1);
+      setprg16(0x8000,bank);
+      setprg16(0xC000,bank);
+    }
+  }
   else
-    return CartBR(A);
+  {
+    int bank=((regs[1]&0x1f)<<1)|((regs[1]>>6)&1);
+    setprg16(0xC000,bank);
+  }
+  if(regs[0]&0x20)
+    setmirror(MI_H);
+  else
+    setmirror(MI_V);
+  setchr8((regs[2]<<2)|((regs[0]>>1)&3));
 }
 
-static DECLFW(UNL8157Write)
+static DECLFW(BMC64in1nrWriteLo)
 {
-  cmdreg=A;
+  regs[A&3]=V;
   Sync();
 }
 
-static void UNL8157Power(void)
+static DECLFW(BMC64in1nrWriteHi)
 {
-  setchr8(0);
-  SetWriteHandler(0x8000,0xFFFF,UNL8157Write);
-  SetReadHandler(0x8000,0xFFFF,UNL8157Read);
-  cmdreg=0x200;
-  invalid_data=1;
+  regs[3]=V;
   Sync();
 }
 
-static void UNL8157Reset(void)
+static void BMC64in1nrPower(void)
 {
-  cmdreg=0;
-  invalid_data^=1;
+  regs[0]=0x80;
+  regs[1]=0x43;
+  regs[2]=regs[3]=0;
+  Sync();
+  SetWriteHandler(0x5000,0x5003,BMC64in1nrWriteLo);
+  SetWriteHandler(0x8000,0xFFFF,BMC64in1nrWriteHi);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+}
+
+static void StateRestore(int version)
+{
   Sync();
 }
 
-static void UNL8157Restore(int version)
+void BMC64in1nr_Init(CartInfo *info)
 {
-  Sync();
-}
-
-void UNL8157_Init(CartInfo *info)
-{
-  info->Power=UNL8157Power;
-  info->Reset=UNL8157Reset;
-  GameStateRestore=UNL8157Restore;
+  info->Power=BMC64in1nrPower;
   AddExState(&StateRegs, ~0, 0, 0);
+  GameStateRestore=StateRestore;
 }
+
+

@@ -23,7 +23,7 @@
 static DECLFW(Mapper62_write)
 {
   VROM_BANK8(((A&0x1F)<<2)|(V&0x03));
-  if((A&0x20)>>5) {
+  if(A&0x20) {
      ROM_BANK16(0x8000,(A&0x40)|((A>>8)&0x3F));
      ROM_BANK16(0xc000,(A&0x40)|((A>>8)&0x3F));
   }

@@ -21,7 +21,6 @@
 #include "mapinc.h"
 
 static uint16 cmdreg;
-static uint8 invalid_data;
 static SFORMAT StateRegs[]=
 {
   {&cmdreg, 2, "CMDREG"},
@@ -30,51 +29,42 @@ static SFORMAT StateRegs[]=
 
 static void Sync(void)
 {
-  setprg16r((cmdreg&0x060)>>5,0x8000,(cmdreg&0x01C)>>2);
-  setprg16r((cmdreg&0x060)>>5,0xC000,(cmdreg&0x200)?(~0):0);
-  setmirror(((cmdreg&2)>>1)^1);
-}
-
-static DECLFR(UNL8157Read)
-{
-  if(invalid_data&&cmdreg&0x100)
-    return 0xFF;
+  if(cmdreg&0x400)
+    setmirror(MI_0);
   else
-    return CartBR(A);
+    setmirror(((cmdreg>>13)&1)^1);
+  if(cmdreg&0x800)
+  {
+    setprg16(0x8000,((cmdreg&0x300)>>3)|((cmdreg&0x1F)<<1)|((cmdreg>>12)&1));
+    setprg16(0xC000,((cmdreg&0x300)>>3)|((cmdreg&0x1F)<<1)|((cmdreg>>12)&1));
+  }
+  else
+    setprg32(0x8000,((cmdreg&0x300)>>4)|(cmdreg&0x1F));
 }
 
-static DECLFW(UNL8157Write)
+static DECLFW(M235Write)
 {
   cmdreg=A;
   Sync();
 }
 
-static void UNL8157Power(void)
+static void M235Power(void)
 {
   setchr8(0);
-  SetWriteHandler(0x8000,0xFFFF,UNL8157Write);
-  SetReadHandler(0x8000,0xFFFF,UNL8157Read);
-  cmdreg=0x200;
-  invalid_data=1;
-  Sync();
-}
-
-static void UNL8157Reset(void)
-{
+  SetWriteHandler(0x8000,0xFFFF,M235Write);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
   cmdreg=0;
-  invalid_data^=1;
   Sync();
 }
 
-static void UNL8157Restore(int version)
+static void M235Restore(int version)
 {
   Sync();
 }
 
-void UNL8157_Init(CartInfo *info)
+void Mapper235_Init(CartInfo *info)
 {
-  info->Power=UNL8157Power;
-  info->Reset=UNL8157Reset;
-  GameStateRestore=UNL8157Restore;
+  info->Power=M235Power;
+  GameStateRestore=M235Restore;
   AddExState(&StateRegs, ~0, 0, 0);
 }

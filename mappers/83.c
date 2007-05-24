@@ -58,9 +58,19 @@ static void m83prg(void)
 
 static void m83chr(void)
 {
-  int x;
-  for(x=0;x<8;x++)
-   VROM_BANK1(x*0x400,mapbyte2[x]|((mapbyte1[0]&0x30)<<4));
+//  if(0)
+//  {
+//    VROM_BANK2(0x0000,mapbyte2[0]);
+//    VROM_BANK2(0x0800,mapbyte2[1]);
+//    VROM_BANK2(0x1000,mapbyte2[6]);
+//    VROM_BANK2(0x1800,mapbyte2[7]);
+//  }
+//  else
+//  {
+    int x;
+    for(x=0;x<8;x++)
+       VROM_BANK1(x*0x400,mapbyte2[x]|((mapbyte1[0]&0x30)<<4));
+//  }
 }
 
 static DECLFW(Mapper83_write)
@@ -79,6 +89,7 @@ static DECLFW(Mapper83_write)
        }
        break;
   case 0x8100:
+              mapbyte3[0]=V&0x80;
               switch(V&0x3)
               {
               case 0x00:MIRROR_SET2(1);break;
@@ -88,7 +99,7 @@ static DECLFW(Mapper83_write)
               }
               break;
   case 0x8200:IRQCount&=0xFF00;IRQCount|=V;X6502_IRQEnd(FCEU_IQEXT);break;
-  case 0x8201:IRQa=1;IRQCount&=0xFF;IRQCount|=V<<8;break;
+  case 0x8201:IRQa=mapbyte3[0];IRQCount&=0xFF;IRQCount|=V<<8;break;
   case 0x8300:ROM_BANK8(0x8000,V);break;
   case 0x8301:ROM_BANK8(0xA000,V);break;
   case 0x8302:ROM_BANK8(0xC000,V);break;

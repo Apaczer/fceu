@@ -61,7 +61,7 @@ void Mapper255_init(void)
  mapbyte1[0]=mapbyte1[1]=0xF;
  ROM_BANK32(0);
  VROM_BANK8(0);
- SetWriteHandler(0x5800,0x5FFF,Mapper255_wl);
+ SetWriteHandler(0x5800,0x5FF0,Mapper255_wl);
  SetWriteHandler(0x8000,0xffff,Mapper255_write);
  SetReadHandler(0x5800,0x5FFF,Mapper255_read);
 }

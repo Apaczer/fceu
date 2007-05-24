@@ -22,7 +22,6 @@
 
 static uint8 cmd;
 static uint8 DRegs[8];
-
 static SFORMAT StateRegs[]=
 {
   {&cmd, 1, "CMD"},
@@ -33,6 +32,7 @@ static SFORMAT StateRegs[]=
 static void Sync(void)
 {
   setprg32(0x8000,(DRegs[0]<<4)|(DRegs[1]&0xF));
+  setchr8(0);
 }
 
 static void StateRestore(int version)
@@ -73,7 +73,6 @@ static void Power(void)
 {
   memset(DRegs,0,8);
   DRegs[1]=0xFF;
-  setchr8(0);
   cmd=0;
   SetReadHandler(0x8000,0xFFFF,CartBR);
   SetWriteHandler(0x4020,0xFFFF,Write);
@@ -82,11 +81,17 @@ static void Power(void)
   Sync();
 }
 
+static void M163HB(void)
+{
+  if(scanline==127&&DRegs[1]&0x80)
+    setchr4(0x0000,1);
+}
+
+
 static void Power2(void)
 {
   memset(DRegs,0,8);
   DRegs[1]=0xFF;
-  setchr8(0);
   cmd=0;
   SetReadHandler(0x8000,0xFFFF,CartBR);
   SetWriteHandler(0x4020,0xFFFF,Write2);
@@ -105,6 +110,7 @@ void Mapper164_Init(CartInfo *info)
 void Mapper163_Init(CartInfo *info)
 {
   info->Power=Power2;
+  GameHBIRQHook=M163HB;
   GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
 }

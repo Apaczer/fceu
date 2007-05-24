@@ -18,24 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-void TCA01_Init(CartInfo *info);
-void TCU01_Init(CartInfo *info);
-void S8259A_Init(CartInfo *info);
-void S8259B_Init(CartInfo *info);
-void S8259C_Init(CartInfo *info);
-void S8259D_Init(CartInfo *info);
-void S74LS374N_Init(CartInfo *info);
-void S74LS374NA_Init(CartInfo *info);
-void SA0161M_Init(CartInfo *info);
-
-void SA72007_Init(CartInfo *info);
-void SA72008_Init(CartInfo *info);
-void SA0036_Init(CartInfo *info);
-void SA0037_Init(CartInfo *info);
-
-void UNLH2288_Init(CartInfo *info);
-void UNL8237_Init(CartInfo *info);
-void UNL8157_Init(CartInfo *info);
+void ANROM_Init(CartInfo *info);
 
 void HKROM_Init(CartInfo *info);
 
@@ -56,14 +39,10 @@ void SNROM_Init(CartInfo *info);
 void SOROM_Init(CartInfo *info);
 
 void NROM_Init(CartInfo *info);
-void NROM256_Init(CartInfo *info);
-void NROM128_Init(CartInfo *info);
 void MHROM_Init(CartInfo *info);
 void UNROM_Init(CartInfo *info);
+void SUNSOFT_UNROM_Init(CartInfo *info); // "Shanghi" original version mapper
 void MALEE_Init(CartInfo *info);
-void Supervision16_Init(CartInfo *info);
-void Super24_Init(CartInfo *info);
-void Novel_Init(CartInfo *info);
 void CNROM_Init(CartInfo *info);
 void CPROM_Init(CartInfo *info);
 void GNROM_Init(CartInfo *info);
@@ -80,9 +59,44 @@ void TQROM_Init(CartInfo *info);
 void TQROM_Init(CartInfo *info);
 
 void DEIROM_Init(CartInfo *info);
+
+void TCA01_Init(CartInfo *info);
+void TCU01_Init(CartInfo *info);
+void S8259A_Init(CartInfo *info);
+void S8259B_Init(CartInfo *info);
+void S8259C_Init(CartInfo *info);
+void S8259D_Init(CartInfo *info);
+void S74LS374N_Init(CartInfo *info);
+void S74LS374NA_Init(CartInfo *info);
+void SA0161M_Init(CartInfo *info);
+
+void SA72007_Init(CartInfo *info);
+void SA72008_Init(CartInfo *info);
+void SA0036_Init(CartInfo *info);
+void SA0037_Init(CartInfo *info);
+
+void Supervision16_Init(CartInfo *info);
+void Super24_Init(CartInfo *info);
+void Novel_Init(CartInfo *info);
+
+void BMC42in1r_Init(CartInfo *info);
+void BMC64in1nr_Init(CartInfo *info);
+void BMC70in1_Init(CartInfo *info);
+void BMC70in1B_Init(CartInfo *info);
+void BMC13in1JY110_Init(CartInfo *info);
+void BMCT262_Init(CartInfo *info);
+void BMCFK23C_Init(CartInfo *info);
+
 void DreamTech01_Init(CartInfo *info);
 void Mapper190_Init(CartInfo *info);
 void UNLCC21_Init(CartInfo *info);
+void UNLSL1632_Init(CartInfo *info);
+void UNLKOF97_Init(CartInfo *info);
+void UNLSonic_Init(CartInfo *info);
+void UNLSHeroes_Init(CartInfo *info);
+void UNLH2288_Init(CartInfo *info);
+void UNL8237_Init(CartInfo *info);
+void UNL8157_Init(CartInfo *info);
 
 extern uint8 *UNIFchrrama;  // Meh.  So I can stop CHR RAM
-	 			// bank switcherooing with certain boards...
+         // bank switcherooing with certain boards...

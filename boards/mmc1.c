@@ -86,7 +86,6 @@ static void MMC1CHR(void)
 static void MMC1PRG(void)
 {
   uint8 offs=DRegs[1]&0x10;
-
   if(MMC1PRGHook16)
   {
     switch(DRegs[0]&0xC)
@@ -131,7 +130,6 @@ static void MMC1MIRROR(void)
   }
 }
 
-
 static uint64 lreset;
 static DECLFW(MMC1_write)
 {
@@ -146,7 +144,6 @@ static DECLFW(MMC1_write)
      precision isn't that great), but this should still work to
      deal with 2 writes in a row from a single RMW instruction. */
   if((timestampbase+timestamp)<(lreset+2)) return;
-
   if(V&0x80)
   {
     DRegs[0]|=0xC;
@@ -175,7 +172,7 @@ static void MMC1_Restore(int version)
   MMC1MIRROR();
   MMC1CHR();
   MMC1PRG();
-  //lreset=0;        /* timestamp(base) is not stored in save states. */ // it is now!
+  lreset=0;        /* timestamp(base) is not stored in save states. */
 }
 
 static void MMC1CMReset(void)
@@ -203,6 +200,8 @@ static int DetectMMC1WRAMSize(uint32 crc32)
     case 0x4642dda6:       /* Nobunaga's Ambition */
     case 0x29449ba9:       /* ""        "" (J) */
     case 0x2b11e0b0:       /* ""        "" (J) */
+    case 0xb8747abf:       /* Best Play Pro Yakyuu Special (J) */
+    case 0xc9556b36:       /* Final Fantasy I & II (J) [!] */
          FCEU_printf(" >8KB external WRAM present.  Use UNIF if you hack the ROM image.\n");
          return(16);
          break;
@@ -333,8 +332,6 @@ static void GenMMC1Init(CartInfo *info, int prg, int chr, int wram, int battery)
   info->Power=GenMMC1Power;
   GameStateRestore=MMC1_Restore;
   AddExState(&lreset, 8, 1, "LRST");
-  AddExState(&Buffer, 1, 1, "BFFR");
-  AddExState(&BufferShift, 1, 1, "BFRS");
 }
 
 void Mapper1_Init(CartInfo *info)

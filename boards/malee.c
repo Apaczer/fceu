@@ -26,7 +26,7 @@ static void MALEEReset(void)
 {
   setprg2r(0x10,0x7000,0);
   SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetReadHandler(0x6000,0x67ff,CartBR);
+  SetReadHandler(0x6000,0x67FF,CartBR);
   SetReadHandler(0x7000,0x77FF,CartBR);
   setprg2r(1,0x6000,0);
   setprg32(0x8000,0);

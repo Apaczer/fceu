@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Xodnizel
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,30 +20,37 @@
 
 #include "mapinc.h"
 
+static uint16 addrlatche;
 
+//------------------ UNLCC21 ---------------------------
 
-static DECLFW(Mapper57_write)
+static void UNLCC21Sync(void)
 {
- A&=0x8800;
- if(A==0x8800)
- {
-  mapbyte1[0]=V;
-  if(V&0x80)
-   ROM_BANK32(2|(V>>6));
-  else
-  {
-   ROM_BANK16(0x8000,(V>>5)&3);
-   ROM_BANK16(0xc000,(V>>5)&3);
-  }
-  MIRROR_SET((V&0x8)>>3);
- }
- else
-  mapbyte1[1]=V;
- VROM_BANK8((mapbyte1[1]&3)|(mapbyte1[0]&7)|((mapbyte1[0]&0x10)>>1));
- //printf("$%04x:$%02x\n",A,V);
+  setchr8(addrlatche&1);
+  setmirror(MI_0+((addrlatche&2)>>1));
 }
 
-void Mapper57_init(void)
+static DECLFW(UNLCC21Write)
 {
- SetWriteHandler(0x8000,0xffff,Mapper57_write);
+  addrlatche=A;
+  UNLCC21Sync();
+}
+
+static void UNLCC21Power(void)
+{
+  setprg32(0x8000,0);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
+  SetWriteHandler(0x8000,0xffff,UNLCC21Write);
+}
+
+static void UNLCC21Restore(int version)
+{
+  UNLCC21Sync();
+}
+
+void UNLCC21_Init(CartInfo *info)
+{
+  info->Power=UNLCC21Power;
+  GameStateRestore=UNLCC21Restore;
+  AddExState(&addrlatche, 2, 0, "ALATC");
 }

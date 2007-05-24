@@ -16,65 +16,72 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * BMC 42-in-1 reset switch
  */
 
 #include "mapinc.h"
 
-static uint16 cmdreg;
-static uint8 invalid_data;
+static uint8 hrd_sw;
+static uint8 latche;
 static SFORMAT StateRegs[]=
 {
-  {&cmdreg, 2, "CMDREG"},
+  {&latche, 1, "LATCHE"},
+  {&hrd_sw, 1, "HRDSW"},
   {0}
 };
 
 static void Sync(void)
 {
-  setprg16r((cmdreg&0x060)>>5,0x8000,(cmdreg&0x01C)>>2);
-  setprg16r((cmdreg&0x060)>>5,0xC000,(cmdreg&0x200)?(~0):0);
-  setmirror(((cmdreg&2)>>1)^1);
-}
-
-static DECLFR(UNL8157Read)
-{
-  if(invalid_data&&cmdreg&0x100)
-    return 0xFF;
+  if(!(latche&0x20))
+    setprg32r(hrd_sw,0x8000,(latche>>1)&0x0f);
   else
-    return CartBR(A);
+  {
+    setprg16r(hrd_sw,0x8000,latche&0x1f);
+    setprg16r(hrd_sw,0xC000,latche&0x1f);
+  }
+  switch((latche>>6)&3)
+  {
+    case 0: setmirrorw(0,0,0,1); break;
+    case 1: setmirror(MI_V); break;
+    case 2: setmirror(MI_H); break;
+    case 3: setmirror(MI_1); break;
+  }
 }
 
-static DECLFW(UNL8157Write)
+static DECLFW(BMC42in1rWrite)
 {
-  cmdreg=A;
+  latche=V;
   Sync();
 }
 
-static void UNL8157Power(void)
+static void BMC42in1rReset(void)
 {
+  hrd_sw^=1;
+  Sync();
+}
+
+static void BMC42in1rPower(void)
+{
+  latche=0x00;
+  hrd_sw=0;
   setchr8(0);
-  SetWriteHandler(0x8000,0xFFFF,UNL8157Write);
-  SetReadHandler(0x8000,0xFFFF,UNL8157Read);
-  cmdreg=0x200;
-  invalid_data=1;
   Sync();
+  SetWriteHandler(0x8000,0xFFFF,BMC42in1rWrite);
+  SetReadHandler(0x8000,0xFFFF,CartBR);
 }
 
-static void UNL8157Reset(void)
-{
-  cmdreg=0;
-  invalid_data^=1;
-  Sync();
-}
-
-static void UNL8157Restore(int version)
+static void StateRestore(int version)
 {
   Sync();
 }
 
-void UNL8157_Init(CartInfo *info)
+void BMC42in1r_Init(CartInfo *info)
 {
-  info->Power=UNL8157Power;
-  info->Reset=UNL8157Reset;
-  GameStateRestore=UNL8157Restore;
+  info->Power=BMC42in1rPower;
+  info->Reset=BMC42in1rReset;
   AddExState(&StateRegs, ~0, 0, 0);
+  GameStateRestore=StateRestore;
 }
+
+

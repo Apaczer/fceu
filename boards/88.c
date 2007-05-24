@@ -21,8 +21,7 @@
 #include "mapinc.h"
 
 static uint8 reg[8];
-static uint8 mirror, cmd;
-static uint8 *WRAM=NULL;
+static uint8 mirror, cmd, is154;
 
 static SFORMAT StateRegs[]=
 {
@@ -34,57 +33,55 @@ static SFORMAT StateRegs[]=
 
 static void Sync(void)
 {
-  setmirror(mirror^1);
-  setprg8(0x8000,reg[0]);
-  setprg8(0xA000,reg[1]);
-  setchr2(0x0000,reg[2]>>1);
-  setchr2(0x0800,reg[3]>>1);
-  setchr1(0x1000,reg[4]);
-  setchr1(0x1400,reg[5]);
-  setchr1(0x1800,reg[6]);
-  setchr1(0x1C00,reg[7]);
+  setchr2(0x0000,reg[0]>>1);
+  setchr2(0x0800,reg[1]>>1);
+  setchr1(0x1000,reg[2]|0x40);
+  setchr1(0x1400,reg[3]|0x40);
+  setchr1(0x1800,reg[4]|0x40);
+  setchr1(0x1C00,reg[5]|0x40);
+  setprg8(0x8000,reg[6]);
+  setprg8(0xA000,reg[7]);
 }
 
-static DECLFW(M112Write)
+static void MSync(void)
 {
-  switch(A)
+  if(is154)setmirror(MI_0+(mirror&1));
+}
+
+static DECLFW(M88Write)
+{
+  switch(A&0x8001)
   {
-    case 0xe000: mirror=V&1; Sync(); ;break;
-    case 0x8000: cmd=V&7; break;
-    case 0xa000: reg[cmd]=V; Sync(); break;
+    case 0x8000: cmd=V&7; mirror=V>>6; MSync(); break;
+    case 0x8001: reg[cmd]=V; Sync(); break;
   }
-FCEU_printf("%04x:%04x %d\n",A,V,scanline);
 }
 
-static void M112Close(void)
-{
-  if(WRAM)
-    FCEU_gfree(WRAM);
-  WRAM = NULL;
-}
-
-static void M112Power(void)
+static void M88Power(void)
 {
   setprg16(0xC000,~0);
-  setprg8r(0x10,0x6000,0);
   SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x8000,0xFFFF,M112Write);
-  SetReadHandler(0x6000,0x7FFF,CartBR);
-  SetWriteHandler(0x6000,0x7FFF,CartBW);
+  SetWriteHandler(0x8000,0xFFFF,M88Write);
 }
 
 static void StateRestore(int version)
 {
   Sync();
+  MSync();
 }
 
-void Mapper112_Init(CartInfo *info)
+void Mapper88_Init(CartInfo *info)
 {
-  info->Power=M112Power;
-  info->Close=M112Close;
+  is154=0;  
+  info->Power=M88Power;
   GameStateRestore=StateRestore;
-  WRAM=(uint8*)FCEU_gmalloc(8192);
-  SetupCartPRGMapping(0x10,WRAM,8192,1);
-  AddExState(WRAM, 8192, 0, "WRAM");
+  AddExState(&StateRegs, ~0, 0, 0);
+}
+
+void Mapper154_Init(CartInfo *info)
+{
+  is154=1;
+  info->Power=M88Power;
+  GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
 }

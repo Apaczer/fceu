@@ -333,14 +333,13 @@ static BMAPPING bmap[] = {
  { "SA-0037", SA0037_Init,0},
  { "SA-NROM", TCA01_Init,0},
 
- { "H2288", UNLH2288_Init,0},
- { "8237", UNL8237_Init,0},
-
 // /* AVE carts. */
 // { "MB-91", MB91_Init,0},  // DeathBots
 // { "NINA-06", NINA06_Init,0},  // F-15 City War
 // { "NINA-03", NINA03_Init,0},  // Tiles of Fate
 // { "NINA-001", NINA001_Init,0}, // Impossible Mission 2
+
+ { "ANROM", ANROM_Init,0},
 
  { "HKROM", HKROM_Init,0},
 
@@ -376,25 +375,42 @@ static BMAPPING bmap[] = {
 
  { "CPROM", CPROM_Init,BMCFLAG_16KCHRR},
  { "CNROM", CNROM_Init,0},
- { "GNROM", GNROM_Init,0},
- { "NROM", NROM256_Init,0 },
- { "RROM", NROM128_Init,0 },
- { "RROM-128", NROM128_Init,0 },
- { "NROM-128", NROM128_Init,0 },
- { "NROM-256", NROM256_Init,0 },
+ { "NROM", NROM_Init,0 }, //NROM256_Init,0 },
+ { "NROM-128", NROM_Init,0 }, //NROM128_Init,0 },
+ { "NROM-256", NROM_Init,0 }, //NROM256_Init,0 },
+ { "RROM", NROM_Init,0 }, //NROM128_Init,0 },
+ { "RROM-128", NROM_Init,0 }, //NROM128_Init,0 },
  { "MHROM", MHROM_Init,0},
  { "UNROM", UNROM_Init,0},
+ { "SUNSOFT_UNROM", SUNSOFT_UNROM_Init,0},
  { "MARIO1-MALEE2", MALEE_Init,0},
 
  { "CC-21", UNLCC21_Init,0},
 
+ { "H2288", UNLH2288_Init,0},
+ { "KOF97", UNLKOF97_Init,0},
+ { "SL1632", UNLSL1632_Init,0},
+ { "SHERO", UNLSHeroes_Init,0},
+ { "8237", UNL8237_Init,0},
  { "8157", UNL8157_Init,0},
+ { "T-262", BMCT262_Init,0},
+ { "FK23C", BMCFK23C_Init,0},
  { "Supervision16in1", Supervision16_Init,0},
  { "NovelDiamond9999999in1", Novel_Init,0},
  { "Super24in1SC03", Super24_Init,0},
+ { "42in1ResetSwitch", BMC42in1r_Init, 0},
+ { "64in1NoRepeat", BMC64in1nr_Init, 0},
+ { "13in1JY110", BMC13in1JY110_Init, 0},
+ { "70in1", BMC70in1_Init, 0},
+ { "70in1B", BMC70in1B_Init, 0},
+ { "GK-192", Mapper58_Init, 0},
  { "SuperHIK8in1", Mapper45_Init,0},
+
  { "DREAMTECH01", DreamTech01_Init,0},
  { "KONAMI-QTAI", Mapper190_Init,0},
+
+ { "TEK90", Mapper90_Init,0},
+
  {0,0,0}
 };
 
