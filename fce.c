@@ -977,9 +977,9 @@ static void DoHBlank(void)
  {
   X6502_Run(6);
   Fixit2();
-  X6502_Run(4);
+  X6502_Run(4+3);	// original value was 4, but adding 3 fixes glitch in smb3 (and breaks something?)
   GameHBIRQHook();
-  X6502_Run(85-16-10);
+  X6502_Run(85-10-16-3);
  }
  else
  {
@@ -1221,14 +1221,17 @@ static INLINE void Thingo(void)
 
    if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
 
-   // check: Battletoads & Double Dragon
+   // check: Battletoads & Double Dragon, Addams Family
+   // sky glitches in SMB1 if done wrong
    if(tosprite>=256)
    {
     X6502_Run(256);
    }
    else
    {
-     // sky glitches in SMB1 if done wrong
+     // a dirty hack for Addams Family and inaccurate sprite hit emulation
+     if(tosprite<8) tosprite-=tosprite*3>>2;
+
      X6502_Run(tosprite);
      PPU[2]|=0x40;
      X6502_Run(256-tosprite);

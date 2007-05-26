@@ -180,8 +180,6 @@ void X6502_Run_d(int32 c)
 				TriggerIRQ_a();
 			}
 			if (pending_irq & 0xff) {
-				TriggerIRQ_c();
-				TriggerIRQ_a();
 				X6502_IRQBegin_c(pending_irq & 0xff);
 				X6502_IRQBegin_a(pending_irq & 0xff);
 			}

@@ -543,7 +543,7 @@ void X6502_Run_c(void/*int32 cycles*/)
 	   {
 	    extern uint8 SIRQStat;
 	    SIRQStat|=0x80;
-	    X6502_IRQBegin_c(FCEU_IQDPCM);
+	    X6502_IRQBegin(FCEU_IQDPCM);
 	   }
 	  }
 	 }
