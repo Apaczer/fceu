@@ -150,9 +150,9 @@ static void FDSInit(void)
   int page;
   // asm code needs pages to be set again..
   for (page=12; page<28; page++) // 0x6000-0xdfff 32K RAM
-   Page[page]=FDSRAM  - (page<<11) + ((page-12)<<11);
+   Page[page]=FDSRAM  - (12<<11);
   for (; page<32; page++)        // 0xe000-0xffff 8K BIOS
-   Page[page]=FDSBIOS - (page<<11) + ((page-28)<<11);
+   Page[page]=FDSBIOS - (28<<11);
  }
 #endif
 }

@@ -916,6 +916,10 @@ static void iNESPower(void)
         setprg8r(1,0x6000,0);
 
         SetReadHandler(0x6000,0x7FFF,AWRAM);
+#ifdef ASM_6502
+        // asm code needs pages to be set again..
+        Page[12]=Page[13]=Page[14]=Page[15]=WRAM-0x6000;
+#endif
         SetWriteHandler(0x6000,0x7FFF,BWRAM);
         FCEU_CheatAddRAM(8,0x6000,WRAM);
 

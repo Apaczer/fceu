@@ -64,13 +64,21 @@ uint32 timestamp;
 static INLINE uint8 RdMem(unsigned int A)
 {
  int _DB1=ARead[A](A);
- /*if (A >= 0x2000)*/ _DB=_DB1;
 #ifdef DEBUG_ASM_6502
+ //_DB=_DB1;
  //printf("a == %x, pc == %x\n", A, _PC);
+ if (A >= 0x2000) {
+  if (A == _PC || A == _PC - 1 || A == _PC + 1) {
+   //printf("fr: %02x\n", _DB1);
+  }
+  _DB=_DB1;
+ }
  if (A >= 0x2000 && A != _PC && A != _PC - 1 && A != _PC + 1) {
   dreads[dread_count_c++] = _DB1;
   if (dread_count_c > 4) { printf("dread_count out of range\n"); exit(1); }
  }
+#else
+ _DB=_DB1;
 #endif
  return _DB1;
 }
@@ -92,7 +100,11 @@ static INLINE void WrMem(unsigned int A, uint8 V)
 static INLINE uint8 RdRAM(unsigned int A)
 {
  //return((_DB=RAM[A]));
- return((_DB=RAM[A]));
+ int _DB1=RAM[A];
+#ifndef DEBUG_ASM_6502
+ _DB=_DB1;
+#endif
+ return _DB1;
 }
 
 static INLINE void WrRAM(unsigned int A, uint8 V)

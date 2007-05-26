@@ -96,6 +96,10 @@ static void M190Power(void)
   SetWriteHandler(0x7000,0x7FFF,BWRAM);
   SetReadHandler(0x6000,0x6FFF,ASWRAM);
   SetWriteHandler(0x6000,0x6FFF,BSWRAM);
+#ifdef ASM_6502
+  Page[14]=Page[15]=WRAM-0x7000;
+  Page[12]=Page[13]=SWRAM-0x6000;
+#endif
   Sync();
 }
 

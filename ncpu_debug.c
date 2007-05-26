@@ -11,6 +11,7 @@ extern uint32 pc_base;
 extern uint8  nes_internal_ram[0x800];
 extern uint32 timestamp_a;
 extern uint32 framecount;
+extern X6502 X_;
 static uint32 framecount_d;
 uint32 PC_prev = 0xcccccc, OP_prev = 0xcccccc;
 int32  g_cnt = 0;
@@ -22,11 +23,14 @@ uint32 dwrites_c[2], dwrites_a[2];
 int dread_count_c, dread_count_a, dwrite_count_c, dwrite_count_a;
 int mapirq_cyc_c, mapirq_cyc_a;
 
+extern void DumpEmptyCartMapping(void);
+
 static void leave(void)
 {
 	printf("\nA: %02x, X: %02x, Y: %02x, S: %02x\n", X.A, X.X, X.Y, X.S);
 	printf("PC = %04x, OP=%02X\n", PC_prev, OP_prev);
 	printf("rest = %08x\n", nes_registers[4]);
+	DumpEmptyCartMapping();
 	exit(1);
 }
 
@@ -107,6 +111,12 @@ static void compare_state(void)
 		fail = 1;
 	}
 
+/*
+	if (X_.DB != X.DB) {
+		printf("DB: %02x vs %02x\n", X_.DB, X.DB);
+		fail = 1;
+	}
+*/
 	if (fail) leave();
 }
 

@@ -405,18 +405,25 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn
 
-.macro	ABS_ADDR
+.macro	ABS_ADDR update_db=0
+.if \update_db
+	ldrb	r0, [REG_PC, #1]
+	ldrb	REG_ADDR, [REG_PC], #2
+	strb    r0, [REG_OP_TABLE, #(OTOFFS_X + 0x10)]		@ X.DB
+	orr	REG_ADDR, REG_ADDR, r0, lsl #8
+.else
 	tst	REG_PC, #1
 	ldrneb	REG_ADDR, [REG_PC], #1
 	ldrneb	r0, [REG_PC], #1
 	ldreqh	REG_ADDR, [REG_PC], #2
 	orrne	REG_ADDR, REG_ADDR, r0, lsl #8
+.endif
 .endm
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn, X
 .macro	ABSX_ADDR
-	ABS_ADDR
+	ABS_ADDR 1
 	add	REG_ADDR, REG_ADDR, REG_X
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
@@ -435,7 +442,7 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn, Y
 .macro	ABSY_ADDR
-	ABS_ADDR
+	ABS_ADDR 1					@ a hack needed for Paperboy, Dirty Harry controls to work
 	add	REG_ADDR, REG_ADDR, REG_Y
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
@@ -3051,6 +3058,7 @@ op9E:	@ SHX $nnnn, Y
 	.globl	RAM
 	.globl	timestamp
 #else
+	.globl	X_
 	.globl	nes_internal_ram
 	.globl	timestamp_a
 #endif

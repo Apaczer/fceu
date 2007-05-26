@@ -711,4 +711,22 @@ void FCEU_LoadGameSave(CartInfo *LocalHWInfo)
  }
 }
 
+void DumpEmptyCartMapping(void)
+{
+ int x, st=0, end=-1;
+
+ for(x=8;x<32;x++)
+ {
+  if (Page[x] == (nothing-x*2048) || Page[x] == 0)
+  {
+   if (end != x) st=x;
+   end=x+1;
+  }
+  if (end == x)
+   printf("DumpEmptyCartMapping: %04x-%04x\n", st*2048, end*2048-1);
+ }
+ if (end==32)
+  printf("DumpEmptyCartMapping: %04x-%04x\n", st*2048, end*2048-1);
+}
+
 

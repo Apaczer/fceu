@@ -287,12 +287,25 @@ void GenMMC3Power(void)
    FCEU_CheatAddRAM(1,0x7000,WRAM);
    SetReadHandler(0x7000,0x7FFF,MAWRAMMMC6);
    SetWriteHandler(0x7000,0x7FFF,MBWRAMMMC6);
+#ifdef ASM_6502
+   // asm code needs pages to be set again..
+   Page[14]=Page[15]=WRAM-0x7000;
+#endif
   }
   else
   {
    FCEU_CheatAddRAM(wrams>>10,0x6000,WRAM);
    SetReadHandler(0x6000,0x6000+wrams-1,MAWRAM);
    SetWriteHandler(0x6000,0x6000+wrams-1,MBWRAM);
+#ifdef ASM_6502
+   {
+    int addr;
+    for (addr=0x6000; addr < 0x6000+wrams-0x7ff; addr += 0x800)
+    {
+     Page[addr>>11]=WRAM - 0x6000;
+    }
+   }
+#endif
   }
   if(!(mmc3opts&2))
      FCEU_dwmemset(WRAM,0,wrams);
@@ -558,7 +571,7 @@ static DECLFW(M45Write)
  }
  EXPREGS[EXPREGS[4]]=V;
  EXPREGS[4]=(EXPREGS[4]+1)&3;
- if(!EXPREGS[4]) 
+ if(!EXPREGS[4])
  {
    FCEU_printf("CHROR %02x, PRGOR %02x, CHRAND %02x, PRGAND %02x\n",EXPREGS[0],EXPREGS[1],EXPREGS[2],EXPREGS[3]);
    FCEU_printf("CHR0 %03x, CHR1 %03x, PRG0 %03x, PRG1 %03x\n",
@@ -1528,6 +1541,10 @@ static void M254_Power(void)
  GenMMC3Power();
  SetWriteHandler(0x8000,0xBFFF,M254Write);
  SetReadHandler(0x6000,0x7FFF,MR254WRAM);
+#ifdef ASM_6502
+   // hrrr.. can't handle those evil xors here..
+   Page[12]=Page[13]=Page[14]=Page[15]=WRAM-0x6000;
+#endif
 }
 
 void Mapper254_Init(CartInfo *info)
