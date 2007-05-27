@@ -139,12 +139,6 @@ uint8 DIPS=0;
 
 uint8 CommandQueue=0;
 
-static int controlselect=0;
-static int ntsccol=0;
-static int ntsctint=46+10;
-static int ntschue=72;
-static int controllength=0;
-
 
 void FCEUI_SetSnapName(int a)
 {
@@ -208,27 +202,12 @@ void DriverInterface(int w, void *d)
 {
  switch(w)
  {
-  case DES_NTSCCOL:ntsccol=*(int *)d;FCEU_ResetPalette();break;
   case DES_RESET:if(netplay!=2) CommandQueue=30;break;
   case DES_POWER:if(netplay!=2) CommandQueue=31;break;
-  case DES_GETNTSCTINT:*(int*)d=ntsctint;break;
-  case DES_GETNTSCHUE:*(int*)d=ntschue;break;
-  case DES_SETNTSCTINT:ntsctint=*(int*)d;if(ntsccol)FCEU_ResetPalette();break;
-  case DES_SETNTSCHUE:ntschue=*(int*)d;if(ntsccol)FCEU_ResetPalette();break;
 
-  case DES_FDSINSERT:if(netplay!=2) CommandQueue=2;break;
-  case DES_FDSEJECT:if(netplay!=2) CommandQueue=3;break;
-  case DES_FDSSELECT:if(netplay!=2) CommandQueue=1;break;
-/*
-  case DES_NSFINC:NSFControl(1);break;
-  case DES_NSFDEC:NSFControl(2);break;
-  case DES_NSFRES:NSFControl(0);break;
-*/
   case DES_VSUNIDIPSET:CommandQueue=10+(int)d;break;
   case DES_VSUNITOGGLEDIPVIEW:CommandQueue=10;break;
   case DES_VSUNICOIN:CommandQueue=19;break;
-  case DES_NTSCSELHUE:if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF){controlselect=1;controllength=360;}break;
-  case DES_NTSCSELTINT:if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF){controlselect=2;controllength=360;}break;
 #if 0
   case DES_NTSCDEC:
 		  if(ntsccol && FCEUGameInfo.type!=GIT_VSUNI && !PAL && FCEUGameInfo.type!=GIT_NSF)
@@ -280,10 +259,6 @@ void DriverInterface(int w, void *d)
 #ifdef FRAMESKIP
 void FCEU_PutImageDummy(void)
 {
- if(FCEUGameInfo.type!=GIT_NSF)
- {
-  if(controllength) controllength--;
- }
  if(howlong) howlong--;	/* DrawMessage() */
  #ifdef FPS
  {

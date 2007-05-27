@@ -117,7 +117,7 @@ static void do_emu_acts(uint32 acts)
 #define down(b) (keys & GP2X_##b)
 static void do_fake_mouse(unsigned long keys)
 {
-	static int x=0, y=0;
+	static int x=256/2, y=240/2;
 	int speed = 3;
 
 	if (down(A)) speed = 1;

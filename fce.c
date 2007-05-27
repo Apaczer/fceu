@@ -605,7 +605,7 @@ static void LineUpdate(uint8 *target)
 {
 	uint32 tem;
 
-	if(FSkip)
+	if(FSkip || scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
 	{
 	   if(PPU_hook)
  	    PRefreshLine();
@@ -614,13 +614,7 @@ static void LineUpdate(uint8 *target)
 	{
 	 if(ScreenON)
 	 {
-  	   if(scanline>=FSettings.FirstSLine && scanline<=FSettings.LastSLine)
-	    BGRender(target);
-	   else
-	   {
-	    if(PPU_hook)
- 	     PRefreshLine();
-   	   }
+	   BGRender(target);
 	 }
 	 else
 	 {
@@ -1235,13 +1229,13 @@ static void DoLine(void)
 #ifdef FRAMESKIP
    if(!FSkip)
 #endif
-   if(SpriteON && spork)
-    CopySprites(target);
+   if(scanline>=FSettings.FirstSLine && scanline<=FSettings.LastSLine)
+   {
+    if(SpriteON && spork)
+     CopySprites(target);
 
-#ifdef FRAMESKIP
-   if(!FSkip)
-#endif
-   LineUpdateEnd(target);
+    LineUpdateEnd(target);
+   }
    sphitx=0x100;
 
    if(ScreenON || SpriteON)

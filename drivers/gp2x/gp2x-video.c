@@ -35,6 +35,8 @@ unsigned short gp2x_palette16[256];
 
 int paletterefresh;
 
+extern int eoptions;
+
 #define FPS_COLOR 1
 
 
@@ -50,14 +52,14 @@ static void gp2x_text(unsigned char *screen, int x, int y, char *text, int color
 		for (l=0;l<8;l++)
                 {
 
-			screen[l*320+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?color:screen[l*320+0];
-			screen[l*320+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?color:screen[l*320+1];
-			screen[l*320+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?color:screen[l*320+2];
-			screen[l*320+3]=(fontdata8x8[((text[i])*8)+l]&0x10)?color:screen[l*320+3];
-			screen[l*320+4]=(fontdata8x8[((text[i])*8)+l]&0x08)?color:screen[l*320+4];
-			screen[l*320+5]=(fontdata8x8[((text[i])*8)+l]&0x04)?color:screen[l*320+5];
-			screen[l*320+6]=(fontdata8x8[((text[i])*8)+l]&0x02)?color:screen[l*320+6];
-			screen[l*320+7]=(fontdata8x8[((text[i])*8)+l]&0x01)?color:screen[l*320+7];
+			screen[l*320+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?color:0;
+			screen[l*320+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?color:0;
+			screen[l*320+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?color:0;
+			screen[l*320+3]=(fontdata8x8[((text[i])*8)+l]&0x10)?color:0;
+			screen[l*320+4]=(fontdata8x8[((text[i])*8)+l]&0x08)?color:0;
+			screen[l*320+5]=(fontdata8x8[((text[i])*8)+l]&0x04)?color:0;
+			screen[l*320+6]=(fontdata8x8[((text[i])*8)+l]&0x02)?color:0;
+			screen[l*320+7]=(fontdata8x8[((text[i])*8)+l]&0x01)?color:0;
 
 		}
 		screen+=8;
@@ -70,7 +72,7 @@ void CleanSurface(void)
 	int c=4;
 	while (c--)
 	{
-		memset(gp2x_screen, 0, 320*240);
+		memset32(gp2x_screen, 0, 320*240*2/4);
 		gp2x_video_flip();
 	}
 	XBuf = gp2x_screen;
@@ -136,38 +138,24 @@ static INLINE void printFps(uint8 *screen)
 		prevsec = tv_now.tv_sec;
 	}
 
+	if (!Settings.showfps || !screen) return;
+
 	if (Settings.scaling == 0)
 	{
 		if (needfpsflip)
 		{
-			int y, *destt = (int *) screen;
-			for (y = 20/*240*/; y; y--)
-			{
-				*destt++ = 0; *destt++ = 0; *destt++ = 0; *destt++ = 0;
-				*destt++ = 0; *destt++ = 0; *destt++ = 0; *destt++ = 0;
-				destt += 64+8;
-
-				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
-				//*destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F; *destt++ = 0x3F3F3F3F;
-			}
-			if (Settings.showfps)
-			{
-				int sep;
-				for (sep=1; sep < 5; sep++)
-					if (fps_str[sep] == '/' || fps_str[sep] == 0) break;
-				fps_str[sep] = 0;
-				gp2x_text(screen, 0,  0, fps_str,       FPS_COLOR, 0);
-				gp2x_text(screen, 0, 10, fps_str+sep+1, FPS_COLOR, 0);
-			}
+			int sep;
+			for (sep=1; sep < 5; sep++)
+				if (fps_str[sep] == '/' || fps_str[sep] == 0) break;
+			fps_str[sep] = 0;
+			gp2x_text(screen, 0,  0, fps_str,       FPS_COLOR, 0);
+			gp2x_text(screen, 0, 10, fps_str+sep+1, FPS_COLOR, 0);
 			needfpsflip--;
 		}
 	}
 	else
 	{
-		if (Settings.showfps)
-		{
-			gp2x_text(screen+32, 0, 0, fps_str, FPS_COLOR, 0); // TODO: firstline
-		}
+		gp2x_text(screen+32, 0, srendline, fps_str, FPS_COLOR, 0);
 	}
 }
 
@@ -176,14 +164,30 @@ void BlitScreen(uint8 *buf)
 {
 	framesEmulated++;
 
-	if (!buf) return;
+	if (!buf) {
+		printFps(0);
+		return;
+	}
 
 	framesRendered++;
 
 	printFps(gp2x_screen);
 
+	if (eoptions & EO_CLIPSIDES)
+	{
+		int i, *p = (int *) ((char *)gp2x_screen + 32);
+		for (i = 240; i; i--, p += 320/4)
+		{
+			p[0] = p[1] = p[62] = p[63] = 0;
+		}
+	}
+
 	if (Settings.scaling == 3)
-		soft_scale((char *)gp2x_screen + 32, gp2x_palette16, 0, 240);
+	{
+		soft_scale((char *)gp2x_screen + 32, gp2x_palette16, srendline, erendline-srendline);
+		if (srendline)
+			memset32((int *)((char *)gp2x_screen + 32), 0, srendline*320*2/4);
+	}
 
 	gp2x_video_flip();
 	XBuf = gp2x_screen;

@@ -86,7 +86,36 @@ spend_cycles:
     bx      lr
 
 
-.global soft_scale @ void *dst, unsigned short *pal, int offs, int lines
+.global memset32 @ int *dest, int c, int count
+
+memset32:
+    stmfd   sp!, {lr}
+
+    mov     r3, r1
+    subs    r2, r2, #4
+    bmi     mst32_fin
+
+    mov     r12,r1
+    mov     lr, r1
+
+mst32_loop:
+    subs    r2, r2, #4
+    stmia   r0!, {r1,r3,r12,lr}
+    bpl     mst32_loop
+
+mst32_fin:
+    tst     r2, #1
+    strne   r1, [r0], #4
+
+    tst     r2, #2
+    stmneia r0!, {r1,r3}
+
+    ldmfd   sp!, {lr}
+    bx      lr
+
+
+
+.global soft_scale @ void *dst, unsigned short *pal, int line_offs, int lines
 
 soft_scale:
     stmfd   sp!,{r4-r11,lr}

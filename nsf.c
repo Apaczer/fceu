@@ -415,7 +415,7 @@ void DrawNSF(uint8 *XBuf)
   memset(XBuf+SCREEN_OFFS+x*SCREEN_WIDTH,0,256);
 
  if(FSettings.SoundVolume)
-  mul=8192*240/(16384*FSettings.SoundVolume/50)/8;
+  mul=8192*240/(16384*FSettings.SoundVolume/50);
 
  {
   int16 *Bufpl;

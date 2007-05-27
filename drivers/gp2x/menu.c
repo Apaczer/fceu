@@ -823,6 +823,19 @@ static void kc_sel_loop(void)
 
 // --------- FCEU options ----------
 
+extern int ntsccol,ntschue,ntsctint;
+extern int srendlinev[2];
+extern int erendlinev[2];
+extern int eoptions;
+
+
+static void int_incdec(int *p, int inc, int min, int max)
+{
+	*p += inc;
+	if      (*p < min) *p = min;
+	else if (*p > max) *p = max;
+}
+
 static void draw_fcemenu_options(int menu_sel)
 {
 	int tl_x = 25, tl_y = 60, y;
@@ -830,8 +843,16 @@ static void draw_fcemenu_options(int menu_sel)
 	y = tl_y;
 	gp2x_fceu_copy_bg();
 
-	gp2x_text_out15(tl_x,  y,      "                           %s", "OFF"); // 0
-	gp2x_text_out15(tl_x, (y+=10), "Done");
+	gp2x_text_out15(tl_x,  y,      "NTSC Color Emulation       %s", ntsccol?"ON":"OFF");	// 0
+	gp2x_text_out15(tl_x, (y+=10), "  Tint (default: 56)       %i", ntsctint);
+	gp2x_text_out15(tl_x, (y+=10), "  Hue  (default: 72)       %i", ntschue);
+	gp2x_text_out15(tl_x, (y+=10), "First visible line (NTSC)  %i", srendlinev[0]);
+	gp2x_text_out15(tl_x, (y+=10), "Last visible line (NTSC)   %i", erendlinev[0]);
+	gp2x_text_out15(tl_x, (y+=10), "First visible line (PAL)   %i", srendlinev[1]);		// 5
+	gp2x_text_out15(tl_x, (y+=10), "Last visible line (PAL)    %i", erendlinev[1]);
+	gp2x_text_out15(tl_x, (y+=10), "Clip 8 left/right columns  %s", (eoptions&EO_CLIPSIDES)?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Disable 8 sprite limit     %s", "TODO");
+	gp2x_text_out15(tl_x, (y+=10), "Done");							// 9
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
@@ -841,8 +862,10 @@ static void draw_fcemenu_options(int menu_sel)
 
 static void fcemenu_loop_options(void)
 {
-	int menu_sel = 0, menu_sel_max = 1;
+	int menu_sel = 0, menu_sel_max = 9, i;
 	unsigned long inp = 0;
+
+	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
 
 	for(;;)
 	{
@@ -852,15 +875,29 @@ static void fcemenu_loop_options(void)
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
-				case  0: break;
-				case  1: return;
+				case  0: ntsccol = !ntsccol; break;
+				case  7: eoptions^=EO_CLIPSIDES; break;
+				case  9: return;
 			}
 		}
-		if(inp & (GP2X_X|GP2X_A)) return;
+		if(inp & (GP2X_X|GP2X_A)) {
+			for(i=0;i<2;i++)
+			{
+				if(srendlinev[i]<0 || srendlinev[i]>239) srendlinev[i]=0;
+				if(erendlinev[i]<srendlinev[i] || erendlinev[i]>239) erendlinev[i]=239;
+			}
+			FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
+			FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
+			return;
+		}
 		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
 			switch (menu_sel) {
-				case 0:
-					break;
+				case  1: int_incdec(&ntsctint,      (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
+				case  2: int_incdec(&ntschue,       (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
+				case  3: int_incdec(&srendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  4: int_incdec(&erendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  5: int_incdec(&srendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  6: int_incdec(&erendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
 			}
 		}
 	}
@@ -930,13 +967,6 @@ static int sndrate_prevnext(int rate, int dir)
 	if (i > 4) return dir ? 44100 : 22050;
 	if (i < 0) return dir ? 11025 : 8000;
 	return rates[i];
-}
-
-static void int_incdec(int *p, int inc, int min, int max)
-{
-	*p += inc;
-	if      (*p < min) *p = min;
-	else if (*p > max) *p = max;
 }
 
 static void config_commit(void)
@@ -1161,6 +1191,7 @@ static int menu_loop_root(void)
 					selfname = romsel_loop(curr_path);
 					if (selfname) {
 						printf("selected file: %s\n", selfname);
+						while (gp2x_joystick_read(1) & GP2X_B) usleep(50*1000);
 						return 2;
 					}
 					break;

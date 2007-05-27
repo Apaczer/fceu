@@ -38,11 +38,14 @@
 #include "../common/unixdsp.h"
 #include "../common/cheat.h"
 
+#include "../../fce.h"
+
 #include "dface.h"
 
-// just for printing some iNES info for user..
-#include "../../fce.h"
-#include "../../ines.h"
+
+// TODO! broken fs0, sram saves
+
+void CleanSurface(void);
 
 // internals
 extern char lastLoadedGameName[2048];
@@ -50,12 +53,12 @@ extern uint8 Exit; // exit emu loop flag
 void CloseGame(void);
 
 FCEUGI *fceugi = NULL;
-static int ntsccol=0,ntschue=-1,ntsctint=-1;
+int ntsccol=0,ntschue=-1,ntsctint=-1;
 int soundvol=70;
 int inited=0;
 
-int srendlinev[2]={0,0};
-int erendlinev[2]={239,239};
+int srendlinev[2]={8,0};
+int erendlinev[2]={231,239};
 int srendline,erendline;
 
 
@@ -83,7 +86,6 @@ static void ParseGI(FCEUGI *gi)
   InputType[1]=gi->input[1];
  if(gi->inputfc>=0)
   InputTypeFC=gi->inputfc;
- FCEUI_GetCurrentVidSystem(&srendline,&erendline);
 }
 
 void FCEUD_PrintError(char *s)
@@ -130,8 +132,7 @@ void SaveConfig(const char *name)
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
-        DriverInterface(DES_GETNTSCTINT,&ntsctint);
-        DriverInterface(DES_GETNTSCHUE,&ntschue);
+	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
         SaveFCEUConfig(tdir,fceuconfig);
 }
 
@@ -141,9 +142,9 @@ static void LoadConfig(const char *name)
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
+	FCEUI_GetNTSCTH(&ntsctint, &ntschue); /* Get default settings for if no config file exists. */
         LoadFCEUConfig(tdir,fceuconfig);
-        if(ntsctint>=0) DriverInterface(DES_SETNTSCTINT,&ntsctint);
-        if(ntschue>=0) DriverInterface(DES_SETNTSCHUE,&ntschue);
+	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 }
 
 static void LoadLLGN(void)
@@ -289,13 +290,10 @@ static int DoArgs(int argc, char *argv[])
          if(erendlinev[x]<srendlinev[x] || erendlinev[x]>239) erendlinev[x]=239;
 	}
 
-	printf("main() setrendered lines: %d, %d, %d, %d\n",srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
-        printf("main() clip sides %d\n", eoptions&EO_CLIPSIDES);
-        srendlinev[0]=0;
+	printf("FCEUI_SetRenderedLines: %d, %d, %d, %d\n",srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
+        printf("clip sides: %d\n", eoptions&EO_CLIPSIDES);
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
-        FCEUI_SetRenderedLines(0,erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetSoundVolume(soundvol);
-	DriverInterface(DES_NTSCCOL,&ntsccol); // TODO
 	DoDriverArgs();
 
 	if(fcexp)
@@ -364,8 +362,9 @@ int CLImain(int argc, char *argv[])
 	gp2x_opt_setup();
 	gp2x_cpuclock_gamma_update();
 	LoadLLGN();
+	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 	if(cpalette)
-	 LoadCPalette();
+	 LoadCPalette(); // TODO
 	if(InitSound())
 	 inited|=1;
 
@@ -422,13 +421,15 @@ int CLImain(int argc, char *argv[])
          }
 
 	 PrepareOtherInput();
+	 FCEUI_GetCurrentVidSystem(&srendline,&erendline);
 	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
 	 switch (Settings.scaling & 3) {
-		 case 0: gp2x_video_RGB_setscaling(0, 320, 240); gp2x_video_set_offs(0); break;
-		 case 1: gp2x_video_RGB_setscaling(0, 256, 240); gp2x_video_set_offs(32); break;
-		 case 2: gp2x_video_RGB_setscaling(0, 256, 240); gp2x_video_set_offs(32); break; // TODO
-		 case 3: gp2x_video_RGB_setscaling(0, 320, 240); gp2x_video_set_offs(32); break;
+		 case 0: gp2x_video_set_offs(0);  gp2x_video_RGB_setscaling(0, 320, 240); break;
+		 case 1: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(0, 256, 240); break;
+		 case 2: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(srendline, 256, erendline-srendline); break;
+		 case 3: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(0, 320, 240); break;
 	 }
+	 CleanSurface();
 	 gp2x_start_sound(Settings.sound_rate, 16, 0);
 	 FCEUI_Emulate();
 	}
