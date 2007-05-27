@@ -17,6 +17,7 @@
 
 #include "../../state.h"
 #include "../../general.h"
+#include "../../input.h"
 
 /* UsrInputType[] is user-specified.  InputType[] is current
        (game loading can override user settings)
@@ -80,13 +81,14 @@ static void do_emu_acts(uint32 acts)
 			FCEUI_SaveState();
 		}
 	}
-	else if (acts & (1 << 29))
+	else if (acts & (3 << 28)) // state slot next/prev
 	{
 		FILE *st;
 		char *fname;
 
-		CurrentState++;
+		CurrentState += (acts & (1 << 29)) ? 1 :  -1;
 		if (CurrentState > 9) CurrentState = 0;
+		if (CurrentState < 0) CurrentState = 9;
 
 		fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
 		st=fopen(fname,"rb");
@@ -94,6 +96,57 @@ static void do_emu_acts(uint32 acts)
 		FCEU_DispMessage("[%s] State Slot %i", st ? "USED" : "FREE", CurrentState);
 		if (st) fclose(st);
 	}
+	else if (acts & (1 << 27)) // FDS insert/eject
+	{
+		FCEU_DoSimpleCommand(FCEUNPCMD_FDSINSERT);
+	}
+	else if (acts & (1 << 26)) // FDS select
+	{
+		FCEU_DoSimpleCommand(FCEUNPCMD_FDSSELECT);
+	}
+	else if (acts & (1 << 25)) // VS Unisystem insert coin
+	{
+		FCEU_DoSimpleCommand(FCEUNPCMD_VSUNICOIN);
+	}
+}
+
+
+#define down(b) (keys & GP2X_##b)
+static void do_fake_mouse(unsigned long keys)
+{
+	static int x=0, y=0;
+	int speed = 3;
+
+	if (down(A)) speed = 1;
+	if (down(Y)) speed = 5;
+
+	if (down(LEFT))
+	{
+		x -= speed;
+		if (x < 0) x = 0;
+	}
+	else if (down(RIGHT))
+	{
+		x += speed;
+		if (x > 255) x = 255;
+	}
+
+	if (down(UP))
+	{
+		y -= speed;
+		if (y < 0) y = 0;
+	}
+	else if (down(DOWN))
+	{
+		y += speed;
+		if (y > 239) y = 239;
+	}
+
+	MouseData[0] = x;
+	MouseData[1] = y;
+	MouseData[2] = 0;
+	if (down(B)) MouseData[2] |= 1;
+	if (down(X)) MouseData[2] |= 2;
 }
 
 
@@ -105,7 +158,6 @@ void FCEUD_UpdateInput(void)
 	uint32 all_acts = 0;
 	int i;
 
-	#define down(b) (keys & GP2X_##b)
 	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
 	{
 		Exit = 1;
@@ -135,8 +187,13 @@ void FCEUD_UpdateInput(void)
 		volpushed_frames = 0;
 	}
 
-
 	JSreturn = 0; // RLDU SEBA
+
+	if (InputType[1] != SI_GAMEPAD)
+	{
+		/* try to feed fake mouse there */
+		do_fake_mouse(keys);
+	}
 
 	for (i = 0; i < 32; i++)
 	{
@@ -174,30 +231,6 @@ void FCEUD_UpdateInput(void)
 	}
 
 	do_emu_acts(all_acts);
-
-
-	//JSreturn=(JS&0xFF000000)|(JS&0xFF)|((JS&0xFF0000)>>8)|((JS&0xFF00)<<8);
-
-  //  JSreturn=(JSreturn&0xFF000000)|(JSreturn&0xFF)|((JSreturn&0xFF0000)>>8)|((JSreturn&0xFF00)<<8);
-  // TODO: make these bindable, use new interface
-  /*
-  if(gametype==GIT_FDS)
-  {
-  	if ((pad & GP2X_PUSH) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_R)) && (!(lastpad2 & GP2X_PUSH)))
-  	{
-      DriverInterface(DES_FDSSELECT,0);
-  	}
-  	else if ((pad & GP2X_L) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_PUSH)) && (!(pad & GP2X_R))&& (!(lastpad2 & GP2X_L)))
-  	{
-      DriverInterface(DES_FDSINSERT,0);
-  	}
-  	else if ((pad & GP2X_R) && (!(pad & GP2X_SELECT)) && (!(pad & GP2X_L)) && (!(pad & GP2X_PUSH)) && (!(lastpad2 & GP2X_R)))
-  	{
-      DriverInterface(DES_FDSEJECT,0);
-  	}
-  }
-  return;
-  */
 }
 
 
@@ -209,6 +242,9 @@ static void InitOtherInput(void)
    int t;
    int x;
    int attrib;
+
+   printf("InitOtherInput: InputType[0]: %i, InputType[1]: %i, InputTypeFC: %i\n",
+   	InputType[0], InputType[1], InputTypeFC);
 
    for(t=0,x=0;x<2;x++)
    {

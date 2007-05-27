@@ -28,6 +28,26 @@ block_loop_or:
     bx      lr
 
 
+.global block_and @ void *src, size_t n, int andpat
+
+block_and:
+    stmfd   sp!, {r4-r5}
+    orr     r2, r2, r2, lsl #8
+    orr     r2, r2, r2, lsl #16
+    mov     r1, r1, lsr #4
+block_loop_and:
+    ldmia   r0, {r3-r5,r12}
+    subs    r1, r1, #1
+    and     r3, r3, r2
+    and     r4, r4, r2
+    and     r5, r5, r2
+    and     r12,r12,r2
+    stmia   r0!, {r3-r5,r12}
+    bne     block_loop_and
+    ldmfd   sp!, {r4-r5}
+    bx      lr
+
+
 .global block_andor @ void *src, size_t n, int andpat, int orpat
 
 block_andor:

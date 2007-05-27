@@ -787,9 +787,13 @@ static bind_action_t ctrl_actions[] =
 
 static bind_action_t emuctrl_actions[] =
 {
-	{ "Save State     ", 1<<31 },
-	{ "Load State     ", 1<<30 },
-	{ "Next State Slot", 1<<29 },
+	{ "Save State       ", 1<<31 },
+	{ "Load State       ", 1<<30 },
+	{ "Next State Slot  ", 1<<29 },
+	{ "Prev State Slot  ", 1<<28 },
+	{ "FDS Insert/Eject ", 1<<27 },
+	{ "FDS Select Disk  ", 1<<26 },
+	{ "VSUni Insert Coin", 1<<25 },
 };
 
 static void kc_sel_loop(void)

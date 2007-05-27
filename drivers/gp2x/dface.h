@@ -12,10 +12,6 @@ void KillSound(void);
 void SilenceSound(int s); /* DOS and SDL */
 
 
-int InitJoysticks(void);
-void KillJoysticks(void);
-uint32 *GetJSOr(void);
-
 int InitVideo(void);
 void KillVideo(void);
 void BlitScreen(uint8 *buf);

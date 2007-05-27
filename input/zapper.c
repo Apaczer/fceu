@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 
 #include        <string.h>
-#include	<stdlib.h>
+#include        <stdlib.h>
 
 #include        "share.h"
 
@@ -27,47 +27,71 @@ typedef struct {
         uint32 mzx,mzy,mzb;
         int zap_readbit;
         int bogo;
-        uint32 colok;
-	uint32 coloklast;
+	int zappo;
+	uint64 zaphit;
 } ZAPPER;
 
 static ZAPPER ZD[2];
 
-static void FP_FASTAPASS(3) ZapperThingy(int w, uint8 *buf, int line)
+static void FP_FASTAPASS(3) ZapperFrapper(int w, uint8 *bg, uint8 *spr, uint32 linets, int final)
 {
-	int mzx=ZD[w].mzx;
+ int xs,xe;
+ int zx,zy;
 
-        if(line==0) ZD[w].colok=1<<16;     /* Disable it. */
+ if(!bg) // New line, so reset stuff.
+ {
+  ZD[w].zappo=0;
+  return;
+ }
+ xs=ZD[w].zappo;
+ xe=final;
 
-	ZD[w].coloklast=ZD[w].colok;
+ zx=ZD[w].mzx;
+ zy=ZD[w].mzy;
 
-	if(ZD[w].mzb&2) return;
-        if((line>=ZD[w].mzy-3 && line<=ZD[w].mzy+3) && mzx<256)
-        {
-         int a,sum,x;
+ if(xe>256) xe=256;
 
-         for(x=-4;x<4;x++)
-         {
-          if((mzx+x)<0 || (mzx+x)>255) continue;
-          a=buf[mzx+x]&63;
-          sum=palo[a].r+palo[a].g+palo[a].b;
+ if(scanline>=(zy-4) && scanline<=(zy+4))
+ {
+  while(xs<xe)
+  {
+    uint8 a1,a2;
+    uint32 sum;
+    if(xs<=(zx+4) && xs>=(zx-4))
+    {
+     a1=bg[xs];
+     if(spr)
+     {
+      a2=spr[xs];
 
-          if(sum>=100*3)
-          {
-           ZD[w].colok=timestamp+mzx/3;
-           break;
-          }
-         }
-        }
+      if(!(a2&0x80))
+       if(!(a2&0x40) || (a1&64))
+        a1=a2;
+     }
+     a1&=63;
 
+     sum=palo[a1].r+palo[a1].g+palo[a1].b;
+     if(sum>=100*3)
+     {
+      ZD[w].zaphit=((uint64)linets+(xs+16)*(PAL?15:16))/48+timestampbase;
+      goto endo;
+     }
+    }
+   xs++;
+  }
+ }
+ endo:
+ ZD[w].zappo=final;
 }
 
 static INLINE int CheckColor(int w)
 {
-  if( (timestamp>=ZD[w].coloklast && timestamp<=(ZD[w].coloklast+100)) ||
-   (timestamp>=ZD[w].colok && timestamp<=(ZD[w].colok+100)) )
-   return 0;
-  return 1;
+ //FCEUPPU_LineUpdate();
+
+ if((ZD[w].zaphit+100)>=(timestampbase+timestamp)
+  && !(ZD[w].mzb&2)) return(0);
+
+ return(1);
 }
 
 static uint8 FP_FASTAPASS(1) ReadZapperVS(int w)
@@ -86,12 +110,13 @@ static uint8 FP_FASTAPASS(1) ReadZapperVS(int w)
                  if(!CheckColor(w))
                   ret|=0x1;
                 }
-                ZD[w].zap_readbit++; 
+		if(!fceuindbg)
+                 ZD[w].zap_readbit++;
                 return ret;
 }
 
 static void FP_FASTAPASS(1) StrobeZapperVS(int w)
-{                        
+{
 			ZD[w].zap_readbit=0;
 }
 
@@ -108,13 +133,14 @@ static uint8 FP_FASTAPASS(1) ReadZapper(int w)
 static void FASTAPASS(3) DrawZapper(int w, uint8 *buf, int arg)
 {
  if(arg)
-  FCEU_DrawCursor(buf, ZD[w].mzx,ZD[w].mzy);
+  FCEU_DrawGunSight(buf, ZD[w].mzx,ZD[w].mzy);
 }
 
 static void FP_FASTAPASS(3) UpdateZapper(int w, void *data, int arg)
 {
-  uint32 *ptr=data;
+  uint32 *ptr=(uint32 *)data;
 
+ //FCEU_DispMessage("%3d:%3d",ZD[w].mzx,ZD[w].mzy);
   if(ZD[w].bogo)
    ZD[w].bogo--;
   if(ptr[2]&3 && (!(ZD[w].mzb&3)))
@@ -123,18 +149,15 @@ static void FP_FASTAPASS(3) UpdateZapper(int w, void *data, int arg)
   ZD[w].mzx=ptr[0];
   ZD[w].mzy=ptr[1];
   ZD[w].mzb=ptr[2];
-
-  if(ZD[w].mzb&2 || ZD[w].mzx>=256 || ZD[w].mzy>=240)
-   ZD[w].colok=0;
 }
 
-static INPUTC ZAPC={ReadZapper,0,0,UpdateZapper,ZapperThingy,DrawZapper};
-static INPUTC ZAPVSC={ReadZapperVS,0,StrobeZapperVS,UpdateZapper,ZapperThingy,DrawZapper};
+static INPUTC ZAPC={ReadZapper,0,0,UpdateZapper,ZapperFrapper,DrawZapper};
+static INPUTC ZAPVSC={ReadZapperVS,0,StrobeZapperVS,UpdateZapper,ZapperFrapper,DrawZapper};
 
 INPUTC *FCEU_InitZapper(int w)
 {
   memset(&ZD[w],0,sizeof(ZAPPER));
-  if(FCEUGameInfo.type==GIT_VSUNI)
+  if(FCEUGameInfo.type == GIT_VSUNI)
    return(&ZAPVSC);
   else
    return(&ZAPC);

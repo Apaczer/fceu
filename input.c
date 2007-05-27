@@ -36,7 +36,7 @@
 #include "dprintf.h"
 
 extern INPUTC *FCEU_InitZapper(int w);
-extern INPUTC *FCEU_InitPowerpad(int w);
+extern INPUTC *FCEU_InitPowerpadA(int w);
 extern INPUTC *FCEU_InitArkanoid(int w);
 
 extern INPUTCFC *FCEU_InitArkanoidFC(void);
@@ -57,7 +57,7 @@ static int JPAttribFC=0;
 static int JPTypeFC=0;
 static void *InputDataPtrFC;
 
-void (*InputScanlineHook)(uint8 *buf, int line);
+void (*InputScanlineHook)(uint8 *bg, uint8 *spr, uint32 linets, int final);
 
 static INPUTC DummyJPort={0,0,0,0,0};
 static INPUTC *JPorts[2]={&DummyJPort,&DummyJPort};
@@ -232,16 +232,16 @@ static DECLFR(VSUNIRead1)
         return ret;
 }
 
-static void SLHLHook(uint8 *buf, int line)
+static void SLHLHook(uint8 *bg, uint8 *spr, uint32 linets, int final)
 {
  int x;
 
  for(x=0;x<2;x++)
   if(JPorts[x]->SLHook)
-   JPorts[x]->SLHook(x,buf,line);
+   JPorts[x]->SLHook(x,bg,spr,linets,final);
  if(FCExp)
   if(FCExp->SLHook)
-   FCExp->SLHook(buf,line);
+   FCExp->SLHook(bg,spr,linets,final);
 }
 
 static void CheckSLHook(void)
@@ -266,7 +266,7 @@ static void FASTAPASS(1) SetInputStuff(int x)
 	  break;
 	  case SI_ARKANOID:JPorts[x]=FCEU_InitArkanoid(x);break;
 	  case SI_ZAPPER:JPorts[x]=FCEU_InitZapper(x);break;
-          case SI_POWERPADA:JPorts[x]=FCEU_InitPowerpad(x);break;
+          case SI_POWERPADA:JPorts[x]=FCEU_InitPowerpadA(x);break;
 	  case SI_NONE:JPorts[x]=&DummyJPort;break;
          }
 

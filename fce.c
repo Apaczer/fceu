@@ -94,8 +94,6 @@ uint8 PPUCHRRAM;
 static uint8 deemp=0;
 static int deempcnt[8];
 
-int tosprite=256;
-
 FCEUGI FCEUGameInfo;
 void (*GameInterface)(int h);
 
@@ -300,30 +298,63 @@ uint8 PAL=0;
 static int linestartts;
 static int tofix=0;
 
-static void ResetRL(void)
+static uint8 *Plinef;
+
+extern uint8 sprlinebuf[256+8];
+extern int32 sphitx;
+extern uint8 sphitdata;
+
+extern int spork;       /* spork the world.  Any sprites on this line?
+                           Then this will be set to 1.  Needed for zapper
+                           emulation and *gasp* sprite emulation.
+                        */
+
+static void ResetRL(uint8 *target)
 {
+ if(InputScanlineHook)
+  InputScanlineHook(0,0,0,0);
+ Plinef=target;
  linestartts=timestamp*48+X6502_GetCycleCount();
  tofix=1;
 }
 
 static INLINE void Fixit1(void);
 
-static void TryFixit1(void)
+/* faking FCEUPPU_LineUpdate() from later versions of the emu */
+static void FakedLineUpdate(void)
 {
  #define TOFIXNUM (272-0x4)
  int lastpixel;
 
- if (scanline < 240 && tofix)
+ if (scanline >= 240) return;
+
+ if (tofix || sphitx != 0x100)
  {
   lastpixel = (timestamp*48-linestartts)>>4;
   if (PAL) lastpixel += lastpixel>>4;
-
   //printf("lastpixel: %i\n", lastpixel);
+ }
 
-  if(lastpixel>=TOFIXNUM)
+ if (tofix && lastpixel>=TOFIXNUM)
+ {
+  Fixit1();
+  tofix=0;
+ }
+
+ // CheckSpriteHit()
+ if(sphitx!=0x100)
+ {
+  int l=lastpixel-16;
+  int x;
+
+  for(x=sphitx;x<(sphitx+8) && x<l;x++)
   {
-   Fixit1();
-   tofix=0;
+   if((sphitdata&(0x80>>(x-sphitx))) && !(Plinef[x]&64))
+   {
+    PPU_status|=0x40;
+    sphitx=0x100;
+    break;
+   }
   }
  }
 }
@@ -355,7 +386,7 @@ static DECLFR(A2002)
 	/* merged */
                         uint8 ret;
 
-			TryFixit1();
+			FakedLineUpdate();
                         ret = PPU_status;
                         ret|=PPUGenLatch&0x1F;
                         vtoggle=0;
@@ -368,7 +399,7 @@ static DECLFR(A2002)
 static DECLFR(A200x)
 {
 	/* merged */
-			TryFixit1();
+			FakedLineUpdate();
                         return PPUGenLatch;
 }
 
@@ -378,7 +409,7 @@ static DECLFR(A2007)
                         uint8 ret;
 			uint32 tmp=RefreshAddr&0x3FFF;
 
-			TryFixit1();
+			FakedLineUpdate();
 
                         ret=VRAMBuffer;
 
@@ -403,7 +434,7 @@ static DECLFR(A2007)
 static DECLFW(B2000)
 {
 	/* NMI2? */
-		TryFixit1();
+		FakedLineUpdate();
                 PPUGenLatch=V;
                 PPU[0]=V;
 		TempAddr&=0xF3FF;
@@ -413,7 +444,7 @@ static DECLFW(B2000)
 static DECLFW(B2001)
 {
 	/* merged */
-		  TryFixit1();
+		  FakedLineUpdate();
                   PPUGenLatch=V;
  	          PPU[1]=V;
 		  if(V&0xE0)
@@ -458,7 +489,7 @@ static DECLFW(B2005)
 {
 	/* merged */
 		uint32 tmp=TempAddr;
-		TryFixit1();
+		FakedLineUpdate();
 		PPUGenLatch=V;
 		if (!vtoggle)
                 {
@@ -480,7 +511,7 @@ static DECLFW(B2005)
 static DECLFW(B2006)
 {
 	/* merged */
-		       TryFixit1();
+		       FakedLineUpdate();
 
                        PPUGenLatch=V;
                        if(!vtoggle)
@@ -570,24 +601,19 @@ void FCEUI_FrameSkip(int x)
 #endif
 
 /*	This is called at the beginning of each visible scanline */
-static void Loop6502(void)
+static void LineUpdate(uint8 *target)
 {
 	uint32 tem;
-	int x;
-        uint8 *target=XBuf+scanline*320+32;
 
-        if(ScreenON || SpriteON)
-        {
-	 /* PRefreshLine() will not get called on skipped frames.  This
-	    could cause a problem, but the solution would be rather complex,
-	    due to the current sprite 0 hit code.
-	 */
-	 #ifdef FRAMESKIP
-	 if(!FSkip)
+	if(FSkip)
+	{
+	   if(PPU_hook)
+ 	    PRefreshLine();
+	}
+	else
+	{
+	 if(ScreenON)
 	 {
-	 #endif
-	  if(ScreenON)
-	  {
   	   if(scanline>=FSettings.FirstSLine && scanline<=FSettings.LastSLine)
 	    BGRender(target);
 	   else
@@ -595,56 +621,62 @@ static void Loop6502(void)
 	    if(PPU_hook)
  	     PRefreshLine();
    	   }
-	  }
-	  else
-	  {
-	   tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
-	   tem|=0x40404040;
-	   FCEU_dwmemset(target,tem,264);
-	  }
-	 #ifdef FRAMESKIP
 	 }
-	 #endif
-   	 if (SpriteON && scanline)
-	  RefreshSprite(target);
-	 #ifdef FRAMESKIP
-	 if(!FSkip)
+	 else
 	 {
-	 #endif
-	  if(PPU[1]&0x01)
-	  {
-	   for(x=63;x>=0;x--)
-	    ((uint32 *)target)[x]=((uint32*)target)[x]&0xF0F0F0F0;
-	  }
-#ifdef GP2X
-	   if((PPU[1]>>5)==0x7) block_or(target, 256, 0xc0);
-	   else	if(PPU[1]&0xE0) block_andor(target, 256, 0x3f, 0x40);
-	   else                 block_andor(target, 256, 0x3f, 0x80);
-#else
-	   if((PPU[1]>>5)==0x7)
-	    for(x=63;x>=0;x--)
-	     ((uint32 *)target)[x]=(((uint32*)target)[x])|0xc0c0c0c0;
-	   else	if(PPU[1]&0xE0)
-	    for(x=63;x>=0;x--)
-	     ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x40404040;
-	   else
-            for(x=63;x>=0;x--)
-             ((uint32 *)target)[x]=(((uint32*)target)[x]&0x3f3f3f3f)|0x80808080;
-#endif
-	  // black borders
-	  ((uint32 *)target)[-2]=((uint32 *)target)[-1]=0;
-	  ((uint32 *)target)[64]=((uint32 *)target)[65]=0;
-	 #ifdef FRAMESKIP
+	   tem=Pal[0]|0x40;
+	   tem|=tem << 8;
+	   tem|=tem << 16;
+	   FCEU_dwmemset(target,tem,256);
 	 }
-	 #endif
 	}
-	else
-	{
-	 tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
-	 FCEU_dwmemset(target,tem,256);
-	}
+
         if(InputScanlineHook)
-         InputScanlineHook(target, scanline);
+         InputScanlineHook(target,spork?sprlinebuf:0,linestartts,256);
+}
+
+
+static void LineUpdateEnd(uint8 *target)
+{
+#ifdef GP2X
+ if(ScreenON || SpriteON)  // Yes, very el-cheapo.
+ {
+  if(PPU[1]&0x01)
+   block_and(target, 256, 0x30);
+ }
+ if((PPU[1]>>5)==0x7)
+  block_or(target, 256, 0xc0);
+ else if(PPU[1]&0xE0)
+  block_or(target, 256, 0x40);
+ else
+  block_andor(target, 256, 0x3f, 0x80);
+#else
+ int x;
+
+ if(ScreenON || SpriteON)  // Yes, very el-cheapo.
+ {
+  if(PPU[1]&0x01)
+  {
+   for(x=63;x>=0;x--)
+   *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])&0x30303030;
+  }
+ }
+ if((PPU[1]>>5)==0x7)
+ {
+  for(x=63;x>=0;x--)
+   *(uint32 *)&target[x<<2]=((*(uint32*)&target[x<<2])&0x3f3f3f3f)|0xc0c0c0c0;
+ }
+ else if(PPU[1]&0xE0)
+  for(x=63;x>=0;x--)
+   *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])|0x40404040;
+ else
+  for(x=63;x>=0;x--)
+   *(uint32 *)&target[x<<2]=((*(uint32*)&target[x<<2])&0x3f3f3f3f)|0x80808080;
+#endif
+
+ // black borders
+ ((uint32 *)target)[-2]=((uint32 *)target)[-1]=0;
+ ((uint32 *)target)[64]=((uint32 *)target)[65]=0;
 }
 
 #define PAL(c)  ((c)+cc)
@@ -968,36 +1000,6 @@ void Fixit1(void)
 }
 
 
-/*      This is called at the beginning of all h-blanks on visible lines. */
-static void DoHBlank(void)
-{
- if(ScreenON || SpriteON)
-  FetchSpriteData();
- if(GameHBIRQHook && (ScreenON || SpriteON) && ((PPU[0]&0x38)!=0x18))
- {
-  X6502_Run(6);
-  Fixit2();
-  X6502_Run(4+3);	// original value was 4, but adding 3 fixes glitch in smb3 (and breaks something?)
-  GameHBIRQHook();
-  X6502_Run(85-10-16-3);
- }
- else
- {
-  X6502_Run(6);  // Tried 65, caused problems with Slalom(maybe others)
-  Fixit2();
-  X6502_Run(85-6-16);
- }
- if(GameHBIRQHook2 && (ScreenON || SpriteON))
-  GameHBIRQHook2();
- //PPU_hook(0,-1);
- //fprintf(stderr,"%3d: $%04x\n",scanline,RefreshAddr);
- scanline++;
- if (scanline<240)
-  ResetRL();
- X6502_Run(16);
-}
-
-
 // ============================//
 // end of new code
 // ===========================//
@@ -1215,31 +1217,61 @@ int FCEUI_Initialize(void)
 }
 
 void MMC5_hb(int);     /* Ugh ugh ugh. */
-static INLINE void Thingo(void)
+static void DoLine(void)
 {
-   Loop6502();
+   uint8 *target=XBuf+scanline*320+32;
+
+   LineUpdate(target);
 
    if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
 
+   X6502_Run(256);
+
    // check: Battletoads & Double Dragon, Addams Family
    // sky glitches in SMB1 if done wrong
-   if(tosprite>=256)
+   FakedLineUpdate();
+
+#ifdef FRAMESKIP
+   if(!FSkip)
+#endif
+   if(SpriteON && spork)
+    CopySprites(target);
+
+#ifdef FRAMESKIP
+   if(!FSkip)
+#endif
+   LineUpdateEnd(target);
+   sphitx=0x100;
+
+   if(ScreenON || SpriteON)
+    FetchSpriteData();
+
+   // DoHBlank();
+   if(GameHBIRQHook && (ScreenON || SpriteON) && ((PPU[0]&0x38)!=0x18))
    {
-    X6502_Run(256);
+    X6502_Run(6);
+    Fixit2();
+    X6502_Run(4);
+    GameHBIRQHook();
+    X6502_Run(85-10-16);
    }
    else
    {
-     // a dirty hack for Addams Family and inaccurate sprite hit emulation
-     if(tosprite<8) tosprite-=tosprite*3>>2;
-
-     X6502_Run(tosprite);
-     PPU[2]|=0x40;
-     X6502_Run(256-tosprite);
-     tosprite = 256;
+    X6502_Run(6);  // Tried 65, caused problems with Slalom(maybe others)
+    Fixit2();
+    X6502_Run(85-6-16);
    }
-   TryFixit1();
-   DoHBlank();
+
+   if(SpriteON)
+    RefreshSprites();
+   if(GameHBIRQHook2 && (ScreenON || SpriteON))
+    GameHBIRQHook2();
+   scanline++;
+   if (scanline<240)
+    ResetRL(XBuf+scanline*320+32);
+   X6502_Run(16);
 }
+
 
 void EmLoop(void)
 {
@@ -1305,7 +1337,8 @@ void EmLoop(void)
     RefreshAddr=TempAddr;
     if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
    }
-   ResetRL();
+   spork=0;
+   ResetRL(XBuf+32);
 
    X6502_Run(16-kook);
    kook ^= 1;
@@ -1326,7 +1359,7 @@ void EmLoop(void)
    for(scanline=0;scanline<240;)       // scanline is incremented in  DoLine.  Evil. :/
    {
     deempcnt[deemp]++;
-    Thingo();
+    DoLine();
    }
    if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
    for(x=1,max=0,maxref=0;x<7;x++)

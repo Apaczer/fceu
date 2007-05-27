@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,11 @@
  */
 
 #include        <string.h>
-#include	<stdlib.h>
-#include	"share.h"
+#include        <stdlib.h>
+#include        "share.h"
 
 
+static char side;
 static uint32 pprsb[2];
 static uint32 pprdata[2];
 
@@ -37,7 +38,8 @@ static uint8 FP_FASTAPASS(1) ReadPP(int w)
 		 if(pprsb[w]>=8) 
 		  ret|=0x08;
 		}
-                pprsb[w]++;
+		if(!fceuindbg)
+                 pprsb[w]++;
                 return ret;
 }
 
@@ -48,13 +50,36 @@ static void FP_FASTAPASS(1) StrobePP(int w)
 
 void FP_FASTAPASS(3) UpdatePP(int w, void *data, int arg)
 {
-        pprdata[w]=*(uint32 *)data;
+ static const char shifttableA[12]={8,9,0,1,11,7,4,2,10,6,5,3};
+ static const char shifttableB[12]={1,0,9,8,2,4,7,11,3,5,6,10};
+ int x;
+
+ pprdata[w]=0;
+
+ if(side=='A')
+  for(x=0;x<12;x++)
+   pprdata[w]|=(((*(uint32 *)data)>>x)&1)<<shifttableA[x];
+ else
+  for(x=0;x<12;x++)
+   pprdata[w]|=(((*(uint32 *)data)>>x)&1)<<shifttableB[x];
 }
 
-static INPUTC PPC={ReadPP,0,StrobePP,UpdatePP,0,0};
+static INPUTC PwrPadCtrl={ReadPP,0,StrobePP,UpdatePP,0,0};
 
-INPUTC *FCEU_InitPowerpad(int w)
+static INPUTC *FCEU_InitPowerpad(int w)
 {
  pprsb[w]=pprdata[w]=0;
- return(&PPC);
+ return(&PwrPadCtrl);
+}
+
+INPUTC *FCEU_InitPowerpadA(int w)
+{
+ side='A';
+ return(FCEU_InitPowerpad(w));
+}
+
+INPUTC *FCEU_InitPowerpadB(int w)
+{
+ side='B';
+ return(FCEU_InitPowerpad(w));
 }

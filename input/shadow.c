@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 
 #include        <string.h>
-#include	<stdlib.h>
+#include        <stdlib.h>
 
 #include        "share.h"
 
@@ -27,45 +27,72 @@ typedef struct {
         uint32 mzx,mzy,mzb;
         int zap_readbit;
         int bogo;
-        uint32 colok;
-        uint32 coloklast;
+        int zappo;
+        uint64 zaphit;
 } ZAPPER;
 
 static ZAPPER ZD;
 
-static void FP_FASTAPASS(2) ZapperThingy(uint8 *buf, int line)
+static void FP_FASTAPASS(3) ZapperFrapper(uint8 *bg, uint8 *spr, uint32  linets, int final)
 {
-	int mzx=ZD.mzx;
+ int xs,xe;
+ int zx,zy;
 
-	if(line==0) ZD.colok=1<<16;	/* Disable it. */
-	ZD.coloklast=ZD.colok;
+ if(!bg) // New line, so reset stuff.
+ {
+  ZD.zappo=0;
+  return;
+ }
+ xs=ZD.zappo;
+ xe=final;
 
-	if((line>=ZD.mzy-3 && line<=ZD.mzy+3) && mzx<256)
-	{
-	 int a,sum,x;
+ zx=ZD.mzx;
+ zy=ZD.mzy;
 
-	 for(x=-4;x<4;x++)
-	 {
-	  if((mzx+x)<0 || (mzx+x)>255) continue;
-	  a=buf[mzx+x]&63;
-	  sum=palo[a].r+palo[a].g+palo[a].b;
-	 
-	  if(sum>=100*3)
-	  {
-	   ZD.colok=timestamp+mzx/3;
-	   break;
-	  }
-	 }
-	}
+ if(xe>256) xe=256;
+
+ if(scanline>=(zy-4) && scanline<=(zy+4))
+ {
+  while(xs<xe)
+  {
+    uint8 a1,a2;
+    uint32 sum;
+    if(xs<=(zx+4) && xs>=(zx-4))
+    {
+     a1=bg[xs];
+     if(spr)
+     {
+      a2=spr[xs];
+
+      if(!(a2&0x80))
+       if(!(a2&0x40) || (a1&64))
+        a1=a2;
+     }
+     a1&=63;
+
+     sum=palo[a1].r+palo[a1].g+palo[a1].b;
+     if(sum>=100*3)
+     {
+      ZD.zaphit=((uint64)linets+(xs+16)*(PAL?15:16))/48+timestampbase;
+      goto endo;
+     }
+    }
+   xs++;
+  }
+ }
+ endo:
+ ZD.zappo=final;
 }
 
 static INLINE int CheckColor(void)
 {
-  if( (timestamp>=ZD.coloklast && timestamp<=(ZD.coloklast+10)) ||
-   (timestamp>=ZD.colok && timestamp<=(ZD.colok+10)) )
-   return 0;
-  return 1;
+ //FCEUPPU_LineUpdate();
+
+ if((ZD.zaphit+10)>=(timestampbase+timestamp)) return(0);
+
+ return(1);
 }
+
 
 static uint8 FP_FASTAPASS(2) ReadZapper(int w, uint8 ret)
 {
@@ -96,7 +123,7 @@ static void FP_FASTAPASS(2) DrawZapper(uint8 *buf, int arg)
 
 static void FP_FASTAPASS(2) UpdateZapper(void *data, int arg)
 {
-  uint32 *ptr=data;
+  uint32 *ptr=(uint32*)data;
 
   if(ZD.bogo)
    ZD.bogo--;
@@ -106,9 +133,6 @@ static void FP_FASTAPASS(2) UpdateZapper(void *data, int arg)
   ZD.mzx=ptr[0];
   ZD.mzy=ptr[1];
   ZD.mzb=ptr[2];
-
-  if(ZD.mzx>=256 || ZD.mzy>=240)
-   ZD.colok=0;
 }
 
 static void StrobeShadow(void)
@@ -116,7 +140,7 @@ static void StrobeShadow(void)
  ZD.zap_readbit=0;
 }
 
-static INPUTCFC SHADOWC={ReadZapper,0,StrobeShadow,UpdateZapper,ZapperThingy,DrawZapper};
+static INPUTCFC SHADOWC={ReadZapper,0,StrobeShadow,UpdateZapper,ZapperFrapper,DrawZapper};
 
 INPUTCFC *FCEU_InitSpaceShadow(void)
 {

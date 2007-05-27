@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 #include <string.h>
 #include "share.h"
 #include "fkb.h"
-#define AK2(x,y)	( (FKB_##x) | (FKB_##y <<8) )
-#define AK(x) 		FKB_##x
+#define AK2(x,y)        ( (FKB_##x) | (FKB_##y <<8) )
+#define AK(x)                 FKB_##x
 
 static uint8 bufit[0x49];
 static uint8 ksmode;

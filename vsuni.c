@@ -376,6 +376,9 @@ void FCEU_VSUniCheck(uint64 md5partial, int *MapperNo, uint8 *Mirroring)
  }
 }
 
+#define SCREEN_WIDTH 320
+#define SCREEN_OFFS 32
+
 void FCEU_VSUniDraw(uint8 *XBuf)
 {
   uint32 *dest;
@@ -383,29 +386,29 @@ void FCEU_VSUniDraw(uint8 *XBuf)
 
   if(!DIPS) return;
 
-  dest=(uint32 *)(XBuf+256*12+164);
-  for(y=24;y;y--,dest+=(256-72)>>2)
+  dest=(uint32 *)(XBuf+SCREEN_WIDTH*12+164+SCREEN_OFFS);
+  for(y=24;y;y--,dest+=(SCREEN_WIDTH-72)>>2)
   {
    for(x=72>>2;x;x--,dest++)
     *dest=0;
   }
 
-  dest=(uint32 *)(XBuf+256*(12+4)+164+6 );
-  for(y=16;y;y--,dest+=(256>>2)-16)
+  dest=(uint32 *)(XBuf+SCREEN_WIDTH*(12+4)+164+6+SCREEN_OFFS );
+  for(y=16;y;y--,dest+=(SCREEN_WIDTH>>2)-16)
    for(x=8;x;x--)
    {
     *dest=0x01010101;
     dest+=2;
    }
 
-  dest=(uint32 *)(XBuf+256*(12+4)+164+6 );
+  dest=(uint32 *)(XBuf+SCREEN_WIDTH*(12+4)+164+6+SCREEN_OFFS );
   for(x=0;x<8;x++,dest+=2)
   {
-   uint32 *da=dest+(256>>2);
+   uint32 *da=dest+(SCREEN_WIDTH>>2);
 
    if(!((vsdip>>x)&1))
-    da+=(256>>2)*10;
-   for(y=4;y;y--,da+=256>>2)
+    da+=(SCREEN_WIDTH>>2)*10;
+   for(y=4;y;y--,da+=SCREEN_WIDTH>>2)
     *da=0;
   }
 }

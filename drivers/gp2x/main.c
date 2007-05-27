@@ -451,8 +451,6 @@ static int DriverInitialize(void)
 {
    SetSignals((void *)CloseStuff);
 
-   if(InitJoysticks())
-    inited|=2;
    if(!InitVideo()) return 0;
    inited|=4;
    return 1;
@@ -463,8 +461,6 @@ static void DriverKill(void)
  // SaveConfig(NULL); // done explicitly in menu now
  SetSignals(SIG_IGN);
 
- if(inited&2)
-  KillJoysticks();
  if(inited&4)
   KillVideo();
  if(inited&1)

@@ -1,8 +1,4 @@
-INPOBJS   =       input/cursor.o input/powerpad.o input/zapper.o input/arkanoid.o input/shadow.o input/fkb.o
+INP_C += input/cursor.c input/zapper.c input/powerpad.c input/arkanoid.c input/shadow.c input/fkb.c input/hypershot.c input/mahjong.c input/oekakids.c input/ftrainer.c input/quiz.c input/toprider.c input/bworld.c input/suborkb.c
 
-input/cursor.o:		input/cursor.c
-input/zapper.o:		input/zapper.c
-input/powerpad.o:	input/powerpad.c
-input/arkanoid.o:	input/arkanoid.c
-input/shadow.o:		input/shadow.c
-input/fkb.o:		input/fkb.c input/fkb.h
+INPOBJS = $(patsubst %.c,%.o,$(INP_C))
+

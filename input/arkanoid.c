@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
  */
 
 #include        <string.h>
-#include	<stdlib.h>
-#include	"share.h"
+#include        <stdlib.h>
+#include        "share.h"
 
 typedef struct {
 	uint32 mzx,mzb;
@@ -47,7 +47,8 @@ static uint8 FP_FASTAPASS(2) ReadARKFC(int w,uint8 ret)
   else
   {
    ret|=((FCArk.mzx>>(7-FCArk.readbit))&1)<<1;
-   FCArk.readbit++;
+   if(!fceuindbg)
+    FCArk.readbit++;
   }
  }
  else
@@ -65,7 +66,7 @@ static uint32 FixX(uint32 x)
 
 static void FP_FASTAPASS(2) UpdateARKFC(void *data, int arg)
 {
- uint32 *ptr=data;
+ uint32 *ptr=(uint32 *)data;
  FCArk.mzx=FixX(ptr[0]);
  FCArk.mzb=ptr[2]?1:0;
 }
@@ -88,7 +89,8 @@ static uint8 FP_FASTAPASS(1) ReadARK(int w)
  else
  {
   ret|=((NESArk[w].mzx>>(7-NESArk[w].readbit))&1)<<4;
-  NESArk[w].readbit++;
+  if(!fceuindbg)
+   NESArk[w].readbit++;
  }
  ret|=(NESArk[w].mzb&1)<<3;
  return(ret);
@@ -102,7 +104,7 @@ static void FP_FASTAPASS(1) StrobeARK(int w)
 
 static void FP_FASTAPASS(3) UpdateARK(int w, void *data, int arg)
 {
- uint32 *ptr=data;
+ uint32 *ptr=(uint32*)data;
  NESArk[w].mzx=FixX(ptr[0]);
  NESArk[w].mzb=ptr[2]?1:0;
 }
