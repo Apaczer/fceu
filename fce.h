@@ -72,7 +72,7 @@ extern writefunc BWrite[0x10000];
 #define PPU_status      (PPU[2])
 
 
-extern void (*GameInterface)(int h);
+extern void (*GameInterface)(int h, void *param);
 extern void FP_FASTAPASS(1) (*PPU_hook)(uint32 A);
 extern void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
 extern void (*GameStateRestore)(int version);
@@ -80,6 +80,7 @@ extern void (*GameStateRestore)(int version);
 #define GI_RESETM2	1
 #define GI_POWER	2
 #define GI_CLOSE	3
+#define GI_INFOSTRING	11
 
 #include "git.h"
 extern FCEUGI FCEUGameInfo;

@@ -70,7 +70,7 @@ extern int32 fhinc;
 
 uint8 FCEU_GetJoyJoy(void);
 
-int GetSoundBuffer(int32 **W);
+int GetSoundBuffer(int16 **W);
 int FlushEmulateSound(void);
 extern uint32 Wave[2048];
 extern int32 WaveFinal[2048];

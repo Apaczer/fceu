@@ -80,7 +80,7 @@ static DECLFR(TrainerRead)
  return(trainerpoo[A&0x1FF]);
 }
 
-static void iNESGI(int h)
+static void iNESGI(int h, void *param)
 {
  switch(h)
  {
@@ -121,7 +121,16 @@ static void iNESGI(int h)
 		 if(trainerpoo) {FCEU_gfree(trainerpoo);trainerpoo=0;}
 	        }
         	break;
-     }
+  case GI_INFOSTRING:
+		{
+		 int MapperNo;
+		 MapperNo = (head.ROM_type>>4);
+		 MapperNo|=(head.ROM_type2&0xF0);
+		 sprintf(param, "iNES, %s, Mapper: %d%s%s", PAL?"PAL":"NTSC",
+		 	MapperNo, (head.ROM_type&2)?", BB":"", (head.ROM_type&4)?", T":"");
+		}
+		break;
+ }
 }
 
 uint32 iNESGameCRC32=0;
@@ -1108,10 +1117,5 @@ static int NewiNES_Init(int num)
   tmp++;
  }
  return(0);
-}
-
-iNES_HEADER *iNESGetHead(void)
-{
-	return &head;
 }
 

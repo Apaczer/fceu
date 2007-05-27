@@ -23,8 +23,8 @@
 static uint16 IRQCount;
 static uint8 IRQa;
 
-static uint8 WRAM[8192];
-static uint8 IRAM[128];
+static uint8 WRAM[8192] __attribute__ ((aligned (4)));
+static uint8 IRAM[128] __attribute__ ((aligned (4)));
 
 static DECLFR(AWRAM)
 {

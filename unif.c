@@ -62,8 +62,8 @@ static CartInfo UNIFCart;
 
 static int vramo;
 static int mirrortodo;
-static uint8 *boardname;
-static uint8 *sboardname;
+static char *boardname;
+static char *sboardname;
 
 static uint32 CHRRAMSize;
 uint8 *UNIFchrrama=0;
@@ -274,7 +274,7 @@ static int LoadPRG(int fp)
 
 static int SetBoardName(int fp)
 {
- if(!(boardname=(uint8 *)FCEU_malloc(uchead.info+1)))
+ if(!(boardname=FCEU_malloc(uchead.info+1)))
   return(0);
  FCEU_fread(boardname,1,uchead.info,fp);
  boardname[uchead.info]=0;
@@ -470,7 +470,7 @@ static int InitializeBoard(void)
 
    while(bmap[x].name)
    {
-    if(!strcmp((char *)sboardname,(char *)bmap[x].name))
+    if(!strcmp(sboardname,(char *)bmap[x].name))
     {
      if(!malloced[16])
      {
@@ -498,7 +498,7 @@ static int InitializeBoard(void)
    return(0);
 }
 
-static void UNIFGI(int h)
+static void UNIFGI(int h, void *param)
 {
  switch(h)
  {
@@ -517,6 +517,14 @@ static void UNIFGI(int h)
 		 UNIFCart.Close();
                 FreeUNIF();
                 break;
+  case GI_INFOSTRING:
+		{
+		 char board[24];
+		 strncpy(board, sboardname, 20);
+		 board[20] = 0;
+		 sprintf(param, "UNIF, %s, %s%s", board, PAL?"PAL":"NTSC", UNIFCart.battery?", BB":"");
+		}
+		break;
  }
 }
 

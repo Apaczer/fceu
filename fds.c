@@ -85,12 +85,13 @@ static uint8 SelectDisk,InDisk;
 
 #define DC_INC    1
 
-void FDSGI(int h)
+void FDSGI(int h, void *param)
 {
  switch(h)
  {
   case GI_CLOSE: FDSClose();break;
   case GI_POWER: FDSInit();break;
+  case GI_INFOSTRING: sprintf(param, "FDS, Sides: %d", TotalSides);break;
  }
 }
 

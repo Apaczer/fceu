@@ -51,8 +51,8 @@ void *MakeZipWrap(void *tz)
 
  if(!(tmp=FCEU_malloc(sizeof(ZIPWRAP))))
   goto doret;
- 
- unzGetCurrentFileInfo(tz,&ufo,0,0,0,0,0,0);  
+
+ unzGetCurrentFileInfo(tz,&ufo,0,0,0,0,0,0);
 
  tmp->location=0;
  tmp->size=ufo.uncompressed_size;
@@ -68,7 +68,7 @@ void *MakeZipWrap(void *tz)
 
  unzCloseCurrentFile(tz);
  unzClose(tz);
- 
+
  return tmp;
 }
 #endif
@@ -109,13 +109,13 @@ int FASTAPASS(2) FCEU_fopen(char *path, char *mode)
        break;
      }
      if(unzGoToNextFile(tz)!=UNZ_OK)
-     { 
+     {
       if(unzGoToFirstFile(tz)!=UNZ_OK) goto zpfail;
-      break;     
+      break;
      }
     }
     if(unzOpenCurrentFile(tz)!=UNZ_OK)
-     goto zpfail;       
+     goto zpfail;
    }
    else
    {
@@ -204,7 +204,7 @@ size_t FASTAPASS(3) FCEU_fread(void *ptr, size_t size, size_t nmemb, int stream)
   return gzread(desctable[(stream&255)-1],ptr,size*nmemb);
  }
  else if(stream&0x8000)
- { 
+ {
   ZIPWRAP *wz;
   uint32 total=size*nmemb;
 
@@ -242,7 +242,7 @@ size_t FASTAPASS(3) FCEU_fwrite(void *ptr, size_t size, size_t nmemb, int stream
   return gzwrite(desctable[(stream&255)-1],ptr,size*nmemb);
  }
  else if(stream&0x8000)
- { 
+ {
   return 0;
  }
  else
@@ -256,7 +256,7 @@ int FASTAPASS(3) FCEU_fseek(int stream, long offset, int whence)
  if(stream&0x4000)
  {
   return gzseek(desctable[(stream&255)-1],offset,whence);
- } 
+ }
  else if(stream&0x8000)
  {
   ZIPWRAP *wz;
@@ -271,7 +271,7 @@ int FASTAPASS(3) FCEU_fseek(int stream, long offset, int whence)
                   return (-1);
                  wz->location+=offset;
                  break;
-  }    
+  }
   return 0;
  }
  else
@@ -287,8 +287,8 @@ long FASTAPASS(1) FCEU_ftell(int stream)
   return gztell(desctable[(stream&255)-1]);
  }
  else if(stream&0x8000)
- { 
-  return (((ZIPWRAP *)desctable[(stream&255)-1])->location);  
+ {
+  return (((ZIPWRAP *)desctable[(stream&255)-1])->location);
  }
  else
  #endif
@@ -312,25 +312,25 @@ void FASTAPASS(1)FCEU_rewind(int stream)
   fseek(desctable[stream-1],0,SEEK_SET);
  #else
   rewind(desctable[stream-1]);
- #endif 
+ #endif
 }
 
 int FASTAPASS(2) FCEU_read32(void *Bufo, int stream)
 {
  #ifdef ZLIB
  if(stream&0xC000)
- { 
-  uint8 t[4];
+ {
+  uint32 t;
   #ifndef LSB_FIRST
   uint8 x[4];
   #endif
   if(stream&0x8000)
-  { 
+  {
    ZIPWRAP *wz;
    wz=(ZIPWRAP*)desctable[(stream&255)-1];
    if(wz->location+4>wz->size)
     {return 0;}
-   *(uint32 *)t=*(uint32 *)(wz->data+wz->location);
+   memcpy(&t, wz->data+wz->location, 4);
    wz->location+=4;
   }
   else if(stream&0x4000)
@@ -342,7 +342,7 @@ int FASTAPASS(2) FCEU_read32(void *Bufo, int stream)
   x[3]=t[0];
   *(uint32*)Bufo=*(uint32*)x;
   #else
-  *(uint32*)Bufo=*(uint32*)t;
+  memcpy(Bufo, &t, 4);
   #endif
   return 1;
  }
@@ -357,7 +357,7 @@ int FASTAPASS(1) FCEU_fgetc(int stream)
 {
  #ifdef ZLIB
  if(stream&0x4000)
-  return gzgetc(desctable[(stream&255)-1]); 
+  return gzgetc(desctable[(stream&255)-1]);
  else if(stream&0x8000)
  {
   ZIPWRAP *wz;

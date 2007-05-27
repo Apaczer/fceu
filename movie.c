@@ -440,6 +440,7 @@ strcpy(origname,fname);
   else
   {
 	  // unsupported version
+	  printf("movie: unsupported version\n");
 	  fclose(fp);
 	  return;
   }
@@ -485,7 +486,8 @@ strcpy(origname,fname);
  }
 #endif
 
- if(!FCEUSS_LoadFP(fp,1)) return;
+ // Loading new savestates doesn't work and even breaks FDS
+ //if(!FCEUSS_LoadFP(fp,1)) return;
 
  ResetInputTypes();
 

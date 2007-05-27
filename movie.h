@@ -21,5 +21,6 @@ int FCEUMOV_PostLoad(void);
 extern int current;     // > 0 for recording, < 0 for playback
 extern uint32 framecount;
 void FCEUI_LoadMovie(char *fname, int _read_only);
+void FCEUI_StopMovie(void);
 
 #endif /* __MOVIE_H_ */

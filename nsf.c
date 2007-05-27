@@ -100,7 +100,7 @@ static NSF_HEADER NSFHeader;
 void NSFMMC5_Close(void);
 static uint8 *ExWRAM=0;
 
-void NSFGI(int h)
+void NSFGI(int h, void *param)
 {
  switch(h)
  {
@@ -123,6 +123,9 @@ void NSFGI(int h)
   break;
  case GI_RESETM2:
  case GI_POWER: NSF_init();break;
+ case GI_INFOSTRING:
+  sprintf(param, "NSF, %s", PAL?"PAL":"NTSC");
+  break;
  }
 }
 
@@ -403,6 +406,7 @@ static int special=0;
 void DrawNSF(uint8 *XBuf)
 {
  char snbuf[16];
+ int32 mul=0;
  int x;
 
  if(vismode==0) return;
@@ -410,17 +414,17 @@ void DrawNSF(uint8 *XBuf)
  for (x=0;x<240;x++)
   memset(XBuf+SCREEN_OFFS+x*SCREEN_WIDTH,0,256);
 
+ if(FSettings.SoundVolume)
+  mul=8192*240/(16384*FSettings.SoundVolume/50)/8;
+
  {
-  int32 *Bufpl;
-  int32 mul=0;
+  int16 *Bufpl;
 
   int l;
   l=GetSoundBuffer(&Bufpl);
 
   if(special==0)
   {
-   if(FSettings.SoundVolume)
-    mul=8192*240/(16384*FSettings.SoundVolume/50);
    for(x=0;x<256;x++)
    {
     uint32 y;
@@ -431,8 +435,6 @@ void DrawNSF(uint8 *XBuf)
   }
   else if(special==1)
   {
-   if(FSettings.SoundVolume)
-    mul=8192*240/(8192*FSettings.SoundVolume/50);
    for(x=0;x<256;x++)
    {
     double r;
@@ -449,8 +451,6 @@ void DrawNSF(uint8 *XBuf)
   else if(special==2)
   {
    static double theta=0;
-   if(FSettings.SoundVolume)
-    mul=8192*240/(16384*FSettings.SoundVolume/50);
    for(x=0;x<128;x++)
    {
     double xc,yc;

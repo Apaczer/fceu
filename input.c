@@ -46,8 +46,6 @@ static uint8 joy_readbit[2];
 static uint8 joy[4]={0,0,0,0};
 static uint8 LastStrobe;
 
-extern int coinon;
-
 static int FSDisable=0;	/* Set to 1 if NES-style four-player adapter is disabled. */
 static int JPAttrib[2]={0,0};
 static int JPType[2]={0,0};
@@ -350,6 +348,7 @@ void FCEUI_SetInputFC(int type, void *ptr, int attrib)
 
 void FCEU_DoSimpleCommand(int cmd)
 {
+   printf("FCEU_DoSimpleCommand: %i\n", cmd);
  switch(cmd)
  {
    case FCEUNPCMD_FDSINSERT: FCEU_FDSInsert();break;

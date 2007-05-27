@@ -95,7 +95,7 @@ static uint8 deemp=0;
 static int deempcnt[8];
 
 FCEUGI FCEUGameInfo;
-void (*GameInterface)(int h);
+void (*GameInterface)(int h, void *param);
 
 void FP_FASTAPASS(1) (*PPU_hook)(uint32 A);
 
@@ -1045,6 +1045,7 @@ void ResetMapping(void)
 int GameLoaded=0;
 void CloseGame(void)
 {
+ FCEUI_StopMovie();
  if(GameLoaded)
  {
   if(FCEUGameInfo.type!=GIT_NSF)
@@ -1052,7 +1053,7 @@ void CloseGame(void)
   #ifdef NETWORK
   if(FSettings.NetworkPlay) KillNetplay();
   #endif
-  GameInterface(GI_CLOSE);
+  GameInterface(GI_CLOSE, 0);
   CloseGenie();
   GameLoaded=0;
  }
@@ -1466,7 +1467,7 @@ static void PowerPPU(void)
 void ResetNES(void)
 {
         if(!GameLoaded) return;
-        GameInterface(GI_RESETM2);
+        GameInterface(GI_RESETM2, 0);
         ResetSound();
         ResetPPU();
         X6502_Reset();
@@ -1499,7 +1500,7 @@ void PowerNES(void)
         memset(RAM,0x00,0x800);
 #endif
         ResetMapping();
-	GameInterface(GI_POWER);
+	GameInterface(GI_POWER, 0);
         PowerSound();
 	PowerPPU();
 	timestampbase=0;

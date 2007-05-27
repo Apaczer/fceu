@@ -389,6 +389,7 @@ int CLImain(int argc, char *argv[])
           fceugi=FCEUI_LoadGame(lastLoadedGameName);
 	  if (fceugi)
 	  {
+	   char infostring[32];
 	   LoadConfig(lastLoadedGameName);
 	   if (Settings.region_force)
 	    FCEUI_SetVidSystem(Settings.region_force - 1);
@@ -396,15 +397,8 @@ int CLImain(int argc, char *argv[])
 	   //RefreshThrottleFPS();
 	   InitOtherInput();
 
-	   // additional print for gpfce
-	   // TODO: handlers for other formats then iNES
-	   {
-	  int MapperNo;
-	  iNES_HEADER *head = iNESGetHead(); // TODO: ReMake
-          MapperNo = (head->ROM_type>>4);
-          MapperNo|=(head->ROM_type2&0xF0);
-	  FCEU_DispMessage("%s, Mapper: %d%s%s", PAL?"PAL":"NTSC", MapperNo, (head->ROM_type&2)?", BB":"", (head->ROM_type&4)?", T":"");
-	   }
+	   GameInterface(GI_INFOSTRING, infostring);
+	   FCEU_DispMessage("%s", infostring);
 	  }
 	  else
 	  {

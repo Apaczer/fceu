@@ -98,15 +98,18 @@ static void do_emu_acts(uint32 acts)
 	}
 	else if (acts & (1 << 27)) // FDS insert/eject
 	{
-		FCEU_DoSimpleCommand(FCEUNPCMD_FDSINSERT);
+        	if(FCEUGameInfo.type == GIT_FDS)
+			FCEU_DoSimpleCommand(FCEUNPCMD_FDSINSERT);
 	}
 	else if (acts & (1 << 26)) // FDS select
 	{
-		FCEU_DoSimpleCommand(FCEUNPCMD_FDSSELECT);
+        	if(FCEUGameInfo.type == GIT_FDS)
+			FCEU_DoSimpleCommand(FCEUNPCMD_FDSSELECT);
 	}
 	else if (acts & (1 << 25)) // VS Unisystem insert coin
 	{
-		FCEU_DoSimpleCommand(FCEUNPCMD_VSUNICOIN);
+        	if(FCEUGameInfo.type == GIT_VSUNI)
+			FCEU_DoSimpleCommand(FCEUNPCMD_VSUNICOIN);
 	}
 }
 
