@@ -58,7 +58,6 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #if defined(DEBUG_ASM_6502)
 #define TriggerIRQ TriggerIRQ_d
 #define TriggerNMI TriggerNMI_d
-#define TriggerNMINSF TriggerNMINSF_d
 #define X6502_Run X6502_Run_d
 #define X6502_Reset X6502_Reset_d
 #define X6502_Power X6502_Power_d
@@ -74,7 +73,6 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #elif defined(ASM_6502)
 #define TriggerIRQ TriggerIRQ_a
 #define TriggerNMI TriggerNMI_a
-#define TriggerNMINSF TriggerNMINSF_a
 #define X6502_Reset X6502_Reset_a
 #define X6502_Power X6502_Power_a
 #define X6502_AddCycles X6502_AddCycles_a
@@ -102,7 +100,6 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #else
 #define TriggerIRQ TriggerIRQ_c
 #define TriggerNMI TriggerNMI_c
-#define TriggerNMINSF TriggerNMINSF_c
 #define X6502_Reset X6502_Reset_c
 #define X6502_Power X6502_Power_c
 #define X6502_AddCycles X6502_AddCycles_c
@@ -127,7 +124,6 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 extern int32 g_cnt;
 void TriggerIRQ_c(void);
 void TriggerNMI_c(void);
-void TriggerNMINSF_c(void);
 void X6502_Run_c(void);
 void X6502_Reset_c(void);
 void X6502_Power_c(void);
@@ -142,7 +138,6 @@ extern uint32 nes_registers[0x10];
 extern uint32 pc_base;
 void TriggerIRQ_a(void);
 void TriggerNMI_a(void);
-void TriggerNMINSF_a(void);
 void X6502_Run_a(void);
 void X6502_Reset_a(void);
 void X6502_Power_a(void);
@@ -156,7 +151,6 @@ void X6502_Rebase_a(void);
 #ifdef X6502_D
 void TriggerIRQ_d(void);
 void TriggerNMI_d(void);
-void TriggerNMINSF_d(void);
 void X6502_Run_d(int32 c);
 void X6502_Reset_d(void);
 void X6502_Power_d(void);

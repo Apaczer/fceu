@@ -73,7 +73,7 @@ static INLINE uint8 RdMem(unsigned int A)
   }
   _DB=_DB1;
  }
- if (A >= 0x2000 && A != _PC && A != _PC - 1 && A != _PC + 1) {
+ if (A >= 0x2000 && A != _PC - 1) {
   dreads[dread_count_c++] = _DB1;
   if (dread_count_c > 4) { printf("dread_count out of range\n"); exit(1); }
  }
@@ -379,6 +379,7 @@ static uint8 ZNTable[256] = {
 
 static uint8 CycTable[256] =
 {
+/*       0 1 2 3 4 5 6 7 8 9 a b c d e f */
 /*0x00*/ 7,6,2,8,3,3,5,5,3,2,2,2,4,4,6,6,
 /*0x10*/ 2,5,2,8,4,4,6,6,2,4,2,7,4,4,7,7,
 /*0x20*/ 6,6,2,8,3,3,5,5,4,2,2,2,4,4,6,6,
@@ -412,15 +413,6 @@ void FASTAPASS(1) X6502_IRQEnd_c(int w)
 void TriggerIRQ_c(void)	/* This function should probably be phased out. */
 {
  _IRQlow|=FCEU_IQTEMP;
-}
-
-void TriggerNMINSF_c(void)
-{
- ADDCYC(7);
- PUSH(_PC>>8);
- PUSH(_PC);
- PUSH((_P&~B_FLAG)|(U_FLAG));
- _PC=0x3800;
 }
 
 void TriggerNMI_c(void)
@@ -520,7 +512,11 @@ void X6502_Run_c(void/*int32 cycles*/)
 	  }
 	 }
 	 _PI=_P;
+#ifdef DEBUG_ASM_6502
+	 b1=RdMem(_PC++); _PC--;
+#else
 	 b1=RdMem(_PC);
+#endif
 	 ADDCYC(CycTable[b1]);
 	 temp=_tcount;
 

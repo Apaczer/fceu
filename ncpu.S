@@ -3,10 +3,14 @@
   File : ncpu.S
   Authors : FCA author
             modified and adapted by Yoyo.
-            adapted for fceu by notaz, 2007.
+            timing fixed, missing opcodes added
+	    and adapted for fceu by notaz, 2007.
 **************************************/
 
 #include "ncpu.h"
+
+/* emulate (some) dummy reads (may need that because they affect open bus) */
+#define DO_DUMMY_READS 1
 
 @@@
 @@@ Offets from REG_OP_TABLE
@@ -423,7 +427,7 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn, X
 .macro	ABSX_ADDR
-	ABS_ADDR 1
+	ABS_ADDR DO_DUMMY_READS
 	add	REG_ADDR, REG_ADDR, REG_X
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
@@ -442,7 +446,7 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@ $nnnn, Y
 .macro	ABSY_ADDR
-	ABS_ADDR 1					@ a hack needed for Paperboy, Dirty Harry controls to work
+	ABS_ADDR DO_DUMMY_READS				@ a hack needed for Paperboy, Dirty Harry controls to work
 	add	REG_ADDR, REG_ADDR, REG_Y
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff
@@ -531,12 +535,12 @@ op38:	@ SEC
 
 opD8:	@ CLD
 	IMPLIED
-	@@bic	REG_P_REST, REG_P_REST, #P_REST_D_FLAG
+	bic	REG_P_REST, REG_P_REST, #P_REST_D_FLAG
 	CYCLE_NEXT	2
 
 opF8:	@ SED
 	IMPLIED
-	@@orr	REG_P_REST, REG_P_REST, #P_REST_D_FLAG
+	orr	REG_P_REST, REG_P_REST, #P_REST_D_FLAG
 	CYCLE_NEXT	2
 
 op58:	@ CLI
@@ -1878,12 +1882,6 @@ op70:	@ BVS $nn
 	and	r0, r0, #0xFF
 .endm
 
-.macro	OP_SHY
-	mov	r0,REG_ADDR, lsr #8
-	add	r0,r0,#1
-	and	r0,r0,REG_Y
-.endm
-
 .macro  OP_SRE
 	movs	r0, r0, lsr #1
  @@set C flag
@@ -1919,13 +1917,9 @@ op70:	@ BVS $nn
 	@@ キャリーを保存
 	adc	REG_P_REST, r1, r1
 	and	REG_A,REG_A,r0,lsl #24
+	orr	REG_NZ, REG_A, REG_A, lsr #24		@ according to fceu
 .endm
 
-.macro	OP_RRA
-	movs	r1, REG_P_REST, lsr #1
-	orrcs	r0, r0, #0x100
-	movs	r0, r0, lsr #1
-.endm
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1961,7 +1955,7 @@ op4F:	@ SRE $nnnn
 
 op5F:	@ SRE $nnnn, X
 	CYCLE_PRE	7
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_SRE
 	READ_WRITE_2
@@ -1973,7 +1967,7 @@ op5F:	@ SRE $nnnn, X
 
 op5B:	@ SRE $nnnn, Y
 	CYCLE_PRE	7
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_SRE
 	READ_WRITE_2
@@ -2008,13 +2002,6 @@ op53:	@ SRE ($nn), Y
 	CYCLE_NEXT	8,1,0
 
 
-op9C:	@ SHY $nnnn, X
-	CYCLE_PRE	5
-	ABSX_ADDR_W
-	OP_SHY
-	WRITE_1
-	CYCLE_NEXT	5,1,0
-
 opE7:	@ ISB $nn
 	ZERO_ADDR
 	ZP_READ_W
@@ -2048,7 +2035,7 @@ opEF:   @ ISB $nnnn
 
 opFF:   @ ISB $nnnn,X
 	CYCLE_PRE	7
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_ISB
 	READ_WRITE_2
@@ -2062,7 +2049,7 @@ opFF:   @ ISB $nnnn,X
 
 opFB:	@ ISB $nnnn, Y
 	CYCLE_PRE	7
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_ISB
 	READ_WRITE_2
@@ -2075,32 +2062,32 @@ opFB:	@ ISB $nnnn, Y
 	CYCLE_NEXT	7,1,0
 
 opE3:	@ ISB ($nn, X)
-	CYCLE_PRE	7
+	CYCLE_PRE	8
 	INDX_ADDR
 	READ_WRITE_1
 	OP_ISB
 	READ_WRITE_2
 	OP_SBC
-	CYCLE_NEXT	7,1,0
+	CYCLE_NEXT	8,1,0
 	READ_WRITE_3
 	OP_ISB
 	READ_WRITE_4
 	OP_SBC
-	CYCLE_NEXT	7,1,0
+	CYCLE_NEXT	8,1,0
 
 opF3:	@ ISB ($nn), Y
-	CYCLE_PRE	7
+	CYCLE_PRE	8
 	INDY_ADDR
 	READ_WRITE_1
 	OP_ISB
 	READ_WRITE_2
 	OP_SBC
-	CYCLE_NEXT	7,1,0
+	CYCLE_NEXT	8,1,0
 	READ_WRITE_3
 	OP_ISB
 	READ_WRITE_4
 	OP_SBC
-	CYCLE_NEXT	7,1,0
+	CYCLE_NEXT	8,1,0
 
 opA7:	@ LAX $nn
 	ZERO_ADDR
@@ -2171,7 +2158,7 @@ op0F:	@ SLO $nnnn
 
 op1F:	@ SLO $nnnn, X
 	CYCLE_PRE	7
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_SLO
 	READ_WRITE_2
@@ -2254,7 +2241,7 @@ opCF:	@ DCP $nnnn
 
 opDF:	@ DCP $nnnn, X
 	CYCLE_PRE	7
-	ABSX_ADDR
+	ABSX_ADDR_W
 	READ_WRITE_1
 	OP_DCP
 	READ_WRITE_2
@@ -2268,7 +2255,7 @@ opDF:	@ DCP $nnnn, X
 
 opDB:	@ DCP $nnnn, Y
 	CYCLE_PRE	7
-	ABSY_ADDR
+	ABSY_ADDR_W
 	READ_WRITE_1
 	OP_DCP
 	READ_WRITE_2
@@ -2297,7 +2284,7 @@ opC3:	@ DCP ($nn, X)
 
 opD3:	@ DCP ($nn), Y
 	CYCLE_PRE	8
-	INDY_ADDR
+	INDY_ADDR_W
 	READ_WRITE_1
 	OP_DCP
 	READ_WRITE_2
@@ -2386,7 +2373,7 @@ op33:	@ RLA ($nn), Y
 op67:	@ RRA $nn
 	ZERO_ADDR
 	ZP_READ_W
-	OP_RRA
+	OP_ROR
 	ZP_WRITE_W
 	OP_ADC
 	CYCLE_NEXT	5
@@ -2394,7 +2381,7 @@ op67:	@ RRA $nn
 op77:	@ RRA $nn, X
 	ZEROX_ADDR
 	ZP_READ_W
-	OP_RRA
+	OP_ROR
 	ZP_WRITE_W
 	OP_ADC
 	CYCLE_NEXT	6
@@ -2403,12 +2390,12 @@ op6F:	@ RRA $nnnn
 	CYCLE_PRE	6
 	ABS_ADDR
 	READ_WRITE_1
-	OP_RRA
+	OP_ROR
 	READ_WRITE_2
 	OP_ADC
 	CYCLE_NEXT	6,1,0
 	READ_WRITE_3
-	OP_RRA
+	OP_ROR
 	READ_WRITE_4
 	OP_ADC
 	CYCLE_NEXT	6,1,0
@@ -2417,12 +2404,12 @@ op7F:	@ RRA $nnnn, X
 	CYCLE_PRE	7
 	ABSX_ADDR_W
 	READ_WRITE_1
-	OP_RRA
+	OP_ROR
 	READ_WRITE_2
 	OP_ADC
 	CYCLE_NEXT	7,1,0
 	READ_WRITE_3
-	OP_RRA
+	OP_ROR
 	READ_WRITE_4
 	OP_ADC
 	CYCLE_NEXT	7,1,0
@@ -2431,12 +2418,12 @@ op7B:	@ RRA $nnnn, Y
 	CYCLE_PRE	7
 	ABSY_ADDR_W
 	READ_WRITE_1
-	OP_RRA
+	OP_ROR
 	READ_WRITE_2
 	OP_ADC
 	CYCLE_NEXT	7,1,0
 	READ_WRITE_3
-	OP_RRA
+	OP_ROR
 	READ_WRITE_4
 	OP_ADC
 	CYCLE_NEXT	7,1,0
@@ -2445,12 +2432,12 @@ op63:	@ RRA ($nn, X)
 	CYCLE_PRE	8
 	INDX_ADDR
 	READ_WRITE_1
-	OP_RRA
+	OP_ROR
 	READ_WRITE_2
 	OP_ADC
 	CYCLE_NEXT	8,1,0
 	READ_WRITE_3
-	OP_RRA
+	OP_ROR
 	READ_WRITE_4
 	OP_ADC
 	CYCLE_NEXT	8,1,0
@@ -2459,12 +2446,12 @@ op73:	@ RRA ($nn), Y
 	CYCLE_PRE	8
 	INDY_ADDR_W
 	READ_WRITE_1
-	OP_RRA
+	OP_ROR
 	READ_WRITE_2
 	OP_ADC
 	CYCLE_NEXT	8,1,0
 	READ_WRITE_3
-	OP_RRA
+	OP_ROR
 	READ_WRITE_4
 	OP_ADC
 	CYCLE_NEXT	8,1,0
@@ -2477,8 +2464,14 @@ op64:
 	CYCLE_NEXT  3
 
 op0C:	@ NOP $nnnn
+	CYCLE_PRE	4
+#if DO_DUMMY_READS
+	ABS_ADDR
+	READ
+#else
 	add     REG_PC,REG_PC,#2
-	CYCLE_NEXT   4
+#endif
+	CYCLE_NEXT	4,1,0
 
 op14:	@ NOP $nn, X
 op34:
@@ -2503,16 +2496,176 @@ op5C:
 op7C:
 opDC:
 opFC:
+	CYCLE_PRE	4
+#if DO_DUMMY_READS
+	ABSX_ADDR
+	READ
+#else
 	add     REG_PC,REG_PC,#2
-	CYCLE_NEXT   4
+#endif
+	CYCLE_NEXT	4,1,0
 
 op80:	@ NOP #$nn
 op82:
 op89:
 opC2:
-opE2:
 	add     REG_PC,REG_PC,#1
 	CYCLE_NEXT   2
+
+opE2:
+	add     REG_PC,REG_PC,#1
+	CYCLE_NEXT   3
+
+op02:	@ JAM: try to be compatible with fceu
+op12:
+op22:
+op32:
+op42:
+op52:
+op62:
+op72:
+op92:
+opB2:
+opD2:
+opF2:
+	sub     REG_PC,REG_PC,#1
+	add	REG_CYCLE, REG_CYCLE, #0x10
+	FLUSH_TIMESTAMP r0
+	add	REG_CYCLE, REG_CYCLE, #0xef
+	sub	REG_CYCLE, REG_CYCLE, #0x00d00000 @ 0xff*48<<16
+	sub	REG_CYCLE, REG_CYCLE, #0x2f000000
+	CYCLE_NEXT   2
+
+op0B:	@ ANC #$nn
+op2B:	@ ANC #$nn
+	IMM_VALUE
+	OP_AND
+	bic	REG_P_REST, REG_P_REST, #P_REST_C_FLAG
+	orr	REG_P_REST, REG_P_REST, REG_A, lsr #31
+	CYCLE_NEXT   2
+
+op4B:	@ ASR #$nn
+	IMM_VALUE
+	OP_AND
+	OP_LSR_A
+	CYCLE_NEXT   2
+
+op6B:	@ ARR #$nn
+	IMM_VALUE
+	OP_AND
+	bic	REG_P_REST, REG_P_REST, #P_REST_C_FLAG
+	eor	r0, REG_A, REG_A, lsr #1
+	and	r0, r0, #0x40000000
+	orr	REG_P_REST, REG_P_REST, r0, lsr #24
+	OP_ROR_A
+	CYCLE_NEXT   2
+
+op83:	@ SAX/AAX ($nn, X)
+	CYCLE_PRE	6
+	INDX_ADDR
+	and	r0, REG_X, REG_A, lsr #24
+	WRITE_1
+	CYCLE_NEXT	6,1,0
+
+op87:	@ SAX/AAX $nn
+	ZERO_ADDR
+	and	r0, REG_X, REG_A, lsr #24
+	ZP_WRITE
+	CYCLE_NEXT	3
+
+op8B:	@ ANE/XAA #$nn
+	orr	REG_A, REG_A, #0xee000000
+	and	REG_A, REG_A, REG_X, lsl #24
+	IMM_VALUE
+	OP_AND
+	CYCLE_NEXT	2
+
+op8F:	@ SAX/AAX $nnnn
+	CYCLE_PRE	4
+	ABS_ADDR
+	and	r0, REG_X, REG_A, lsr #24
+	WRITE_1
+	CYCLE_NEXT	4,1,0
+
+.macro	AMY_MSB
+	sub	r0, REG_ADDR, REG_Y
+	mov	r0, r0, lsr #8
+	add	r0, r0, #1
+.endm
+
+op93:	@ SHA/AXA ($nn), Y
+	CYCLE_PRE	6
+	INDY_ADDR_W
+	AMY_MSB
+	and	r0, r0, REG_X
+	and	r0, r0, REG_A, lsr #24
+	WRITE_1
+	CYCLE_NEXT	6,1,0
+
+op97:	@ SAX,AAX $nn, Y
+	ZEROY_ADDR
+	and	r0, REG_X, REG_A, lsr #24
+	ZP_WRITE
+	CYCLE_NEXT	4
+
+op9B:	@ SHS/XAS $nnnn, Y
+	and	r0, REG_X, REG_A, lsr #24
+	bic	REG_S, REG_S, #0xFF << 24
+	orr	REG_S, REG_S, r0, lsl #24
+	ABSY_ADDR_W
+	AMY_MSB
+	and	r0, r0, REG_S, lsr #24
+	WRITE_1
+	CYCLE_NEXT	5
+
+op9C:	@ SHY/SYA $nnnn, X
+	CYCLE_PRE	5
+	ABSX_ADDR_W
+	sub	r0, REG_ADDR, REG_X
+	mov	r0, r0, lsr #8
+	add	r0, r0, #1
+	and	r0, r0, REG_Y
+	WRITE_1
+	CYCLE_NEXT	5,1,0
+
+op9E:	@ SHX/SXA $nnnn, Y
+	ABSY_ADDR_W
+	AMY_MSB
+	and	r0, r0, REG_X
+	WRITE_1
+	CYCLE_NEXT	5
+
+op9F:	@ SHA/AXA $nnnn, Y
+	CYCLE_PRE	5
+	ABSY_ADDR_W
+	AMY_MSB
+	and	r0, r0, REG_X
+	and	r0, r0, REG_A, lsr #24
+	WRITE_1
+	CYCLE_NEXT	5,1,0
+
+opAB:	@ LXA/ATX/OAL #$nn
+	IMM_VALUE
+	orr	REG_A, REG_A, #0xee000000
+	OP_AND
+	mov	REG_X, REG_A, lsr #24
+	CYCLE_NEXT	2
+
+opBB:	@ LAS/LAR $nnnn,Y
+	CYCLE_PRE	4
+	ABSY_ADDR_W
+	READ_WRITE_1
+	READ_WRITE_2
+	b	opBB_
+	READ_WRITE_3
+	READ_WRITE_4
+opBB_:	and	REG_X, r0, REG_S, lsr #24
+	bic	REG_S, REG_S, #0xff<<24
+	orr	REG_S, REG_S, REG_X, lsl #24
+	mov	REG_A, REG_X, lsl #24
+	orr	REG_NZ, REG_A, REG_A, lsr #24
+	CYCLE_NEXT	4,1,0
+
 
 
 
@@ -2950,92 +3103,6 @@ X_:	.fill   0x20, 1, 0
 	ALIGN
 
 
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@
-@@@ Undefined Opcodes
-@@@
-op0B:	@ ANC #$nn
-op2B:	@ ANC #$nn
-op8B:	@ ANE #$nn
-op6B:	@ ARR #$nn
-op4B:	@ ASR #$nn
-@opC7:	@ DCP $nn
-@opD7:	@ DCP $nn, X
-@opCF:	@ DCP $nnnn
-@opDF:	@ DCP $nnnn, X
-@opDB:	@ DCP $nnnn, Y
-@opC3:	@ DCP ($nn, X)
-@opD3:	@ DCP ($nn), Y
-
-
-
-@opE7:	@ ISB $nn
-@opF7:	@ ISB $nn, X
-@opEF:	@ ISB $nnnn
-@opFF:	@ ISB $nnnn, X
-@opFB:	@ ISB $nnnn, Y
-@opE3:	@ ISB ($nn, X)
-@opF3:	@ ISB ($nn), Y
-
-
-op02:	@ JAM
-op12:
-op22:
-op32:
-op42:
-op52:
-op62:
-op72:
-op92:
-opB2:
-opD2:
-opF2:
-
-
-opBB:	@ LAS $nnnn,Y
-@opA3:	@ LAX ($nn, X)
-@opA7:	@ LAX $nn
-@opB7:	@ LAX $nn, Y
-@opAF:	@ LAX $nnnn
-@opBF:	@ LAX $nnnn, Y
-
-@opB3:	@ LAX ($nn), Y
-opAB:	@ LXA #$nn
-@op27:	@ RLA $nn
-@op37:	@ RLA $nn, X
-@op2F:	@ RLA $nnnn
-@op3F:	@ RLA $nnnn, X
-@op23:	@ RLA ($nn, X)
-@op67:	@ RRA $nn
-@op77:	@ RRA $nn, X
-@op6F:	@ RRA $nnnn
-@op7F:	@ RRA $nnnn, X
-@op63:	@ RRA ($nn, X)
-op87:	@ SAX $nn
-op97:	@ SAX $nn, Y
-op8F:	@ SAX $nnnn
-op83:	@ SAX ($nn, X)
-@opCB:	@ SBX #$nn
-op9F:	@ SHA $nnnn, Y
-op93:	@ SHA ($nn), Y
-op9B:	@ SHS $nnnn, Y
-op9E:	@ SHX $nnnn, Y
-@op03:   @ SLO ($nn, X)
-@op07:	@ SLO $nn
-@op17:	@ SLO $nn, X
-@op0F:	@ SLO $nnnn
-@op1F:	@ SLO $nnnn, X
-@op47:	@ SRE $nn
-@op57:	@ SRE $nn, X
-@op4F:	@ SRE $nnnn
-@op5F:	@ SRE $nnnn, X
-@op5B:	@ SRE $nnnn, Y
-@op43:	@ SRE ($nn, X)
-	CYCLE_NEXT   1
-@ emu_panic?
-
-
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@
 @ fceu stuff...
@@ -3067,7 +3134,6 @@ op9E:	@ SHX $nnnn, Y
 	.globl	X6502_Run_a @ (int32 cycles);
 	.globl	TriggerIRQ_a @ (void);
 	.globl	TriggerNMI_a @ (void);
-	.globl	TriggerNMINSF_a @ (void);
 	.globl	X6502_AddCycles_a @ (int x);
 	.globl	X6502_IRQBegin_a @ (int w);
 	.globl	X6502_IRQEnd_a @ (int w);
@@ -3120,11 +3186,6 @@ X6502_IRQEnd_a:
 TriggerNMI_a:
 	mov     r0, #FCEU_IQNMI
 	b	X6502_IRQBegin_a
-
-
-TriggerNMINSF_a:
-	@ not implemented
-	bx	lr
 
 
 X6502_AddCycles_a:

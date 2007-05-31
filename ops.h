@@ -57,12 +57,15 @@ case 0x28: /* PLP */
            break;
 case 0x4C:
 	  {
-	   uint16 ptmp=_PC;
 	   unsigned int npc;
-
+/*
+	   uint16 ptmp=_PC;
 	   npc=RdMem(ptmp);
 	   ptmp++;
 	   npc|=RdMem(ptmp)<<8;
+*/
+	   npc=RdMem(_PC++);
+	   npc|=RdMem(_PC++)<<8;
 	   _PC=npc;
 	  }
 	  break; /* JMP ABSOLUTE */
@@ -76,12 +79,12 @@ case 0x6C:
 	   break;
 case 0x20: /* JSR */
 	   {
-	    uint8 npc;
+	    uint32 npc;
 	    npc=RdMem(_PC++);
             PUSH(_PC>>8);
             PUSH(_PC);
-            _PC=RdMem(_PC)<<8;
-	    _PC|=npc;
+            npc|=RdMem(_PC++)<<8;
+	    _PC=npc;
 	   }
            break;
 

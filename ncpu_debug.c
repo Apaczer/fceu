@@ -153,10 +153,6 @@ void TriggerNMI_d(void)
 	compare_state();
 }
 
-void TriggerNMINSF_d(void)
-{
-}
-
 void X6502_Run_d(int32 c)
 {
 	int32 cycles = c << 4; /* *16 */
@@ -185,6 +181,8 @@ void X6502_Run_d(int32 c)
 			}
 			pending_irq = 0;
 		}
+
+		//printf("%04x: %02x\n", nes_registers[3] - pc_base, *(unsigned char *)nes_registers[3]);
 
 		nes_registers[7]=1<<16;
 		X.count=1;
@@ -235,6 +233,38 @@ void X6502_Power_d(void)
 	X6502_Power_c();
 	X6502_Power_a();
 	compare_state();
+
+#if 0
+	{
+		unsigned char *p = (void *) nes_registers[3];
+		int i, u, nop = 0xea;
+
+		for (i = 0; i < 256; i++)
+		{
+			if (i == 0 || i == 0x20 || i == 0x40 || i == 0x60 || i == 0x4c || i == 0x6c) continue; /* BRK, JSR, RET, etc. */
+			if ((i & 0x1f) == 0x10) continue; /* Bxx */
+			switch (i)
+			{
+				case 0x02: /* JAM */
+				case 0x12:
+				case 0x22:
+				case 0x32:
+				case 0x42:
+				case 0x52:
+				case 0x62:
+				case 0x72:
+				case 0x92:
+				case 0xB2:
+				case 0xD2:
+				case 0xF2: continue;
+			}
+
+			*p++ = i;
+			for (u = 0; u < 3; u++)
+				*p++ = nop;
+		}
+	}
+#endif
 }
 
 void X6502_AddCycles_d(int x)
