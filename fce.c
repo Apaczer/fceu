@@ -605,7 +605,13 @@ static void LineUpdate(uint8 *target)
 {
 	uint32 tem;
 
-	if(FSkip || scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
+	/* PRefreshLine() will not get called on skipped frames.  This
+	 * could cause a problem, but the solution would be rather complex,
+	 * due to the current sprite 0 hit code.
+	 */
+	if(FSkip) return;
+
+	if(scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
 	{
 	   if(PPU_hook)
  	    PRefreshLine();
@@ -678,27 +684,29 @@ static void LineUpdateEnd(uint8 *target)
 
 static void PRefreshLine(void)
 {
-        uint32 vofs;
-        uint8 X1;
+         uint32 vofs;
+	 int X1;
+	 vofs=((PPU[0]&0x10)<<8) | ((RefreshAddr>>12)&7);
+	 void (*PPU_hook_)(uint32 A) = PPU_hook;
 
-        vofs = 0;
-        if (BGAdrHI) vofs = 0x1000;
 
-        vofs+=(RefreshAddr>>12)&7;
+         for(X1=33;X1;X1--)
+         {
+                uint32 zz2;
+                uint32 vadr;
 
-        for(X1=33;X1;X1--)
-        {
-                register uint8 no;
-                register uint8 zz2;
-                zz2=(uint8)((RefreshAddr>>10)&3);
-		PPU_hook(0x2000|(RefreshAddr&0xFFF));
-                no  = vnapage[zz2][(RefreshAddr&0x3ff)];
-                PPU_hook((no<<4)+vofs);
+                zz2=(RefreshAddr>>10)&3;
+                PPU_hook_(0x2000|(RefreshAddr&0xFFF));
+
+                vadr=(vnapage[zz2][RefreshAddr&0x3ff]<<4)+vofs;
+
+	        PPU_hook_(vadr);
+
                 if((RefreshAddr&0x1f)==0x1f)
                  RefreshAddr^=0x41F;
                 else
                  RefreshAddr++;
-        }
+         }
 }
 
 /* This high-level graphics MMC5 emulation code was written
@@ -856,30 +864,34 @@ static void RefreshLine_MMC5Hack4(uint8 *P, uint32 vofs)
 static void RefreshLine_PPU_hook(uint8 *P, uint32 vofs)
 {
          int8 X1;
+	 void (*PPU_hook_)(uint32 A) = PPU_hook;
+	 uint32 rfraddr = RefreshAddr;
+	 uint8 *page = vnapage[(rfraddr>>10)&3];
 
          for(X1=33;X1;X1--,P+=8)
          {
                 uint8 *C;
-                uint8 cc,zz,zz2;
+                uint8 cc,zz;
                 uint32 vadr;
 
-                zz=RefreshAddr&0x1F;
-                zz2=(RefreshAddr>>10)&3;
-                PPU_hook(0x2000|(RefreshAddr&0xFFF));
-                cc=vnapage[zz2][0x3c0+(zz>>2)+((RefreshAddr&0x380)>>4)];
-                cc=((cc >> ((zz&2) + ((RefreshAddr&0x40)>>4))) &3) <<2;
-                vadr=(vnapage[zz2][RefreshAddr&0x3ff]<<4)+vofs;
+                zz=rfraddr&0x1F;
+                PPU_hook_(0x2000|(rfraddr&0xFFF));
+                cc=page[0x3c0+(zz>>2)+((rfraddr&0x380)>>4)];
+                cc=((cc >> ((zz&2) + ((rfraddr&0x40)>>4))) &3) <<2;
+                vadr=(page[rfraddr&0x3ff]<<4)+vofs;
                 C = VRAMADR(vadr);
 
 	        #include "fceline.h"
 
-	        PPU_hook(vadr);
+	        PPU_hook_(vadr);
 
-                if((RefreshAddr&0x1f)==0x1f)
-                 RefreshAddr^=0x41F;
-                else
-                 RefreshAddr++;
+                if((rfraddr&0x1f)==0x1f) {
+                 rfraddr^=0x41F;
+	         page = vnapage[(rfraddr>>10)&3];
+                } else
+                 rfraddr++;
          }
+	 RefreshAddr = rfraddr;
 }
 
 static void RefreshLine_normal(uint8 *P, uint32 vofs) // vofs is 0x107 max
