@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef GP2X
+#include <unistd.h> // for sync()
+#endif
+
 #include "types.h"
 #include "x6502.h"
 #include "fce.h"
@@ -911,9 +915,11 @@ void FDSClose(void)
 {
  FILE *fp;
  int x;
- char *fn=FCEU_MakeFName(FCEUMKF_FDS,0,0);
+ char *fn;
 
  if(!DiskWritten) return;
+
+ fn=FCEU_MakeFName(FCEUMKF_FDS,0,0);
 
  if(!(fp=FCEUD_UTF8fopen(fn,"wb")))
  {
@@ -933,4 +939,8 @@ void FDSClose(void)
  }
  FreeFDSMemory();
  fclose(fp);
+#ifdef GP2X
+ sync();
+#endif
 }
+

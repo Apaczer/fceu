@@ -43,8 +43,6 @@
 #include "dface.h"
 
 
-// TODO! broken fs0, sram saves
-
 void CleanSurface(void);
 
 // internals
@@ -393,7 +391,6 @@ int CLImain(int argc, char *argv[])
 	   if (Settings.region_force)
 	    FCEUI_SetVidSystem(Settings.region_force - 1);
 	   ParseGI(fceugi);
-	   //RefreshThrottleFPS();
 	   InitOtherInput();
 
 	   GameInterface(GI_INFOSTRING, infostring);
@@ -421,6 +418,7 @@ int CLImain(int argc, char *argv[])
          }
 
 	 PrepareOtherInput();
+	 RefreshThrottleFPS();
 	 FCEUI_GetCurrentVidSystem(&srendline,&erendline);
 	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
 	 switch (Settings.scaling & 3) {

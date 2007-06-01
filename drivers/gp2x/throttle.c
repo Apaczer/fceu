@@ -3,57 +3,18 @@
 #include "gp2x.h"
 #include "throttle.h"
 
-#if 0
-static uint64 tfreq;
-static uint64 desiredfps;
-
-void RefreshThrottleFPS(void)
-{
- uint64 f=FCEUI_GetDesiredFPS();
- // great, a bit faster than before
- //f = (f*65) >> 6;
- desiredfps=f>>8;
- tfreq=1000000;
- tfreq<<=16;    /* Adjustment for fps returned from FCEUI_GetDesiredFPS(). */
-}
-
-static uint64 GetCurTime(void)
-{
- uint64 ret;
- struct timeval tv;
-
- gettimeofday(&tv,0);
- ret=(uint64)tv.tv_sec*1000000;
- ret+=tv.tv_usec;
- return(ret);
-}
-
-INLINE void SpeedThrottle(void)
-{
- static uint64 ttime,ltime;
-
- waiter:
-
- ttime=GetCurTime();
-
- if( (ttime-ltime) < (tfreq/desiredfps) )
- {
-  goto waiter;
- }
- if( (ttime-ltime) >= (tfreq*4/desiredfps))
-  ltime=ttime;
- else
-  ltime+=tfreq/desiredfps;
-}
-
-#else
 
 extern uint8 PAL;
 extern int FSkip;
 static int usec_aim = 0, usec_done = 0;
 static int skip_count = 0;
 
-INLINE void SpeedThrottle(void)
+void RefreshThrottleFPS(void)
+{
+	usec_aim = usec_done = skip_count = 0;
+}
+
+void SpeedThrottle(void)
 {
 	static struct timeval tv_prev;
 	struct timeval tv_now;
@@ -108,5 +69,4 @@ INLINE void SpeedThrottle(void)
 	usec_done = usec_done - usec_aim + 1; // reset to prevent overflows
 	usec_aim = 0;
 }
-#endif
 

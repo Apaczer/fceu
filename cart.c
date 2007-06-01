@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef GP2X
+#include <unistd.h> // for sync()
+#endif
+
 #include "types.h"
 #include "fce.h"
 #include "ppu.h"
@@ -683,6 +687,10 @@ void FCEU_SaveGameSave(CartInfo *LocalHWInfo)
      fwrite(LocalHWInfo->SaveGame[x],1,
       LocalHWInfo->SaveGameLen[x],sp);
     }
+   fclose(sp);
+#ifdef GP2X
+   sync();
+#endif
   }
   free(soot);
  }
@@ -706,6 +714,7 @@ void FCEU_LoadGameSave(CartInfo *LocalHWInfo)
    for(x=0;x<4;x++)
     if(LocalHWInfo->SaveGame[x])
      fread(LocalHWInfo->SaveGame[x],1,LocalHWInfo->SaveGameLen[x],sp);
+   fclose(sp);
   }
   free(soot);
  }
