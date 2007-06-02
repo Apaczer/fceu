@@ -217,7 +217,7 @@ char *FCEU_MakeFName(int type, int id1, char *cd1)
                        if(odirs[FCEUIOD_MISC])
                         asprintf(&ret,"%s"PSS"%s.pal",odirs[FCEUIOD_MISC],FileBase);
                        else
-                        asprintf(&ret,"%s"PSS"%s.pal",BaseDirectory,FileBase);
+                        asprintf(&ret,"%s"PSS"pal"PSS"%s.pal",BaseDirectory,FileBase);
                        break;
   case FCEUMKF_MOVIEGLOB:
                      if(odirs[FCEUIOD_MISC])

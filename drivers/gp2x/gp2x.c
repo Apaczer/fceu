@@ -91,6 +91,7 @@ static void SetDefaults(void)
  Settings.sound_rate = 22050;
  Settings.turbo_rate_add = (8*2 << 24) / 60 + 1; // 8Hz turbofire
  Settings.gamma = 100;
+ Settings.sstate_confirm = 1;
  // default controls, RLDU SEBA
  Settings.KeyBinds[ 0] = 0x010; // GP2X_UP
  Settings.KeyBinds[ 4] = 0x020; // GP2X_DOWN
@@ -102,6 +103,9 @@ static void SetDefaults(void)
  Settings.KeyBinds[15] = 0x200; // GP2X_Y
  Settings.KeyBinds[ 8] = 0x008; // GP2X_START
  Settings.KeyBinds[ 9] = 0x004; // GP2X_SELECT
+ Settings.KeyBinds[10] = 0x80000000; // GP2X_L
+ Settings.KeyBinds[11] = 0x40000000; // GP2X_R
+ Settings.KeyBinds[27] = 0xc0000000; // GP2X_PUSH
 }
 
 void DoDriverArgs(void)

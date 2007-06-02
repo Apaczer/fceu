@@ -52,9 +52,8 @@ ncpu.o: ncpu.S ncpu.h
 include Makefile.base
 
 ${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
-${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h
+${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h ${B}rev.h
 ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
-${B}menu.o:		${B}rev.h
 ppu.o:			ppu.c ppu.h
 
 ${B}rev.h: FORCE

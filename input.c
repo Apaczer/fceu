@@ -117,7 +117,7 @@ static DECLFR(JPRead)
 	  ret=FCExp->Read(A&1,ret);
 
 	ret|=X.DB&0xC0;
-	dprintf("JPRead %02x", ret);
+	dprintf("JPRead %i %02x", A&1, ret);
 	return(ret);
 }
 

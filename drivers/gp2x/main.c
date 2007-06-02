@@ -91,8 +91,8 @@ void FCEUD_PrintError(char *s)
  puts(s);
 }
 
-static char *cpalette=0;
-static void LoadCPalette(void)
+char *cpalette=0;
+void LoadCPalette(void)
 {
  char tmpp[192];
  FILE *fp;
@@ -100,6 +100,8 @@ static void LoadCPalette(void)
  if(!(fp=fopen(cpalette,"rb")))
  {
   printf(" Error loading custom palette from file: %s\n",cpalette);
+  free(cpalette);
+  cpalette=0;
   return;
  }
  fread(tmpp,1,192,fp);
@@ -181,7 +183,7 @@ static void SaveLLGN(void)
 
 static void CreateDirs(void)
 {
- char *subs[]={"fcs","snaps","gameinfo","sav","cheats","cfg"};
+ char *subs[]={"fcs","snaps","gameinfo","sav","cheats","cfg","pal"};
  char tdir[2048];
  int x;
 
@@ -212,11 +214,8 @@ static void CloseStuff(int signum)
          case SIGHUP:printf("Reach out and hang-up on someone.\n");break;
          case SIGPIPE:printf("The pipe has broken!  Better watch out for floods...\n");break;
          case SIGSEGV:printf("Iyeeeeeeeee!!!  A segmentation fault has occurred.  Have a fluffy day.\n");break;
-	 /* So much SIGBUS evil. */
-	 #ifdef SIGBUS
 	 #if(SIGBUS!=SIGSEGV)
          case SIGBUS:printf("I told you to be nice to the driver.\n");break;
-	 #endif
 	 #endif
          case SIGFPE:printf("Those darn floating points.  Ne'er know when they'll bite!\n");break;
          case SIGALRM:printf("Don't throw your clock at the meowing cats!\n");break;
@@ -251,8 +250,7 @@ static int DoArgs(int argc, char *argv[])
          {"-fcexp",0,&fcexp,0x4001},
 
          {"-gg",&docheckie[1],0,0},
-         {"-no8lim",0,&eoptions,0x8001},
-         {"-subase",0,&eoptions,0x8002},
+         {"-no8lim",0,&eoptions,0x8000|EO_NO8LIM},
          {"-snapname",0,&eoptions,0x8000|EO_SNAPNAME},
 	 {"-nofs",0,&eoptions,0x8000|EO_NOFOURSCORE},
          {"-clipsides",0,&eoptions,0x8000|EO_CLIPSIDES},
@@ -278,8 +276,7 @@ static int DoArgs(int argc, char *argv[])
 	 Settings.region_force=2;
 	if(docheckie[1])
 	 FCEUI_SetGameGenie(1);
-        FCEUI_DisableSpriteLimitation(1);
-        FCEUI_SaveExtraDataUnderBase(eoptions&2);
+        FCEUI_DisableSpriteLimitation(eoptions&EO_NO8LIM);
 	FCEUI_SetSnapName(eoptions&EO_SNAPNAME);
 
 	for(x=0;x<2;x++)
@@ -288,8 +285,6 @@ static int DoArgs(int argc, char *argv[])
          if(erendlinev[x]<srendlinev[x] || erendlinev[x]>239) erendlinev[x]=239;
 	}
 
-	printf("FCEUI_SetRenderedLines: %d, %d, %d, %d\n",srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
-        printf("clip sides: %d\n", eoptions&EO_CLIPSIDES);
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetSoundVolume(soundvol);
 	DoDriverArgs();
@@ -362,7 +357,7 @@ int CLImain(int argc, char *argv[])
 	LoadLLGN();
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 	if(cpalette)
-	 LoadCPalette(); // TODO
+	 LoadCPalette();
 	if(InitSound())
 	 inited|=1;
 
@@ -453,6 +448,9 @@ static void DriverKill(void)
 {
  // SaveConfig(NULL); // done explicitly in menu now
  SetSignals(SIG_IGN);
+
+ if(cpalette) free(cpalette);
+ cpalette=0;
 
  if(inited&4)
   KillVideo();

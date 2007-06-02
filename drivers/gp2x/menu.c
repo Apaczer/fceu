@@ -20,6 +20,7 @@
 
 #include "../../input.h"
 #include "../../state.h"
+#include "../../palette.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
 #error "need d_type for file browser
@@ -40,6 +41,9 @@ static char *gp2xKeyNames[] = {
 	"10???", "11???",  "12???","13???", "14???","15???", "VOL DOWN", "VOL UP",
 	"18???", "19???",  "1a???","PUSH",  "1c???","1d???", "1e???",    "1f???"
 };
+
+
+static char path_buffer[PATH_MAX];
 
 char menuErrorMsg[40] = {0, };
 
@@ -290,11 +294,11 @@ static int scandir_filter(const struct dirent *ent)
 	return 1;
 }
 
-static char *romsel_loop(char *curr_path)
+static char *filesel_loop(char *curr_path, char *final_dest)
 {
 	struct dirent **namelist;
 	DIR *dir;
-	int n, sel = 0;
+	int n, newlen, sel = 0;
 	unsigned long inp = 0;
 	char *ret = NULL, *fname = NULL;
 
@@ -343,15 +347,18 @@ static char *romsel_loop(char *curr_path)
 		if(inp & GP2X_R)     { sel+=24; if (sel > n-2) sel = n-2; }
 		if(inp & GP2X_B)     { // enter dir/select
 			again:
-			if (namelist[sel+1]->d_type == DT_REG) {
-				strcpy(lastLoadedGameName, curr_path);
-				strcat(lastLoadedGameName, "/");
-				strcat(lastLoadedGameName, namelist[sel+1]->d_name);
-				ret = lastLoadedGameName;
+			newlen = strlen(curr_path) + strlen(namelist[sel+1]->d_name) + 2;
+			if (namelist[sel+1]->d_type == DT_REG) { // file selected
+				if (final_dest == NULL) final_dest = malloc(newlen);
+				if (final_dest == NULL) break;
+				strcpy(final_dest, curr_path);
+				strcat(final_dest, "/");
+				strcat(final_dest, namelist[sel+1]->d_name);
+				ret = final_dest;
 				break;
 			} else if (namelist[sel+1]->d_type == DT_DIR) {
-				int newlen = strlen(curr_path) + strlen(namelist[sel+1]->d_name) + 2;
 				char *p, *newdir = malloc(newlen);
+				if (newdir == NULL) break;
 				if (strcmp(namelist[sel+1]->d_name, "..") == 0) {
 					char *start = curr_path;
 					p = start + strlen(start) - 1;
@@ -366,16 +373,19 @@ static char *romsel_loop(char *curr_path)
 					strcat(newdir, "/");
 					strcat(newdir, namelist[sel+1]->d_name);
 				}
-				ret = romsel_loop(newdir);
+				ret = filesel_loop(newdir, final_dest);
 				free(newdir);
 				break;
 			} else {
 				// unknown file type, happens on NTFS mounts. Try to guess.
-				FILE *tstf; int tmp;
-				strcpy(lastLoadedGameName, curr_path);
-				strcat(lastLoadedGameName, "/");
-				strcat(lastLoadedGameName, namelist[sel+1]->d_name);
-				tstf = fopen(lastLoadedGameName, "rb");
+				char *tstfn; FILE *tstf; int tmp;
+				tstfn = malloc(newlen);
+				if (tstfn == NULL) break;
+				strcpy(tstfn, curr_path);
+				strcat(tstfn, "/");
+				strcat(tstfn, namelist[sel+1]->d_name);
+				tstf = fopen(tstfn, "rb");
+				free(tstfn);
 				if (tstf != NULL)
 				{
 					if (fread(&tmp, 1, 1, tstf) > 0 || ferror(tstf) == 0)
@@ -617,7 +627,7 @@ static char *action_binds(int player_idx, int action_mask)
 		{
 			if (Settings.JoyBinds[joy][i] & action_mask)
 			{
-				if (player_idx >= 0 && ((Settings.KeyBinds[i] >> 16) & 3) != player_idx) continue;
+				if (player_idx >= 0 && ((Settings.JoyBinds[joy][i] >> 16) & 3) != player_idx) continue;
 				if (strkeys[0]) {
 					strcat(strkeys, ", "); strcat(strkeys, usb_joy_key_name(joy + 1, i));
 					break;
@@ -685,6 +695,8 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 		gp2x_text_out15(30, 210, "To bind UP/DOWN, hold VOL-");
 		gp2x_text_out15(30, 220, "Select \"Done\" to exit");
 	} else {
+		gp2x_text_out15(30, 200, "Use Options -> Save cfg");
+		gp2x_text_out15(30, 210, "to save controls");
 		gp2x_text_out15(30, 220, "Press B or X to exit");
 	}
 	gp2x_video_flip();
@@ -723,7 +735,9 @@ static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_i
 						Settings.KeyBinds[i] |= player_idx << 16;
 					}
 				}
-		} else if (sel < opt_cnt) {
+		}
+		else if (sel < opt_cnt)
+		{
 			for (i = 0; i < 32; i++)
 				if (inp & (1 << i)) {
 					if (count_bound_keys(opts[sel].mask, 1) >= 1) // disallow combos for usbjoy
@@ -810,6 +824,7 @@ static void kc_sel_loop(void)
 				case 1: key_config_loop(ctrl_actions,  8, 1); return;
 				case 2: key_config_loop(emuctrl_actions,
 						sizeof(emuctrl_actions)/sizeof(emuctrl_actions[0]), -1); return;
+				case 3: if (!fceugi) SaveConfig(NULL); return;
 				default: return;
 			}
 		}
@@ -824,6 +839,8 @@ extern int ntsccol,ntschue,ntsctint;
 extern int srendlinev[2];
 extern int erendlinev[2];
 extern int eoptions;
+extern char *cpalette;
+extern void LoadCPalette(void);
 
 
 static void int_incdec(int *p, int inc, int min, int max)
@@ -836,20 +853,37 @@ static void int_incdec(int *p, int inc, int min, int max)
 static void draw_fcemenu_options(int menu_sel)
 {
 	int tl_x = 25, tl_y = 60, y;
+	char cpal[32];
+
+	if (cpalette != NULL)
+	{
+		char *p = cpalette + strlen(cpalette) - 1;
+		while (*p != '/' && p > cpalette) p--;
+		if (*p == '/') p++;
+		strncpy(cpal, p, 16);
+		cpal[16] = 0;
+	}
+	else strcpy(cpal, "           OFF");
 
 	y = tl_y;
 	gp2x_fceu_copy_bg();
 
-	gp2x_text_out15(tl_x,  y,      "NTSC Color Emulation       %s", ntsccol?"ON":"OFF");	// 0
+	gp2x_text_out15(tl_x,  y,      "Custom palette: %s", cpal);				// 0
+	gp2x_text_out15(tl_x, (y+=10), "NTSC Color Emulation       %s", ntsccol?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "  Tint (default: 56)       %i", ntsctint);
 	gp2x_text_out15(tl_x, (y+=10), "  Hue  (default: 72)       %i", ntschue);
 	gp2x_text_out15(tl_x, (y+=10), "First visible line (NTSC)  %i", srendlinev[0]);
-	gp2x_text_out15(tl_x, (y+=10), "Last visible line (NTSC)   %i", erendlinev[0]);
-	gp2x_text_out15(tl_x, (y+=10), "First visible line (PAL)   %i", srendlinev[1]);		// 5
+	gp2x_text_out15(tl_x, (y+=10), "Last visible line (NTSC)   %i", erendlinev[0]);		// 5
+	gp2x_text_out15(tl_x, (y+=10), "First visible line (PAL)   %i", srendlinev[1]);
 	gp2x_text_out15(tl_x, (y+=10), "Last visible line (PAL)    %i", erendlinev[1]);
 	gp2x_text_out15(tl_x, (y+=10), "Clip 8 left/right columns  %s", (eoptions&EO_CLIPSIDES)?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "Disable 8 sprite limit     %s", "TODO");
-	gp2x_text_out15(tl_x, (y+=10), "Done");							// 9
+	gp2x_text_out15(tl_x, (y+=10), "Disable 8 sprite limit     %s", (eoptions&EO_NO8LIM)?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Done");							// 10
+
+	if (menu_sel == 0) {
+		gp2x_text_out15(30, 210, "Press B to browse,");
+		gp2x_text_out15(30, 220, "START to use default");
+	}
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
@@ -859,7 +893,7 @@ static void draw_fcemenu_options(int menu_sel)
 
 static void fcemenu_loop_options(void)
 {
-	int menu_sel = 0, menu_sel_max = 9, i;
+	int menu_sel = 0, menu_sel_max = 10, i;
 	unsigned long inp = 0;
 
 	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
@@ -867,14 +901,15 @@ static void fcemenu_loop_options(void)
 	for(;;)
 	{
 		draw_fcemenu_options(menu_sel);
-		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_B|GP2X_X|GP2X_A);
+		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_B|GP2X_X|GP2X_A|GP2X_START);
 		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = menu_sel_max; }
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
-				case  0: ntsccol = !ntsccol; break;
-				case  7: eoptions^=EO_CLIPSIDES; break;
-				case  9: return;
+				case  1: ntsccol = !ntsccol; break;
+				case  8: eoptions^=EO_CLIPSIDES; break;
+				case  9: eoptions^=EO_NO8LIM; break;
+				case 10: return;
 			}
 		}
 		if(inp & (GP2X_X|GP2X_A)) {
@@ -885,16 +920,38 @@ static void fcemenu_loop_options(void)
 			}
 			FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 			FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
+			FCEUI_DisableSpriteLimitation(eoptions&EO_NO8LIM);
+			if (cpalette) LoadCPalette();
+			else FCEUI_SetPaletteArray(0); // set to default
+			FCEU_ResetPalette();
 			return;
 		}
 		if(inp & (GP2X_LEFT|GP2X_RIGHT)) { // multi choise
 			switch (menu_sel) {
-				case  1: int_incdec(&ntsctint,      (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
-				case  2: int_incdec(&ntschue,       (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
-				case  3: int_incdec(&srendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
-				case  4: int_incdec(&erendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
-				case  5: int_incdec(&srendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
-				case  6: int_incdec(&erendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  2: int_incdec(&ntsctint,      (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
+				case  3: int_incdec(&ntschue,       (inp & GP2X_LEFT) ? -1 : 1, 0, 128); break;
+				case  4: int_incdec(&srendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  5: int_incdec(&erendlinev[0], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  6: int_incdec(&srendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+				case  7: int_incdec(&erendlinev[1], (inp & GP2X_LEFT) ? -1 : 1, 0, 239); break;
+			}
+		}
+		if(menu_sel == 0 && (inp & (GP2X_START|GP2X_B))) { // custom palette
+			if ((inp & GP2X_START) && cpalette) {
+				free(cpalette);
+				cpalette=NULL;
+			}
+			else if (inp & GP2X_B) {
+				char *selfname;
+				if (cpalette) strncpy(path_buffer, cpalette, sizeof(path_buffer));
+				else getcwd(path_buffer, PATH_MAX);
+				path_buffer[sizeof(path_buffer)-1] = 0;
+
+				selfname = filesel_loop(path_buffer, NULL);
+				if (selfname) {
+					if (cpalette) free(cpalette);
+					cpalette = selfname;
+				}
 			}
 		}
 	}
@@ -934,14 +991,13 @@ static void draw_menu_options(int menu_sel)
 	gp2x_text_out15(tl_x, (y+=10), "Sound Rate:           %5iHz", Settings.sound_rate);		// 4
 	gp2x_text_out15(tl_x, (y+=10), "Force Region:              %s",
 		Settings.region_force == 2 ? "PAL" : Settings.region_force == 1 ? "NTSC" : "OFF");	// 5
-	gp2x_text_out15(tl_x, (y+=10), "Use SRAM savestates        %s", "OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Turbo rate                 %iHz", (Settings.turbo_rate_add*60/2) >> 24);
-	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);			// 8
+	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);			// 7
 	gp2x_text_out15(tl_x, (y+=10), "Save slot                  %i", CurrentState);
 	gp2x_text_out15(tl_x, (y+=10), "Faster RAM timings         %s", Settings.ramtimings?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 11
+	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 10
 	gp2x_text_out15(tl_x, (y+=10), "Gamma correction           %i.%02i", Settings.gamma / 100, Settings.gamma%100);
-	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 13
+	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 12
 	gp2x_text_out15(tl_x, (y+=10), "[FCE Ultra options]");
 	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");
 	if (fceugi)
@@ -991,14 +1047,14 @@ static int menu_loop_options(void)
 			switch (menu_sel) {
 				case  1: Settings.showfps    = !Settings.showfps; break;
 				case  3: soundvol = soundvol ? 0 : 100; break;
-				case 10: Settings.ramtimings = !Settings.ramtimings; break;
-				case 11: Settings.mmuhack    = !Settings.mmuhack; break;
-				case 14: fcemenu_loop_options(); break;
-				case 15: // done (update and write)
+				case  9: Settings.ramtimings = !Settings.ramtimings; break;
+				case 10: Settings.mmuhack    = !Settings.mmuhack; break;
+				case 13: fcemenu_loop_options(); break;
+				case 14: // done (update and write)
 					config_commit();
 					SaveConfig(NULL);
 					return 1;
-				case 16: // done (update and write for current game)
+				case 15: // done (update and write for current game)
 					config_commit();
 					if (lastLoadedGameName[0])
 						SaveConfig(lastLoadedGameName);
@@ -1018,16 +1074,16 @@ static int menu_loop_options(void)
 					InitSound();
 					break;
 				case  5: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
-				case  7: {
+				case  6: {
 					int hz = Settings.turbo_rate_add*60/2 >> 24;
 					int_incdec(&hz, (inp & GP2X_LEFT) ? -1 : 1, 1, 30);
 					Settings.turbo_rate_add = (hz*2 << 24) / 60 + 1;
 					break;
 				}
-				case  8: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
-				case  9: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
-				case 12: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
-				case 13:
+				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
+				case  8: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
+				case 11: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
+				case 12:
 					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
 						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
 						if (Settings.cpuclock < 0) Settings.cpuclock = 0; // 0 ~ do not change
@@ -1112,19 +1168,6 @@ static int menu_loop_root(void)
 	int ret, menu_sel_max = 8, menu_sel_min = 4;
 	static int menu_sel = 4;
 	unsigned long inp = 0;
-	char curr_path[PATH_MAX], *selfname;
-	FILE *tstf;
-
-	if ( (tstf = fopen(lastLoadedGameName, "rb")) )
-	{
-		fclose(tstf);
-		strncpy(curr_path, lastLoadedGameName, sizeof(curr_path));
-		curr_path[sizeof(curr_path)-1] = 0;
-	}
-	else
-	{
-		getcwd(curr_path, PATH_MAX);
-	}
 
 	if (fceugi) menu_sel_min = 0;
 // TODO	if (PicoPatches) menu_sel_max = 9;
@@ -1185,13 +1228,29 @@ static int menu_loop_root(void)
 					}
 					break;
 				case 4: // select rom
-					selfname = romsel_loop(curr_path);
+				{
+					FILE *tstf;
+					char *selfname;
+
+					if ( (tstf = fopen(lastLoadedGameName, "rb")) )
+					{
+						fclose(tstf);
+						strncpy(path_buffer, lastLoadedGameName, sizeof(path_buffer));
+						path_buffer[sizeof(path_buffer)-1] = 0;
+					}
+					else
+					{
+						getcwd(path_buffer, PATH_MAX);
+					}
+
+					selfname = filesel_loop(path_buffer, lastLoadedGameName);
 					if (selfname) {
 						printf("selected file: %s\n", selfname);
 						while (gp2x_joystick_read(1) & GP2X_B) usleep(50*1000);
 						return 2;
 					}
 					break;
+				}
 				case 5: // options
 					ret = menu_loop_options();
 					if (ret == 1) continue; // status update

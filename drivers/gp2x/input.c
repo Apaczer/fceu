@@ -18,6 +18,9 @@
 #include "../../state.h"
 #include "../../general.h"
 #include "../../input.h"
+#include "../../svga.h"
+#include "../../video.h"
+#include "usbjoy.h"
 
 /* UsrInputType[] is user-specified.  InputType[] is current
        (game loading can override user settings)
@@ -72,14 +75,42 @@ static void do_emu_acts(uint32 acts)
 
 	if (acts & (3 << 30))
 	{
+		unsigned long keys;
+		int do_it = 1;
 		if (acts & (1 << 30))
 		{
-			FCEUI_LoadState();
+			if (Settings.sstate_confirm & 2)
+			{
+				FCEU_DispMessage("LOAD STATE? (Y=yes, X=no)");
+				FCEU_PutImage();
+				FCEUD_Update(XBuf+8,NULL,0);
+				while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
+				if (keys & GP2X_X) do_it = 0;
+				FCEU_DispMessage("");
+			}
+			if (do_it) FCEUI_LoadState();
 		}
 		else
 		{
-			FCEUI_SaveState();
+			if (Settings.sstate_confirm & 1)
+			{
+				char *fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
+				FILE *st=fopen(fname,"rb");
+				free(fname);
+				if (st)
+				{
+					fclose(st);
+					FCEU_DispMessage("OVERWRITE SAVE? (Y=yes, X=no)");
+					FCEU_PutImage();
+					FCEUD_Update(XBuf+8,NULL,0);
+					while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
+					if (keys & GP2X_X) do_it = 0;
+					FCEU_DispMessage("");
+				}
+			}
+			if (do_it) FCEUI_SaveState();
 		}
+		RefreshThrottleFPS();
 	}
 	else if (acts & (3 << 28)) // state slot next/prev
 	{
@@ -156,9 +187,9 @@ static void do_fake_mouse(unsigned long keys)
 void FCEUD_UpdateInput(void)
 {
 	static int volpushed_frames = 0;
-	static int turbo_rate_cnt_a = 0, turbo_rate_cnt_b = 0;
+	static int turbo_rate_cnt_a[2] = {0,0}, turbo_rate_cnt_b[2] = {0,0};
 	unsigned long keys = gp2x_joystick_read(0);
-	uint32 all_acts = 0;
+	uint32 all_acts[2] = {0,0};
 	int i;
 
 	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
@@ -219,21 +250,49 @@ void FCEUD_UpdateInput(void)
 			}
 			if (u != 32) acts &=  combo_acts; // other combo key pressed
 			else         acts &= ~combo_acts;
-			all_acts |= acts;
+			all_acts[(acts>>16)&1] |= acts;
 		}
 	}
 
-	JSreturn |= all_acts & 0xff;
-	if (all_acts & 0x100) {		// A turbo
-		turbo_rate_cnt_a += Settings.turbo_rate_add;
-		JSreturn |= (turbo_rate_cnt_a >> 24) & 1;
-	}
-	if (all_acts & 0x200) {		// B turbo
-		turbo_rate_cnt_b += Settings.turbo_rate_add;
-		JSreturn |= (turbo_rate_cnt_b >> 23) & 2;
+	// add joy inputs
+	if (num_of_joys > 0)
+	{
+		int joy;
+		gp2x_usbjoy_update();
+		for (joy = 0; joy < num_of_joys; joy++) {
+			int keys = gp2x_usbjoy_check2(joy);
+			for (i = 0; i < 32; i++) {
+				if (keys & (1 << i)) {
+					int acts = Settings.JoyBinds[joy][i];
+					all_acts[(acts>>16)&1] |= acts;
+				}
+			}
+		}
 	}
 
-	do_emu_acts(all_acts);
+	// player 1
+	JSreturn |= all_acts[0] & 0xff;
+	if (all_acts[0] & 0x100) {		// A turbo
+		turbo_rate_cnt_a[0] += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_a[0] >> 24) & 1;
+	}
+	if (all_acts[0] & 0x200) {		// B turbo
+		turbo_rate_cnt_b[0] += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_b[0] >> 23) & 2;
+	}
+
+	// player 2
+	JSreturn |= (all_acts[1] & 0xff) << 16;
+	if (all_acts[1] & 0x100) {		// A turbo
+		turbo_rate_cnt_a[1] += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_a[1] >> 8) & 0x10000;
+	}
+	if (all_acts[1] & 0x200) {		// B turbo
+		turbo_rate_cnt_b[1] += Settings.turbo_rate_add;
+		JSreturn |= (turbo_rate_cnt_b[1] >> 7) & 0x20000;
+	}
+
+	do_emu_acts(all_acts[0]|all_acts[1]);
 }
 
 
@@ -300,6 +359,8 @@ static void PrepareOtherInput(void)
 			}
 		}
 	}
+
+	combo_acts &= ~0x00030000; // don't take player_id bits
 
 	// find combo_keys
 	for (act = 1; act; act <<= 1)
