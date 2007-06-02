@@ -199,9 +199,9 @@ void gp2x_init(void)
 {
 	printf("entering init()\n"); fflush(stdout);
 
-	gp2x_screen = malloc(320*240*2);
+	gp2x_screen = malloc(320*240*2 + 32);
 	if(gp2x_screen == NULL) return;
-	memset(gp2x_screen, 0, 320*240*2);
+	memset(gp2x_screen, 0, 320*240*2 + 32);
 
 	if(SDL_Init(SDL_INIT_NOPARACHUTE))
 	{
@@ -283,7 +283,14 @@ void spend_cycles(int c)
 	usleep(c/200);
 }
 
+/* don't scale, just convert */
 void soft_scale(void *dst, unsigned short *pal, int line_offs, int lines)
 {
+	unsigned char *src = (unsigned char *)dst + (line_offs + lines) * 320;
+	unsigned short *dest = (unsigned short *)dst + (line_offs + lines) * 320;
+	int count = lines*320;
+
+	while (count--)
+		*(--dest) = pal[*(--src)];
 }
 

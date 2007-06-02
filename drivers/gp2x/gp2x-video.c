@@ -107,8 +107,9 @@ void ToggleFS(void)
 // 16: rrrr rggg gggb bbbb
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {
+	/* note: menu depends on bit5 being 0 */
 	gp2x_palette[index] = (r << 16) | (g << 8) | b;
-	gp2x_palette16[index] = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+	gp2x_palette16[index] = ((r & 0xf8) << 8) | ((g & 0xf8) << 3) | (b >> 3);
 	gp2x_video_setpalette(gp2x_palette, index + 1);
 
 	paletterefresh = 1;

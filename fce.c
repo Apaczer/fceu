@@ -1382,6 +1382,12 @@ void EmLoop(void)
   }
 
 update:
+  if(Exit)
+  {
+   //CloseGame();
+   break;
+  }
+
   {
    int ssize;
 
@@ -1403,12 +1409,6 @@ update:
     FCEU_PutImage();
     FCEUD_Update(XBuf+8,WaveFinalMono,ssize);
    }
-  }
-
-  if(Exit)
-  {
-   //CloseGame();
-   break;
   }
 
  } // for

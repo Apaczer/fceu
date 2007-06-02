@@ -21,6 +21,7 @@
 #include "../../input.h"
 #include "../../state.h"
 #include "../../palette.h"
+#include "readpng.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
 #error "need d_type for file browser
@@ -44,13 +45,67 @@ static char *gp2xKeyNames[] = {
 
 
 static char path_buffer[PATH_MAX];
+static unsigned short *menu_bg = 0;
+static int txt_xmin, txt_xmax, txt_ymin, txt_ymax;
 
 char menuErrorMsg[40] = {0, };
 
-// TODO
-void gp2x_fceu_copy_bg(void)
+static void gp2x_fceu_darken_reset(void)
 {
-	memset(gp2x_screen, 0, 320*240*2);
+	txt_xmin = 320; txt_xmax = 0;
+	txt_ymin = 240; txt_ymax = 0;
+}
+
+static void gp2x_fceu_copy_bg(void)
+{
+	if (menu_bg)
+	     memcpy(gp2x_screen, menu_bg, 320*240*2);
+	else memset(gp2x_screen, 0, 320*240*2);
+	gp2x_fceu_darken_reset();
+}
+
+static void gp2x_fceu_darken_text_bg(void)
+{
+	int x, y, xmin, xmax, ymax;
+	unsigned short *screen = gp2x_screen;
+
+	xmin = txt_xmin - 3;
+	if (xmin < 0) xmin = 0;
+	xmax = txt_xmax + 2;
+	if (xmax > 319) xmax = 319;
+
+	y = txt_ymin - 3;
+	if (y < 0) y = 0;
+	ymax = txt_ymax + 2;
+	if (ymax > 239) ymax = 239;
+
+	for (x = xmin; x <= xmax; x++)
+		screen[y*320+x] = 0xa514;
+	for (y++; y < ymax; y++)
+	{
+		screen[y*320+xmin] = 0xffff;
+		for (x = xmin+1; x < xmax; x++)
+		{
+			unsigned int p = screen[y*320+x];
+			if (p != 0xffff)
+				screen[y*320+x] = ((p&0xf79e)>>1) - ((p&0xc618)>>3);
+		}
+		screen[y*320+xmax] = 0xffff;
+	}
+	for (x = xmin; x <= xmax; x++)
+		screen[y*320+x] = 0xffff;
+}
+
+static void gp2x_fceu_darken_all(void)
+{
+	unsigned int *screen = gp2x_screen;
+	int count = 320*240/2;
+
+	while (count--)
+	{
+		unsigned int p = screen[count];
+		screen[count] = ((p&0xf79ef79e)>>1) - ((p&0xc618c618)>>3);
+	}
 }
 
 // draws white text to current bbp15 screen
@@ -76,6 +131,10 @@ static void gp2x_text_out15_(int x, int y, const char *text)
 		}
 		screen += 8;
 	}
+	if (x < txt_xmin) txt_xmin = x;
+	if (x+i*8 > txt_xmax) txt_xmax = x+i*8;
+	if (y < txt_ymin) txt_ymin = y;
+	if (y+8   > txt_ymax) txt_ymax = y+8;
 }
 
 void gp2x_text_out15(int x, int y, const char *texto, ...)
@@ -243,8 +302,8 @@ static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 	start = 12 - sel;
 	n--; // exclude current dir (".")
 
-	//memset(gp2x_screen, 0, 320*240);
 	gp2x_fceu_copy_bg();
+	gp2x_fceu_darken_all();
 
 	if(start - 2 >= 0)
 		gp2x_smalltext8_lim(14, (start - 2)*10, curdir, 53-2);
@@ -369,7 +428,7 @@ static char *filesel_loop(char *curr_path, char *final_dest)
 				} else {
 					strcpy(newdir, curr_path);
 					p = newdir + strlen(newdir) - 1;
-					while (*p == '/' && p >= newdir) *p-- = 0;
+					while (p >= newdir && *p == '/') *p-- = 0;
 					strcat(newdir, "/");
 					strcat(newdir, namelist[sel+1]->d_name);
 				}
@@ -689,6 +748,9 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 	// draw cursor
 	gp2x_text_out15(x - 16, tl_y + sel*10, ">");
 
+	gp2x_fceu_darken_text_bg();
+	gp2x_fceu_darken_reset();
+
 	if (sel < opt_cnt) {
 		gp2x_text_out15(30, 190, "Press a button to bind/unbind");
 		gp2x_text_out15(30, 200, "Use VOL+ to clear");
@@ -699,6 +761,7 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 		gp2x_text_out15(30, 210, "to save controls");
 		gp2x_text_out15(30, 220, "Press B or X to exit");
 	}
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -778,6 +841,7 @@ static void draw_kc_sel(int menu_sel)
 		gp2x_text_out15(tl_x, (y+=10), "none");
 	}
 
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -880,14 +944,18 @@ static void draw_fcemenu_options(int menu_sel)
 	gp2x_text_out15(tl_x, (y+=10), "Disable 8 sprite limit     %s", (eoptions&EO_NO8LIM)?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Done");							// 10
 
+	// draw cursor
+	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
 	if (menu_sel == 0) {
+		gp2x_fceu_darken_text_bg();
+		gp2x_fceu_darken_reset();
+
 		gp2x_text_out15(30, 210, "Press B to browse,");
 		gp2x_text_out15(30, 220, "START to use default");
 	}
 
-	// draw cursor
-	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
-
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -1006,6 +1074,7 @@ static void draw_menu_options(int menu_sel)
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -1032,7 +1101,7 @@ static void config_commit(void)
 static int menu_loop_options(void)
 {
 	static int menu_sel = 0;
-	int menu_sel_max = 15;
+	int menu_sel_max = 14;
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_max++;
@@ -1121,6 +1190,7 @@ static void draw_menu_credits(void)
 	gp2x_text_out15(20, 180, "  cpuctrl, gamma libs");
 	gp2x_text_out15(20, 190, "Squidge: squidgehack");
 
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -1152,13 +1222,18 @@ static void draw_menu_root(int menu_sel)
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
-	// error
+
+	gp2x_fceu_darken_text_bg();
+	gp2x_fceu_darken_reset();
+
+	// error / version
 	if (menuErrorMsg[0]) gp2x_text_out15(1, 230, menuErrorMsg);
 	else {
 		char vstr[16];
 		sprintf(vstr, "v" GP2X_PORT_VERSION " r%i", GP2X_PORT_REV);
 		gp2x_text_out15(320-strlen(vstr)*8-1, 230, vstr);
 	}
+	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
 }
 
@@ -1274,9 +1349,26 @@ static int menu_loop_root(void)
 }
 
 
+extern unsigned short gp2x_palette16[256];
+
 static void menu_prepare_bg(void)
 {
-	// TODO...
+	menu_bg = malloc(320*240*2);
+	if (menu_bg == NULL) return;
+
+	if (fceugi)
+	{
+		/* raw emu frame should now be at gp2x_screen */
+		soft_scale((char *)gp2x_screen + 32, gp2x_palette16, srendline, erendline-srendline);
+		if (srendline)
+			memset32((int *)((char *)gp2x_screen + 32), 0, srendline*320*2/4);
+		memcpy(menu_bg, gp2x_screen + 32, 320*240*2);
+	}
+	else
+	{
+		memset32((int *)menu_bg, 0, 320*240*2/4);
+		readpng(menu_bg, "background.png");
+	}
 }
 
 static void menu_gfx_prepare(void)
@@ -1299,6 +1391,8 @@ int gp2x_menu_do(void)
 
 	ret = menu_loop_root();
 
+	if (menu_bg) free(menu_bg);
+	menu_bg = NULL;
 	menuErrorMsg[0] = 0;
 
 	return ret;
