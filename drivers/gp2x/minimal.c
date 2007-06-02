@@ -219,7 +219,10 @@ void gp2x_start_sound(int rate, int bits, int stereo)
 	if (sounddev > 0) close(sounddev);
 	sounddev = open("/dev/dsp", O_WRONLY|O_ASYNC);
 	if (sounddev == -1)
+	{
 		printf("open(\"/dev/dsp\") failed with %i\n", errno);
+		return;
+	}
 
 	ioctl(sounddev, SNDCTL_DSP_SPEED,  &rate);
 	ioctl(sounddev, SNDCTL_DSP_SETFMT, &bits);

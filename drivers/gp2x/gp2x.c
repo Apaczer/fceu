@@ -15,10 +15,11 @@
 #include "cpuctrl.h"
 #include "squidgehack.h"
 
-int CLImain(int argc, char *argv[]);
+int GP2X_PORT_REV =
+#include "rev.h"
+;
 
-//#define SOUND_RATE 44100
-#define SOUND_RATE 22050
+int CLImain(int argc, char *argv[]);
 
 DSETTINGS Settings;
 CFGSTRUCT DriverConfig[]={
@@ -87,7 +88,7 @@ static void SetDefaults(void)
  Settings.cpuclock = 150;
  Settings.frameskip = -1; // auto
  Settings.mmuhack = 1;
- Settings.sound_rate = SOUND_RATE;
+ Settings.sound_rate = 22050;
  Settings.turbo_rate_add = (8*2 << 24) / 60 + 1; // 8Hz turbofire
  Settings.gamma = 100;
  // default controls, RLDU SEBA
@@ -127,10 +128,10 @@ int main(int argc, char *argv[])
 	int ret;
 	g_argv = argv;
 
-        puts("Starting GPFCE - Port version " GP2X_PORT_VERSION " (" __DATE__ ")");
-        puts("Based on FCE Ultra "VERSION_STRING"...");
-        puts("Ported by Zheng Zhu");
-        puts("Additional optimization/misc work by notaz\n");
+        printf("Starting GPFCE - Port version " GP2X_PORT_VERSION " r%i (" __DATE__ ")\n", GP2X_PORT_REV);
+        puts("Based on FCE Ultra "VERSION_STRING" and 0.98.1x versions");
+        puts("Original port by Zheng Zhu");
+        puts("Menu/optimization/misc work by notaz\n");
 
     	gp2x_init();
 	cpuctrl_init();

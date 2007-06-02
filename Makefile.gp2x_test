@@ -1,11 +1,12 @@
-CROSS	= arm-linux-
+CROSS	= 
 CC	= $(CROSS)gcc
 STRIP	= $(CROSS)strip
-AS	= $(CROSS)as
-TFLAGS  = -Winline -mcpu=arm920t -Izlib -DGP2X=1 -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT
-ASFLAGS	= -mcpu=arm920t -mfloat-abi=soft
+TFLAGS  = -Winline -Izlib -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT `sdl-config --cflags`
 RM	= rm -f
 B	= drivers/gp2x/
+
+DEBUG   = 1
+
 ifdef DEBUG
 TFLAGS	+= -ggdb
 LDRIVER	+= -ggdb
@@ -18,8 +19,6 @@ endif
 
 #NOSTRIP = 1
 
-asm_6502=1
-#debug_asm_6502=1
 
 all:		fceu
 
@@ -28,26 +27,14 @@ gpfce.gpe: fceu
 
 include zlib/Makefile
 
-OBJDRIVER	 = ${B}minimal.o ${B}cpuctrl.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
+OBJDRIVER	 = drivers/gp2x_test/minimal.o drivers/gp2x_test/throttle.o ${B}gp2x.o ${B}main.o \
 		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}usbjoy.o ${B}menu.o ${B}fonts.o \
 		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o movie.o
-LDRIVER		+= -lm -lz -static -Wl,-Map=fceu.map
+LDRIVER		+= -lm -lz `sdl-config --libs`
 
-ifeq ($(asm_6502),1)
-TFLAGS  += -DASM_6502
-OBJDRIVER += ncpu.o
-ifeq ($(debug_asm_6502),1)
-TFLAGS  += -DDEBUG_ASM_6502
-OBJDRIVER += x6502.o ncpu_debug.o
-endif
-else
 OBJDRIVER += x6502.o
-endif
 
 x6502.o: x6502.c x6502.h ops.h fce.h sound.h dprintf.h
-
-ncpu.o: ncpu.S ncpu.h
-	$(CC) $(TFLAGS) -c $< -o $@
 
 include Makefile.base
 
@@ -70,18 +57,4 @@ ${B}rev.h: FORCE
 .PHONY: FORCE
 
 include Makefile.common
-
-up: fceu
-	cp -v fceu /mnt/gp2x/mnt/sd/emus/gpfce/gpfce
-
-# ----------- release -----------
-ifneq ($(findstring rel,$(MAKECMDGOALS)),)
-ifeq ($(VER),)
-$(error need VER)
-endif
-endif
-
-rel: gpfce.gpe
-	zip -9 -j gpfce_v$(VER).zip $^ drivers/gp2x/mmuhack.o
-
 

@@ -25,10 +25,7 @@
 #error "need d_type for file browser
 #endif
 
-static int GP2X_PORT_REV =
-#include "rev.h"
-;
-
+extern int GP2X_PORT_REV;
 extern char lastLoadedGameName[PATH_MAX];
 extern int mmuhack_status;
 extern int soundvol;
