@@ -917,30 +917,39 @@ void FDSClose(void)
  int x;
  char *fn;
 
- if(!DiskWritten) return;
-
- fn=FCEU_MakeFName(FCEUMKF_FDS,0,0);
-
- if(!(fp=FCEUD_UTF8fopen(fn,"wb")))
+ if(!DiskWritten)
  {
-  free(fn);
-  return;
- }
- free(fn);
+  fn=FCEU_MakeFName(FCEUMKF_FDS,0,0);
 
- for(x=0;x<TotalSides;x++)
- {
-  if(fwrite(diskdata[x],1,65500,fp)!=65500)
+  if(!(fp=FCEUD_UTF8fopen(fn,"wb")))
   {
-   FCEU_PrintError("Error saving FDS image!");
-   fclose(fp);
+   free(fn);
    return;
   }
- }
- FreeFDSMemory();
- fclose(fp);
+  free(fn);
+
+  for(x=0;x<TotalSides;x++)
+  {
+   if(fwrite(diskdata[x],1,65500,fp)!=65500)
+   {
+    FCEU_PrintError("Error saving FDS image!");
+    fclose(fp);
+    return;
+   }
+  }
+  fclose(fp);
 #ifdef GP2X
- sync();
+  sync();
 #endif
+ }
+
+ FreeFDSMemory();
+ for(x=0;x<TotalSides;x++)
+  if(diskdatao[x])
+  {
+   free(diskdatao[x]);
+   diskdatao[x]=0;
+  }
+ ResetExState(0,0);
 }
 

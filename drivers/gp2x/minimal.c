@@ -68,7 +68,8 @@ void gp2x_video_flip(void)
 
 	// since we are using the mmu hack, we must flush the cache first
 	// (the params are most likely wrong, but they seem to work somehow)
-	flushcache(addr, addr + 320*240*2, 0);
+	//flushcache(addr, addr + 320*240*2, 0);
+	flushcache(gp2x_screen, (char *)gp2x_screen + 320*240*2, 0);
 
 	lsw = (unsigned short) addr;
 	msw = (unsigned short)(addr >> 16);

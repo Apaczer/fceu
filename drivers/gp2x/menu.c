@@ -1044,7 +1044,7 @@ static int menu_loop_options(void)
 
 static void draw_menu_credits(void)
 {
-	char vstr[16];
+	char vstr[32];
 
 	//int tl_x = 15, tl_y = 70;
 	gp2x_fceu_copy_bg();
@@ -1054,7 +1054,7 @@ static void draw_menu_credits(void)
 	gp2x_text_out15(20,  40, "(c) notaz, 2007");
 
 	gp2x_text_out15(20,  70, "Based on FCE Ultra versions");
-	gp2x_text_out15(20,  80, "0.81 and 0.98.15");
+	gp2x_text_out15(20,  80, "0.81 and 0.98.1x");
 
 	gp2x_text_out15(20, 110, "         - Credits - ");
 	gp2x_text_out15(20, 130, "Bero: FCE");

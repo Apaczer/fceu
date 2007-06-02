@@ -119,6 +119,7 @@ static void iNESGI(int h, void *param)
 		 if(VROM) {free(VROM);VROM=0;}
 	         if(MapClose) MapClose();
 		 if(trainerpoo) {FCEU_gfree(trainerpoo);trainerpoo=0;}
+		 ResetExState(0,0);
 	        }
         	break;
   case GI_INFOSTRING:

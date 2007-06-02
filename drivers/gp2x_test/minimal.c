@@ -235,6 +235,7 @@ void gp2x_deinit(void)
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	SDL_Quit();
 
+	free(gp2x_screen);
 	if (sounddev > 0) close(sounddev);
 	gp2x_usbjoy_deinit();
 }

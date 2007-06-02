@@ -516,6 +516,7 @@ static void UNIFGI(int h, void *param)
 		if(UNIFCart.Close)
 		 UNIFCart.Close();
                 FreeUNIF();
+		ResetExState(0,0);
                 break;
   case GI_INFOSTRING:
 		{

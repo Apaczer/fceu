@@ -202,13 +202,6 @@ char *FCEU_MakeFName(int type, int id1, char *cd1)
                     asprintf(&ret,"%s"PSS"%s.%s",odirs[FCEUIOD_NV],FileBase,cd1);
 	           else
                     asprintf(&ret,"%s"PSS"sav"PSS"%s.%s",BaseDirectory,FileBase,cd1);
-                   if(stat(ret,&tmpstat)==-1)
-                   {
-                    if(odirs[FCEUIOD_NV])
-                     asprintf(&ret,"%s"PSS"%s.%s",odirs[FCEUIOD_NV],FileBase,cd1);
-                    else
-                     asprintf(&ret,"%s"PSS"sav"PSS"%s.%s",BaseDirectory,FileBase,cd1);
-                   }
                    break;
   case FCEUMKF_CHEAT:
                      if(odirs[FCEUIOD_CHEATS])
