@@ -1227,11 +1227,11 @@ static void draw_menu_root(int menu_sel)
 	gp2x_fceu_darken_reset();
 
 	// error / version
-	if (menuErrorMsg[0]) gp2x_text_out15(1, 230, menuErrorMsg);
+	if (menuErrorMsg[0]) gp2x_text_out15(1, 229, menuErrorMsg);
 	else {
 		char vstr[16];
 		sprintf(vstr, "v" GP2X_PORT_VERSION " r%i", GP2X_PORT_REV);
-		gp2x_text_out15(320-strlen(vstr)*8-1, 230, vstr);
+		gp2x_text_out15(320-strlen(vstr)*8-1, 229, vstr);
 	}
 	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
