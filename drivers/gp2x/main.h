@@ -26,6 +26,7 @@ extern int eoptions;
 #define EO_SNAPNAME    16
 #define EO_NOFOURSCORE	32
 #define EO_NOTHROTTLE	64
+#define EO_GG		128
 extern int srendline,erendline,srendlinev[2],erendlinev[2];
 extern int NoWaiting;
 

@@ -39,6 +39,7 @@
 #include "../common/cheat.h"
 
 #include "../../fce.h"
+#include "../../cart.h"
 
 #include "dface.h"
 
@@ -249,7 +250,7 @@ static int DoArgs(int argc, char *argv[])
          {"-input1",0,&inputa[0],0x4001},{"-input2",0,&inputa[1],0x4001},
          {"-fcexp",0,&fcexp,0x4001},
 
-         {"-gg",&docheckie[1],0,0},
+         {"-gg",0,&eoptions,0x8000|EO_GG},
          {"-no8lim",0,&eoptions,0x8000|EO_NO8LIM},
          {"-snapname",0,&eoptions,0x8000|EO_SNAPNAME},
 	 {"-nofs",0,&eoptions,0x8000|EO_NOFOURSCORE},
@@ -274,8 +275,7 @@ static int DoArgs(int argc, char *argv[])
 	}
 	if(docheckie[0])
 	 Settings.region_force=2;
-	if(docheckie[1])
-	 FCEUI_SetGameGenie(1);
+	FCEUI_SetGameGenie(eoptions&EO_GG);
         FCEUI_DisableSpriteLimitation(eoptions&EO_NO8LIM);
 	FCEUI_SetSnapName(eoptions&EO_SNAPNAME);
 
@@ -388,7 +388,12 @@ int CLImain(int argc, char *argv[])
 	   ParseGI(fceugi);
 	   InitOtherInput();
 
-	   GameInterface(GI_INFOSTRING, infostring);
+	   if ((eoptions&EO_GG) && geniestage == 0) {
+	    strcpy(infostring, "gg.rom is missing, GG disabled");
+	    eoptions&=~EO_GG;
+	    FCEUI_SetGameGenie(0);
+	   } else
+	    GameInterface(GI_INFOSTRING, infostring);
 	   FCEU_DispMessage("%s", infostring);
 	  }
 	  else

@@ -22,6 +22,8 @@
 #include "../../video.h"
 #include "usbjoy.h"
 
+extern int FSkip;
+
 /* UsrInputType[] is user-specified.  InputType[] is current
        (game loading can override user settings)
 */
@@ -184,7 +186,7 @@ static void do_fake_mouse(unsigned long keys)
 }
 
 
-void FCEUD_UpdateInput(void)
+static void FCEUD_UpdateInput(void)
 {
 	static int volpushed_frames = 0;
 	static int turbo_rate_cnt_a[2] = {0,0}, turbo_rate_cnt_b[2] = {0,0};
@@ -195,6 +197,7 @@ void FCEUD_UpdateInput(void)
 	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
 	{
 		Exit = 1;
+		FSkip = 0;	/* force rendering the last frame for menu */
 		return;
 	}
 	else if (down(VOL_UP))

@@ -194,7 +194,7 @@ static void gp2x_smalltext16(int x, int y, const char *texto)
 	}
 }
 
-static void gp2x_smalltext8_lim(int x, int y, const char *texto, int max)
+static void gp2x_smalltext16_lim(int x, int y, const char *texto, int max)
 {
 	char    buffer[320/6+1];
 
@@ -306,16 +306,16 @@ static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 	gp2x_fceu_darken_all();
 
 	if(start - 2 >= 0)
-		gp2x_smalltext8_lim(14, (start - 2)*10, curdir, 53-2);
+		gp2x_smalltext16_lim(14, (start - 2)*10, curdir, 53-2);
 	for (i = 0; i < n; i++) {
 		pos = start + i;
 		if (pos < 0)  continue;
 		if (pos > 23) break;
 		if (namelist[i+1]->d_type == DT_DIR) {
-			gp2x_smalltext8_lim(14,   pos*10, "/", 1);
-			gp2x_smalltext8_lim(14+6, pos*10, namelist[i+1]->d_name, 53-3);
+			gp2x_smalltext16_lim(14,   pos*10, "/", 1);
+			gp2x_smalltext16_lim(14+6, pos*10, namelist[i+1]->d_name, 53-3);
 		} else {
-			gp2x_smalltext8_lim(14,   pos*10, namelist[i+1]->d_name, 53-2);
+			gp2x_smalltext16_lim(14,   pos*10, namelist[i+1]->d_name, 53-2);
 		}
 	}
 	gp2x_text_out15(5, 120, ">");
@@ -468,47 +468,69 @@ static char *filesel_loop(char *curr_path, char *final_dest)
 
 // ------------ patch/gg menu ------------
 
-#if 0 // TODO?
+extern void *cheats;
+static int cheat_count = 0, cheat_start, cheat_pos;
+
+static int countcallb(char *name, uint32 a, uint8 v, int compare, int s, int type, void *data)
+{
+	cheat_count++;
+	return 1;
+}
+
+static int clistcallb(char *name, uint32 a, uint8 v, int compare, int s, int type, void *data)
+{
+	int pos;
+
+	pos = cheat_start + cheat_pos;
+	cheat_pos++;
+	if (pos < 0)  return 1;
+	if (pos > 23) return 0;
+
+	gp2x_smalltext16_lim(14,     pos*10, s ? "ON " : "OFF", 3);
+	gp2x_smalltext16_lim(14+6*4, pos*10, type ? "S" : "R", 1);
+	gp2x_smalltext16_lim(14+6*6, pos*10, name, 53-8);
+
+	return 1;
+}
+
 static void draw_patchlist(int sel)
 {
-	int start, i, pos;
-
-	start = 12 - sel;
+	int pos;
 
 	gp2x_fceu_copy_bg();
+	gp2x_fceu_darken_all();
 
-	for (i = 0; i < PicoPatchCount; i++) {
-		pos = start + i;
-		if (pos < 0)  continue;
-		if (pos > 23) break;
-		gp2x_smalltext8_lim(14,     pos*10, PicoPatches[i].active ? "ON " : "OFF", 3);
-		gp2x_smalltext8_lim(14+6*4, pos*10, PicoPatches[i].name, 53-6);
-	}
-	pos = start + i;
-	if (pos < 24) gp2x_smalltext8_lim(14, pos*10, "done", 4);
+	cheat_start = 12 - sel;
+	cheat_pos = 0;
+	FCEUI_ListCheats(clistcallb,0);
+
+	pos = cheat_start + cheat_pos;
+	if (pos < 24) gp2x_smalltext16_lim(14, pos*10, "done", 4);
 
 	gp2x_text_out15(5, 120, ">");
 	gp2x_video_flip();
 }
-
 
 void patches_menu_loop(void)
 {
 	int menu_sel = 0;
 	unsigned long inp = 0;
 
+	cheat_count = 0;
+	FCEUI_ListCheats(countcallb,0);
+
 	for(;;)
 	{
 		draw_patchlist(menu_sel);
 		inp = wait_for_input(GP2X_UP|GP2X_DOWN|GP2X_LEFT|GP2X_RIGHT|GP2X_L|GP2X_R|GP2X_B|GP2X_X);
-		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = PicoPatchCount; }
-		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > PicoPatchCount) menu_sel = 0; }
+		if(inp & GP2X_UP  ) { menu_sel--; if (menu_sel < 0) menu_sel = cheat_count; }
+		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > cheat_count) menu_sel = 0; }
 		if(inp &(GP2X_LEFT|GP2X_L))  { menu_sel-=10; if (menu_sel < 0) menu_sel = 0; }
-		if(inp &(GP2X_RIGHT|GP2X_R)) { menu_sel+=10; if (menu_sel > PicoPatchCount) menu_sel = PicoPatchCount; }
+		if(inp &(GP2X_RIGHT|GP2X_R)) { menu_sel+=10; if (menu_sel > cheat_count) menu_sel = cheat_count; }
 		if(inp & GP2X_B) { // action
-			if (menu_sel < PicoPatchCount)
-				PicoPatches[menu_sel].active = !PicoPatches[menu_sel].active;
-			else 	return;
+			if (menu_sel < cheat_count)
+			     FCEUI_ToggleCheat(menu_sel);
+			else return;
 		}
 		if(inp & GP2X_X) return;
 	}
@@ -517,6 +539,7 @@ void patches_menu_loop(void)
 
 // ------------ savestate loader ------------
 
+#if 0
 static void menu_prepare_bg(void);
 
 static int state_slot_flags = 0;
@@ -942,7 +965,8 @@ static void draw_fcemenu_options(int menu_sel)
 	gp2x_text_out15(tl_x, (y+=10), "Last visible line (PAL)    %i", erendlinev[1]);
 	gp2x_text_out15(tl_x, (y+=10), "Clip 8 left/right columns  %s", (eoptions&EO_CLIPSIDES)?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Disable 8 sprite limit     %s", (eoptions&EO_NO8LIM)?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "Done");							// 10
+	gp2x_text_out15(tl_x, (y+=10), "Enable authentic GameGenie %s", (eoptions&EO_GG)?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Done");							// 11
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
@@ -961,7 +985,7 @@ static void draw_fcemenu_options(int menu_sel)
 
 static void fcemenu_loop_options(void)
 {
-	int menu_sel = 0, menu_sel_max = 10, i;
+	int menu_sel = 0, menu_sel_max = 11, i;
 	unsigned long inp = 0;
 
 	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
@@ -977,7 +1001,8 @@ static void fcemenu_loop_options(void)
 				case  1: ntsccol = !ntsccol; break;
 				case  8: eoptions^=EO_CLIPSIDES; break;
 				case  9: eoptions^=EO_NO8LIM; break;
-				case 10: return;
+				case 10: eoptions^=EO_GG; break;
+				case 11: return;
 			}
 		}
 		if(inp & (GP2X_X|GP2X_A)) {
@@ -989,6 +1014,7 @@ static void fcemenu_loop_options(void)
 			FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 			FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
 			FCEUI_DisableSpriteLimitation(eoptions&EO_NO8LIM);
+			FCEUI_SetGameGenie(eoptions&EO_GG);
 			if (cpalette) LoadCPalette();
 			else FCEUI_SetPaletteArray(0); // set to default
 			FCEU_ResetPalette();
@@ -1199,7 +1225,7 @@ static void draw_menu_credits(void)
 
 static void draw_menu_root(int menu_sel)
 {
-	int tl_x = 30, tl_y = 128, y;
+	int tl_x = 30, tl_y = 126, y;
 	gp2x_fceu_copy_bg();
 
 	y = tl_y;
@@ -1216,9 +1242,9 @@ static void draw_menu_root(int menu_sel)
 	gp2x_text_out15(tl_x, (y+=10), "Controls");
 	gp2x_text_out15(tl_x, (y+=10), "Credits");
 	gp2x_text_out15(tl_x, (y+=10), "Exit");
-// TODO
-//	if (PicoPatches)
-//		gp2x_text_out15(tl_x, (y+=10), "Patches / GameGenie");
+
+	if (cheats)
+		gp2x_text_out15(tl_x, (y+=10), "Cheats");
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
@@ -1231,7 +1257,7 @@ static void draw_menu_root(int menu_sel)
 	else {
 		char vstr[16];
 		sprintf(vstr, "v" GP2X_PORT_VERSION " r%i", GP2X_PORT_REV);
-		gp2x_text_out15(320-strlen(vstr)*8-1, 229, vstr);
+		gp2x_text_out15(320-strlen(vstr)*8-1, 228, vstr);
 	}
 	gp2x_fceu_darken_text_bg();
 	gp2x_video_flip();
@@ -1245,7 +1271,7 @@ static int menu_loop_root(void)
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_min = 0;
-// TODO	if (PicoPatches) menu_sel_max = 9;
+	if (cheats) menu_sel_max = 9;
 	if (menu_sel < menu_sel_min || menu_sel > menu_sel_max)
 		menu_sel = menu_sel_min;
 
@@ -1341,6 +1367,7 @@ static int menu_loop_root(void)
 				case 8: // exit
 					return 1;
 				case 9: // patches/gg
+					patches_menu_loop();
 					break;
 			}
 		}
