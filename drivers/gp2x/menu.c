@@ -1,7 +1,5 @@
+// menu system for gpfce - FCE Ultra port
 // (c) Copyright 2006,2007 notaz, All rights reserved.
-// Free for non-commercial use.
-
-// For commercial use, separate licencing terms must be obtained.
 
 #include <stdio.h>
 #include <string.h>
@@ -1386,10 +1384,17 @@ static void menu_prepare_bg(void)
 	if (fceugi)
 	{
 		/* raw emu frame should now be at gp2x_screen */
-		soft_scale((char *)gp2x_screen + 32, gp2x_palette16, srendline, erendline-srendline);
-		if (srendline)
-			memset32((int *)((char *)gp2x_screen + 32), 0, srendline*320*2/4);
-		memcpy(menu_bg, gp2x_screen + 32, 320*240*2);
+		if (Settings.scaling != 0)
+		{
+			soft_scale((char *)gp2x_screen + 32, gp2x_palette16, srendline, erendline-srendline);
+			if (srendline)
+				memset32((int *)((char *)gp2x_screen + 32), 0, srendline*320*2/4);
+			memcpy(menu_bg, gp2x_screen + 32, 320*240*2);
+		}
+		else
+		{
+			convert2RGB555(menu_bg, gp2x_screen, gp2x_palette16, 320*240);
+		}
 	}
 	else
 	{
