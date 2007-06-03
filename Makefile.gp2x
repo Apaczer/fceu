@@ -80,7 +80,8 @@ $(error need VER)
 endif
 endif
 
-rel: gpfce.gpe
+rel: gpfce.gpe out_gp2x/readme.txt out_gp2x/gpfce.man.txt out_gp2x/gpfce.png out_gp2x/background.png
 	zip -9 -j gpfce_v$(VER).zip $^ drivers/gp2x/mmuhack.o
+	zip -9 gpfce_v$(VER).zip fceultra
 
 
