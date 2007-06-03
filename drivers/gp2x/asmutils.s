@@ -117,7 +117,7 @@ mst32_fin:
     bx      lr
 
 
-
+@ warning: this code relies on palette being strictly RGB555, i.e. bit5=0
 .global soft_scale @ void *dst, unsigned short *pal, int line_offs, int lines
 
 soft_scale:
@@ -161,10 +161,14 @@ soft_scale_loop_line:
     ldrh    r6, [r3, r6]
     and     r12,lr, r12,lsr #23
     ldrh    r12,[r3, r12]
-    bic     r11,r6, #0x0820
-    bic     r5, r5, #0x0820
-    add     r5, r5, r11
-    mov     r5, r5, lsr #1
+
+    mov     r11,r6, ror #11
+    adds    r5, r11,r5, ror #11
+    mov     r5, r5, ror #22
+    bic     r5, r5, #0xff000000
+    bic     r5, r5, #0x0420           @ set the green bits as they should be
+    orrcs   r5, r5, #0x0400
+
     and     r11,r6, r9, lsl #2
     sub     r6, r6, r11,lsr #2        @ r6 = 3/4 pix_s 2
     orr     r5, r5, r6, lsl #16
@@ -183,14 +187,16 @@ soft_scale_loop_line:
     sub     r8, r12,r11,lsr #2        @ r8 = 3/4 pix_s 1
     and     r11,r6, r9, lsl #18
     add     r8, r8, r11,lsr #18
-    mov     r8, r8, lsl #16
     and     r7, lr, r7, lsr #23
     ldrh    r7, [r3, r7]
-    bic     r11,r10,#0x0820
-    bic     r12,r12,#0x0820
-    add     r12,r12,r11
-    add     r8, r8, r12,lsr #1        @ pix_d 6, 7
-    mov     r8, r8, ror #16
+
+    mov     r11,r10,ror #11
+    adds    r12,r11,r12,ror #11
+    mov     r12,r12,ror #22
+    bic     r12,r12,#0x0420
+    orrcs   r12,r12,#0x0400
+    orr     r8, r8, r12,lsl #16       @ pix_d 6, 7
+
     and     r11,r10,r9, lsl #2
     sub     r10,r10,r11,lsr #2        @ r10= 3/4 pix_s 2
     and     r11,r7, r9, lsl #2

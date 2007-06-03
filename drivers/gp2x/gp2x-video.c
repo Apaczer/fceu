@@ -99,11 +99,6 @@ int InitVideo(void)
 }
 
 
-void ToggleFS(void)
-{
-}
-
-
 // 16: rrrr rggg gggb bbbb
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {

@@ -604,17 +604,25 @@ void FCEUI_FrameSkip(int x)
 static void LineUpdate(uint8 *target)
 {
 	uint32 tem;
+	int y;
 
 	/* PRefreshLine() will not get called on skipped frames.  This
 	 * could cause a problem, but the solution would be rather complex,
 	 * due to the current sprite 0 hit code.
 	 */
-	if(FSkip) return;
+	if(FSkip)
+	{
+	 y=(int)SPRAM[0] + 1;
+	 if(scanline==y && SpriteON) PPU_status|=0x40; // hack
+	 return;
+	}
 
 	if(scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
 	{
 	   if(PPU_hook)
  	    PRefreshLine();
+	   y=(int)SPRAM[0] + 1;
+	   if(scanline==y && SpriteON) PPU_status|=0x40;
 	}
 	else
 	{
