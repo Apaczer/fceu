@@ -452,7 +452,7 @@ static int DriverInitialize(void)
 static void DriverKill(void)
 {
  // SaveConfig(NULL); // done explicitly in menu now
- SetSignals(SIG_IGN);
+ SetSignals(SIG_DFL);
 
  if(cpalette) free(cpalette);
  cpalette=0;

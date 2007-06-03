@@ -325,13 +325,13 @@ void gp2x_deinit(void)
 	gp2x_memregs[0x2912>>1] = gp2x_screenaddr_old[2];
 	gp2x_memregs[0x2914>>1] = gp2x_screenaddr_old[3];
 
+	gp2x_usbjoy_deinit();
+
 	munmap(gp2x_screens[0], FRAMEBUFF_WHOLESIZE);
 	munmap((void *)gp2x_memregs, 0x10000);
 	close(memdev);
 	close(mixerdev);
 	if (sounddev > 0) close(sounddev);
-
-	gp2x_usbjoy_deinit();
 
 	printf("all done, running ");
 

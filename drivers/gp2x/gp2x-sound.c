@@ -56,7 +56,7 @@ uint32 GetWriteSound(void)
 
 int KillSound(void)
 {
-	FCEUI_Sound(0);
+	//FCEUI_Sound(0);
 
 	return 1;
 }
