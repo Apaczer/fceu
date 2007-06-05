@@ -145,6 +145,8 @@ void asmcpu_unpack(void)
 	X6502_Rebase_a();
 	nes_registers[4] = X.S << 24;
 	nes_registers[4]|= X.IRQlow << 8;
+	if (MapIRQHook)
+		nes_registers[4] |= 1<<16; // MapIRQHook set bit
 	nes_registers[7] = (uint32)X.count << 16;
 
 	// NVUB DIZC
@@ -1514,9 +1516,9 @@ void PowerNES(void)
         memset(RAM,0x00,0x800);
 #endif
         ResetMapping();
-	GameInterface(GI_POWER, 0);
         PowerSound();
 	PowerPPU();
+	GameInterface(GI_POWER, 0);
 	timestampbase=0;
 #ifdef ASM_6502
 	if (geniestage)

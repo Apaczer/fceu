@@ -466,11 +466,13 @@ static void DriverKill(void)
 
 void FCEUD_Update(uint8 *xbuf, int16 *Buffer, int Count)
 {
- if(!Count && !(eoptions&EO_NOTHROTTLE))
+ if(!(eoptions&EO_NOTHROTTLE))
+ {
+  if(Count)
+   WriteSound(Buffer,Count);
   SpeedThrottle();
+ }
+ FCEUD_UpdateInput();	// must update input before blitting because of save confirmation stuff
  BlitScreen(xbuf);
- if(Count && !(eoptions&EO_NOTHROTTLE))
-  WriteSound(Buffer,Count);
- FCEUD_UpdateInput();
 }
 

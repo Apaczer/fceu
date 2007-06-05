@@ -76,7 +76,7 @@
  * ++++++++---S スタックポインタ
  *
  * note: fceu uses this differently
- * [7:0]   - interrupt flags (same as above)
+ * [7:0]   - flags (same as above)
  * [15:8]  - FCEU IRQ pending sources
  * [16]    - a flag which indicates that MapIRQHook is not null
  * [23:17] - unused

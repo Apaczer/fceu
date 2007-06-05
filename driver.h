@@ -165,6 +165,7 @@ void FCEUI_LoadState(void);
 int32 FCEUI_GetDesiredFPS(void);
 void FCEUI_SaveSnapshot(void);
 void FCEU_DispMessage(char *format, ...);
+void FCEU_CancelDispMessage(void);
 #define FCEUI_DispMessage FCEU_DispMessage
 
 int FCEUI_AddCheat(const char *name, uint32 addr, uint8 val, int compare, int type);

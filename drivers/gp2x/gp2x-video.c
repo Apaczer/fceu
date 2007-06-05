@@ -99,7 +99,7 @@ int InitVideo(void)
 }
 
 
-// 16: rrrr rggg gggb bbbb
+// 16: rrrr rggg gg0b bbbb
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {
 	/* note: menu depends on bit5 being 0 */
@@ -167,8 +167,6 @@ void BlitScreen(uint8 *buf)
 
 	framesRendered++;
 
-	printFps(gp2x_screen);
-
 	if (eoptions & EO_CLIPSIDES)
 	{
 		int i, *p = (int *) ((char *)gp2x_screen + 32);
@@ -177,6 +175,8 @@ void BlitScreen(uint8 *buf)
 			p[0] = p[1] = p[62] = p[63] = 0;
 		}
 	}
+
+	printFps(gp2x_screen);
 
 	if (Settings.scaling == 3)
 	{

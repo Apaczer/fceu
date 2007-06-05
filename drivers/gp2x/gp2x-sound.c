@@ -29,7 +29,7 @@ extern int soundvol;
 void WriteSound(int16 *Buffer, int Count)
 {
 	gp2x_sound_write(Buffer, Count<<1);
-	SpeedThrottle();
+//	SpeedThrottle();
 }
 
 void SilenceSound(int n)

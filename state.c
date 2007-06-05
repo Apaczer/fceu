@@ -106,144 +106,127 @@ SFORMAT SFSND[]={
 
 
 
-int WriteStateChunk(FILE *st, int type, SFORMAT *sf)
+static int SubWrite(FILE *st, SFORMAT *sf)
 {
- int bsize, count;
- int x;
+ uint32 acc=0;
 
- count = x = 0;
- while (sf[x++].v) count++;
+ while(sf->v)
+ {
+  if(sf->s==~0)		/* Link to another struct.	*/
+  {
+   uint32 tmp;
+
+   if(!(tmp=SubWrite(st,(SFORMAT *)sf->v)))
+    return(0);
+   acc+=tmp;
+   sf++;
+   continue;
+  }
+
+  acc+=8;			/* Description + size */
+  acc+=sf->s&(~RLSB);
+
+  if(st)			/* Are we writing or calculating the size of this block? */
+  {
+   fwrite(sf->desc,1,4,st);
+   write32le(sf->s&(~RLSB),st);
+
+   #ifndef LSB_FIRST
+   if(sf->s&RLSB)
+    FlipByteOrder(sf->v,sf->s&(~RLSB));
+   #endif
+
+   fwrite((uint8 *)sf->v,1,sf->s&(~RLSB),st);
+   /* Now restore the original byte order. */
+   #ifndef LSB_FIRST
+   if(sf->s&RLSB)
+    FlipByteOrder(sf->v,sf->s&(~RLSB));
+   #endif
+  }
+  sf++;
+ }
+
+ return(acc);
+}
+
+static int WriteStateChunk(FILE *st, int type, SFORMAT *sf)
+{
+ int bsize;
 
  fputc(type,st);
 
- for(x=bsize=0;x<count;x++)
-  bsize+=sf[x].s&(~RLSB);
- bsize+=count<<3;
- write32(bsize,st);
- for(x=0;x<count;x++)
+ bsize=SubWrite(0,sf);
+ write32le(bsize,st);
+
+ if(!SubWrite(st,sf))
  {
-  fwrite(sf[x].desc,1,4,st);
-  write32(sf[x].s&(~RLSB),st);
-  #ifdef LSB_FIRST
-  fwrite((uint8 *)sf[x].v,1,sf[x].s&(~RLSB),st);
-  #else
-  {
-  int z;
-  if(sf[x].s&RLSB)
-  {
-   for(z=(sf[x].s&(~RLSB))-1;z>=0;z--)
-   {
-    fputc(*(uint8*)sf[x].v,st);
-   }
-  }
-  else
-   fwrite((uint8 *)sf[x].v,1,sf[x].s&(~RLSB),st);
-  }
-  #endif
+	 return(0);
  }
  return (bsize+5);
 }
 
-int ReadStateChunk(FILE *st, SFORMAT *sf, int size)
+static SFORMAT *CheckS(SFORMAT *sf, uint32 tsize, char *desc)
 {
- uint8 tmpyo[16];
- int bsize, count;
- int x;
-
- // recalculate count ourselves
- count = x = 0;
- while (sf[x++].v) count++;
-
- for(x=bsize=0;x<count;x++)
-  bsize+=sf[x].s&(~RLSB);
- if(stateversion>=53)
-  bsize+=count<<3;
- else
+ while(sf->v)
  {
-  if(bsize!=size)
+  if(sf->s==~0)		/* Link to another SFORMAT structure. */
   {
-   fseek(st,size,SEEK_CUR);
-   return 0;
+   SFORMAT *tmp;
+   if((tmp= CheckS((SFORMAT *)sf->v, tsize, desc) ))
+    return(tmp);
+   sf++;
+   continue;
   }
- }
-
- if(stateversion<56)
-  memcpy(tmpyo,mapbyte3,16);
-
- if(stateversion>=53)
- {
-  int temp;
-  temp=ftell(st);
-
-  while(ftell(st)<temp+size)
+  if(!memcmp(desc,sf->desc,4))
   {
-   int tsize;
-   char toa[4];
-
-   if(fread(toa,1,4,st)<=0)
-    return 0;
-   read32(&tsize,st);
-
-   for(x=0;x<count;x++)
+   if(tsize!=(sf->s&(~RLSB)))
    {
-    if(!memcmp(toa,sf[x].desc,4))
-    {
-     if(tsize!=(sf[x].s&(~RLSB)))
-     {
-      printf("ReadStateChunk: sect \"%c%c%c%c\" has wrong size\n", toa[0], toa[1], toa[2], toa[3]);
-      goto nkayo;
-     }
-     #ifndef LSB_FIRST
-     if(sf[x].s&RLSB)
-     {
-      int z;
-       for(z=(sf[x].s&(~RLSB))-1;z>=0;z--)
-        *(uint8*)sf[x].v=fgetc(st);
-     }
-     else
-     #endif
-     {
-       fread((uint8 *)sf[x].v,1,sf[x].s&(~RLSB),st);
-     }
-     goto bloo;
-    }
+    printf("ReadStateChunk: sect \"%c%c%c%c\" has wrong size\n", desc[0], desc[1], desc[2], desc[3]);
+    return(0);
    }
-  printf("ReadStateChunk: sect \"%c%c%c%c\" not handled\n", toa[0], toa[1], toa[2], toa[3]);
-  nkayo:
-  fseek(st,tsize,SEEK_CUR);
-  bloo:;
-  } // while(...)
- }  // >=53
- else
+   return(sf);
+  }
+  sf++;
+ }
+ return(0);
+}
+
+static int ReadStateChunk(FILE *st, SFORMAT *sf, int size)
+{
+ //if(scan_chunks)
+ //  return fseek(st,size,SEEK_CUR) == 0;
+
+ SFORMAT *tmp;
+ int temp;
+ temp=ftell(st);
+
+ while(ftell(st)<temp+size)
  {
-  for(x=0;x<count;x++)
+  uint32 tsize;
+  char toa[4];
+  if(fread(toa,1,4,st)<=0)
+   return 0;
+
+  read32le(&tsize,st);
+
+  if((tmp=CheckS(sf,tsize,toa)))
   {
-   #ifdef LSB_FIRST
-   fread((uint8 *)sf[x].v,1,sf[x].s&(~RLSB),st);
-   #else
-   int z;
-   if(sf[x].s&RLSB)
-    for(z=(sf[x].s&(~RLSB))-1;z>=0;z--)
-    {
-     *(uint8*)sf[x].v=fgetc(st);
-    }
-   else
-    fread((uint8 *)sf[x].v,1,sf[x].s&(~RLSB),st);
+   fread((uint8 *)tmp->v,1,tmp->s&(~RLSB),st);
+
+   #ifndef LSB_FIRST
+   if(tmp->s&RLSB)
+    FlipByteOrder(tmp->v,tmp->s&(~RLSB));
    #endif
   }
- }
- if(stateversion<56)
- {
-  for(x=0;x<16;x++)
-   #ifdef LSB_FIRST
-   mapbyte1[x]=mapbyte1[x<<1];
-   #else
-   mapbyte1[x]=mapbyte1[(x<<1)+1];
-   #endif
-  memcpy(mapbyte3,tmpyo,16);
- }
+  else
+  {
+   fseek(st,tsize,SEEK_CUR);
+   printf("ReadStateChunk: sect \"%c%c%c%c\" not handled\n", toa[0], toa[1], toa[2], toa[3]);
+  }
+ } // while(...)
  return 1;
 }
+
 
 static int ReadStateChunks(FILE *st)
 {
@@ -462,8 +445,7 @@ void AddExState(void *v, uint32 s, int type, char *desc)
   strcpy(SFMDATA[SFEXINDEX].desc,desc);
  }
  else
-//  SFMDATA[SFEXINDEX].desc=0;
-  return; // do not support recursive save structures
+  SFMDATA[SFEXINDEX].desc=0;
  SFMDATA[SFEXINDEX].v=v;
  SFMDATA[SFEXINDEX].s=s;
  if(type) SFMDATA[SFEXINDEX].s|=RLSB;

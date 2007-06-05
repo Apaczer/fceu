@@ -82,6 +82,11 @@ void FCEU_DispMessage(char *format, ...)
   printf("%s\n", errmsg);
 }
 
+void FCEU_CancelDispMessage(void)
+{
+ howlong=0;
+}
+
 void FCEUI_SetRenderedLines(int ntscf, int ntscl, int palf, int pall)
 {
  FSettings.UsrFirstSLine[0]=ntscf;

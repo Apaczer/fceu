@@ -88,7 +88,7 @@ static void do_emu_acts(uint32 acts)
 				FCEUD_Update(XBuf+8,NULL,0);
 				while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
 				if (keys & GP2X_X) do_it = 0;
-				FCEU_DispMessage("");
+				FCEU_CancelDispMessage();
 			}
 			if (do_it) FCEUI_LoadState();
 		}
@@ -107,7 +107,7 @@ static void do_emu_acts(uint32 acts)
 					FCEUD_Update(XBuf+8,NULL,0);
 					while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
 					if (keys & GP2X_X) do_it = 0;
-					FCEU_DispMessage("");
+					FCEU_CancelDispMessage();
 				}
 			}
 			if (do_it) FCEUI_SaveState();
