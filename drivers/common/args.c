@@ -80,6 +80,7 @@ static int ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
      *argsps[y].var=1;
      ret=1;
     }
+    break;
    }
    y++;
   } while(argsps[y].var || argsps[y].subs);

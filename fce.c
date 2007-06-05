@@ -39,6 +39,7 @@
 #include	"fds.h"
 #include	"ines.h"
 #include	"unif.h"
+#include	"vsuni.h"
 #include        "cheat.h"
 
 #include	"state.h"
@@ -1519,12 +1520,15 @@ void PowerNES(void)
         PowerSound();
 	PowerPPU();
 	GameInterface(GI_POWER, 0);
-	timestampbase=0;
+        if(FCEUGameInfo.type==GIT_VSUNI)
+         FCEU_VSUniPower();
 #ifdef ASM_6502
 	if (geniestage)
 	 GenieSetPages(0);
 #endif
+	timestampbase=0;
 	X6502_Power();
+	FCEU_PowerCheats();
 }
 
 
