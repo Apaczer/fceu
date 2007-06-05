@@ -731,15 +731,14 @@ static void unbind_action(int action)
 			Settings.JoyBinds[u][i] &= ~action;
 }
 
-static int count_bound_keys(int action, int is_joy)
+static int count_bound_keys(int action, int joy)
 {
-	int i, u, keys = 0;
+	int i, keys = 0;
 
-	if (is_joy)
+	if (joy)
 	{
-		for (u = 0; u < 4; u++)
-			for (i = 0; i < 32; i++)
-				if (Settings.JoyBinds[u][i] & action) keys++;
+		for (i = 0; i < 32; i++)
+			if (Settings.JoyBinds[joy-1][i] & action) keys++;
 	}
 	else
 	{
@@ -824,7 +823,7 @@ static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_i
 		{
 			for (i = 0; i < 32; i++)
 				if (inp & (1 << i)) {
-					if (count_bound_keys(opts[sel].mask, 1) >= 1) // disallow combos for usbjoy
+					if (count_bound_keys(opts[sel].mask, joy) >= 1) // disallow combos for usbjoy
 					     Settings.JoyBinds[joy-1][i] &= ~opts[sel].mask;
 					else Settings.JoyBinds[joy-1][i] ^=  opts[sel].mask;
 					if (player_idx >= 0) {

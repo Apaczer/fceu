@@ -175,11 +175,12 @@ with additional .fcm extension added. Examples:
 
 
 ver 0.4 (by notaz)
-  rev 154
+  rev 15x
           - Fixed savestate subsections (were causing some mapper data not
             to be saved).
           - Fixed an issue of MapIRQHook getting lost after loading a savestate
             (glitched Akumajou Densetsu and other games after savestate load).
+          - A bug, which prevented configuring multiple USB pads fixed.
   rev 153
           - Lots of work on the asm core. Timing fixed for some instructions.
             Some missing undocumented instruction handlers added. Lots of
