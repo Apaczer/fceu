@@ -10,5 +10,8 @@ int FASTAPASS(1) FCEU_fgetc(int stream);
 long FASTAPASS(1) FCEU_fgetsize(int stream);
 int FASTAPASS(1) FCEU_fisarchive(int stream);
 
+void ApplyIPS(FILE *ips, int destf);
+int FASTAPASS(1) FCEU_fopen_forcemem(char *path);
+
 #define FCEUD_UTF8fopen fopen
 

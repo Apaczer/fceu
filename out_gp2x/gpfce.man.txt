@@ -96,14 +96,19 @@ The .cht files fould be placed into <where_you_put_gpfce>/fceultra/cheats/ direc
 
 If you have done everything correctly, Cheat option will appear in the main menu after you load the ROM. You can activate/deactivate cheats by pressing B. For description of .cht file format, see http://fceultra.sourceforge.net/cheat.php
 
+[IPS patch support]
+Place the IPS files in the same directory as the ROMs to load, and name them filename.ips or filename.something.ips. Examples:
+
+  File name:              IPS file names:
+   BigBad.nes              BigBad.nes.ips           BigBad.nes.somehack.ips
+   BigBad.zip              BigBad.zip.ips           BigBad.zip.badhack.ips
+   BigBad.Better.nes       BigBad.Better.nes.ips    BigBad.Better.nes.evenbetterhack.ips
+
+Patching is supported for all supported formats (iNES, FDS, UNIF, and NSF), but it will probably only be useful for the iNES and FDS formats. UNIF files can't be patched well with the IPS format because they are chunk-based with no fixed offsets.
+
 
 [FCM movies]
-Version 0.4 has partial FCM movie support. Most of the movies desync due to different timing, but some of them can be played. There is only playback support. Files should be placed in the ROMs directory along with the ROMs themselves. Naming is a bit different, the fcm files should have full ROM name in them, with additional .fcm extension added. Examples:
-
-  File name:              Palette file name:
-   BigBad.nes              BigBad.nes.fcm
-   BigBad.zip              BigBad.zip.fcm
-   BigBad.Better.nes       BigBad.Better.nes.fcm
+Version 0.4 has partial FCM movie support. Most of the movies desync due to different timing, but some of them can be played. There is only playback support. Files should be placed in the ROMs directory along with the ROMs themselves. Naming is the same as for IPS patches (see previous section), buf use .fcm extension instead of .ips.
 
 
 [Credits/thanks]

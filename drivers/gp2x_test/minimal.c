@@ -13,6 +13,7 @@
 
 #include "../gp2x/minimal.h"
 #include "../gp2x/usbjoy.h"
+#include "../gp2x/cpuctrl.h"
 
 SDL_Surface *screen;
 void *gp2x_screen;
@@ -89,6 +90,10 @@ void gp2x_video_RGB_setscaling(int W, int H)
 }
 
 void gp2x_video_set_offs(int offs)
+{
+}
+
+void gp2x_video_flush_cache(void)
 {
 }
 
@@ -262,6 +267,14 @@ void set_gamma(int g100)
 {
 }
 
+void set_LCD_custom_rate(lcd_rate_t rate)
+{
+}
+
+void unset_LCD_custom_rate(void)
+{
+}
+
 
 int mmuhack(void)
 {
@@ -281,6 +294,12 @@ void memset32(int *dest, int c, int count)
 void spend_cycles(int c)
 {
 	usleep(c/200);
+}
+
+void convert2RGB555(unsigned short *dst, unsigned char *src, unsigned short *pal, int count)
+{
+	while (count--)
+		*dst++ = pal[*src++];
 }
 
 /* don't scale, just convert */

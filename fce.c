@@ -1109,7 +1109,7 @@ int NSFLoad(int fp);
 FCEUGI *FCEUI_LoadGame(char *name)
 {
 	char name2[512];
-	int have_movie = 0;
+	int have_movie = 0, have_ips = 0;
         int fp;
 
         //Exit=1;
@@ -1129,22 +1129,37 @@ FCEUGI *FCEUI_LoadGame(char *name)
 
         {
 	 char *p = name2 + strlen(name2) - 4;
-	 if (strcmp(p, ".fcm") == 0)
+	 if (strcasecmp(p, ".fcm") == 0) printf("movie detected\n"), have_movie = 1;
+	 if (strcasecmp(p, ".ips") == 0) printf("ips detected\n"), have_ips = 1;
+	 if (have_movie || have_ips)
 	 {
 	  // movie detected
-	  printf("movie detected\n");
 	  FCEU_fclose(fp);
 	  *p = 0;
 	  fp=FCEU_fopen(name2,"rb");
-	  if (!fp && p - name2 > 2)  p[-2] = 0;
-	  fp=FCEU_fopen(name2,"rb");
+	  if (!fp && p - name2 > 2)
+	  {
+	   for (p--; p > name2 && *p != '.'; p--);
+           *p = 0;
+	   fp=FCEU_fopen(name2,"rb");
+	  }
 	  if (!fp) {
-	   printf("no ROM for movie\n");
+	   printf("no ROM for ips/movie\n");
 	   LoadGameLastError = 2;
 	   return 0;
 	  }
-	  have_movie = 1;
 	 }
+	}
+
+	// do IPS patch
+	if (have_ips)
+	{
+	 FCEU_fclose(fp);
+	 FILE *ips = fopen(name, "rb");
+	 if (!ips) return 0;
+         fp=FCEU_fopen_forcemem(name2);
+	 if (!fp) { fclose(ips); return 0; }
+	 ApplyIPS(ips, fp); // closes ips
 	}
 
         GetFileBase(name2);

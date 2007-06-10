@@ -154,19 +154,32 @@ For description of .cht file format, see http://fceultra.sourceforge.net/cheat.p
 
 
 ------------------------------------------------------------------
+ IPS patch support
+------------------------------------------------------------------
+
+Place the IPS files in the same directory as the ROM to load, and name them
+filename.ips or filename.something.ips. Examples:
+
+
+         File name:              IPS file names:
+          BigBad.nes              BigBad.nes.ips           BigBad.nes.somehack.ips
+          BigBad.zip              BigBad.zip.ips           BigBad.zip.badhack.ips
+          BigBad.Better.nes       BigBad.Better.nes.ips    BigBad.Better.nes.evenbetterhack.ips
+
+Patching is supported for all supported formats (iNES, FDS, UNIF, and NSF), but
+it will probably only be useful for the iNES and FDS formats. UNIF files can't be
+patched well with the IPS format because they are chunk-based with no fixed offsets.
+
+
+------------------------------------------------------------------
  FCM movies
 ------------------------------------------------------------------
 
 Version 0.4 has partial FCM movie support. Most of the movies desync due to
 different timing, but some of them can be played. There is only playback support.
 Files should be placed in the ROMs directory along with the ROMs themselves.
-Naming is a bit different, the fcm files should have full ROM name in them,
-with additional .fcm extension added. Examples:
-
-                File name:              Palette file name:
-                 BigBad.nes              BigBad.nes.fcm
-                 BigBad.zip              BigBad.zip.fcm
-                 BigBad.Better.nes       BigBad.Better.nes.fcm
+Naming is the same as for IPS patches (see previous section), buf use .fcm
+extension instead of .ips.
 
 
 --------------------------------------------------------------------
@@ -175,7 +188,7 @@ with additional .fcm extension added. Examples:
 
 
 ver 0.4 (by notaz)
-  rev 15x
+  rev 162
           - Fixed savestate subsections (were causing some mapper data not
             to be saved).
           - Fixed an issue of MapIRQHook getting lost after loading a savestate
@@ -184,6 +197,7 @@ ver 0.4 (by notaz)
           - Fixed sound breaking bug after switching it on/off multiple times.
           - Added "Perfect VSYNC" option, which changes GP2X refresh rate and
             syncs emu timing to LCD vsync.
+          - Fixed IPS patch support.
   rev 153
           - Lots of work on the asm core. Timing fixed for some instructions.
             Some missing undocumented instruction handlers added. Lots of

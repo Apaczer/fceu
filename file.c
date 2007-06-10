@@ -32,17 +32,129 @@
 #include "endian.h"
 #include "memory.h"
 #include "driver.h"
+#include "svga.h"
 
 static void *desctable[8]={0,0,0,0,0,0,0,0};
 static int x;
 
-#ifdef ZLIB
-
+/*
+typedef struct {
+           uint8 *data;
+           uint32 size;
+           uint32 location;
+} MEMWRAP;
+*/
 typedef struct {
            uint8 *data;
            uint32 size;
            uint32 location;
 } ZIPWRAP;
+#define MEMWRAP ZIPWRAP
+
+void ApplyIPS(FILE *ips, int destf)
+{
+ uint8 header[5];
+ uint32 count=0;
+ MEMWRAP *dest;
+
+ FCEU_printf(" Applying IPS...\n");
+ if(!(destf&0x8000))
+ {
+  FCEU_printf("failed (bad destf).\n");
+  return;
+ }
+
+ dest=(MEMWRAP*)desctable[(destf&255)-1];
+
+ if(fread(header,1,5,ips)!=5)
+ {
+  FCEU_printf("failed (bad header).\n");
+  fclose(ips);
+  return;
+ }
+ if(memcmp(header,"PATCH",5))
+ {
+  FCEU_printf("failed (bad header).\n");
+  fclose(ips);
+  return;
+ }
+
+ while(fread(header,1,3,ips)==3)
+ {
+  uint32 offset=(header[0]<<16)|(header[1]<<8)|header[2];
+  uint16 size;
+
+  if(!memcmp(header,"EOF",3))
+  {
+   FCEU_printf(" IPS EOF:  Did %d patches\n\n",count);
+   fclose(ips);
+   return;
+  }
+
+  size=fgetc(ips)<<8;
+  size|=fgetc(ips);
+  if(!size)	/* RLE */
+  {
+   uint8 *start;
+   uint8 b;
+   size=fgetc(ips)<<8;
+   size|=fgetc(ips);
+
+   //FCEU_printf("  Offset: %8d  Size: %5d RLE\n",offset,size);
+
+   if((offset+size)>dest->size)
+   {
+    uint8 *tmp;
+
+    // Probably a little slow.
+    tmp=(uint8 *)realloc(dest->data,offset+size);
+    if(!tmp)
+    {
+     FCEU_printf("  Oops.  IPS patch %d(type RLE) goes beyond end of file.  Could not allocate memory.\n",count);
+     fclose(ips);
+     return;
+    }
+    dest->size=offset+size;
+    dest->data=tmp;
+    memset(dest->data+dest->size,0,offset+size-dest->size);
+   }
+   b=fgetc(ips);
+   start=dest->data+offset;
+   do
+   {
+    *start=b;
+    start++;
+   } while(--size);
+  }
+  else		/* Normal patch */
+  {
+   //FCEU_printf("  Offset: %8d  Size: %5d\n",offset,size);
+   if((offset+size)>dest->size)
+   {
+    uint8 *tmp;
+
+    // Probably a little slow.
+    tmp=(uint8 *)realloc(dest->data,offset+size);
+    if(!tmp)
+    {
+     FCEU_printf("  Oops.  IPS patch %d(type normal) goes beyond end of file.  Could not allocate memory.\n",count);
+     fclose(ips);
+     return;
+    }
+    dest->data=tmp;
+    memset(dest->data+dest->size,0,offset+size-dest->size);
+   }
+   fread(dest->data+offset,1,size,ips);
+  }
+  count++;
+ }
+ fclose(ips);
+ FCEU_printf(" Hard IPS end!\n");
+}
+
+
+#ifdef ZLIB
+
 
 void *MakeZipWrap(void *tz)
 {
@@ -168,6 +280,43 @@ int FASTAPASS(2) FCEU_fopen(char *path, char *mode)
      return(x+1);
     }
   }
+ return 0;
+}
+
+int FASTAPASS(1) FCEU_fopen_forcemem(char *path)
+{
+ MEMWRAP *tmp;
+ long size;
+ int fp;
+
+ fp=FCEU_fopen(path, "rb");
+ if (!fp) return 0;
+
+ if (fp&0x8000) return fp;
+
+ if (!(tmp=FCEU_malloc(sizeof(*tmp))))
+  goto retr;
+
+ size=FCEU_fgetsize(fp);
+ if (size <= 0) goto retr;
+ tmp->size=size;
+ tmp->data=FCEU_malloc(size);
+ if (!tmp->data) goto retr;
+ FCEU_fread(tmp->data, 1, size, fp);
+ FCEU_fclose(fp); fp=0;
+ tmp->location=0;
+
+ for(x=0;x<8;x++)
+  if(!desctable[x])
+  {
+   desctable[x]=tmp;
+   return (x+1)|0x8000;
+  }
+
+ retr:
+ if (fp) FCEU_fclose(fp);
+ if (tmp && tmp->data) FCEU_free(tmp->data);
+ if (tmp) FCEU_free(tmp);
  return 0;
 }
 

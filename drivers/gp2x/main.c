@@ -401,7 +401,7 @@ int CLImain(int argc, char *argv[])
 	  {
 	   switch(LoadGameLastError) {
 	    default: strcpy(menuErrorMsg, "failed to load ROM"); break;
-	    case  2: strcpy(menuErrorMsg, "Can't find a ROM for movie"); break;
+	    case  2: strcpy(menuErrorMsg, "Can't find a ROM for ips/movie"); break;
 	    case 10: strcpy(menuErrorMsg, "FDS BIOS ROM is missing, read docs"); break;
 	    case 11: strcpy(menuErrorMsg, "Error reading auxillary FDS file"); break;
 	   }
