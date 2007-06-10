@@ -49,6 +49,7 @@ void CleanSurface(void);
 // internals
 extern char lastLoadedGameName[2048];
 extern uint8 Exit; // exit emu loop flag
+extern int FSkip;
 void CloseGame(void);
 
 FCEUGI *fceugi = NULL;
@@ -166,7 +167,7 @@ static void LoadLLGN(void)
 static void SaveLLGN(void)
 {
  // save last loaded game name
- if (lastLoadedGameName[0])
+ if (lastLoadedGameName[0] && !(eoptions&EO_NOAUTOWRITE))
  {
   char tdir[2048];
   FILE *f;
@@ -256,6 +257,7 @@ static int DoArgs(int argc, char *argv[])
 	 {"-nofs",0,&eoptions,0x8000|EO_NOFOURSCORE},
          {"-clipsides",0,&eoptions,0x8000|EO_CLIPSIDES},
 	 {"-nothrottle",0,&eoptions,0x8000|EO_NOTHROTTLE},
+	 {"-noautowrite",0,&eoptions,0x8000|EO_NOAUTOWRITE},
          {"-slstart",0,&srendlinev[0],0},{"-slend",0,&erendlinev[0],0},
          {"-slstartp",0,&srendlinev[1],0},{"-slendp",0,&erendlinev[1],0},
 	 {0,(void *)DriverArgs,0,0},
@@ -286,7 +288,7 @@ static int DoArgs(int argc, char *argv[])
 	}
 
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
-        FCEUI_SetSoundVolume(soundvol);
+        FCEUI_SetSoundVolume(80);
 	DoDriverArgs();
 
 	if(fcexp)
@@ -353,7 +355,6 @@ int CLImain(int argc, char *argv[])
         LoadConfig(NULL);
         last_arg_parsed=DoArgs(argc-1,&argv[1]);
 	gp2x_opt_setup();
-	gp2x_cpuclock_gamma_update();
 	LoadLLGN();
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 	if(cpalette)
@@ -417,18 +418,19 @@ int CLImain(int argc, char *argv[])
 	  }
          }
 
+	 gp2x_opt_update();
 	 PrepareOtherInput();
-	 RefreshThrottleFPS();
 	 FCEUI_GetCurrentVidSystem(&srendline,&erendline);
 	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
 	 switch (Settings.scaling & 3) {
-		 case 0: gp2x_video_set_offs(0);  gp2x_video_RGB_setscaling(0, 320, 240); break;
-		 case 1: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(0, 256, 240); break;
-		 case 2: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(srendline, 256, erendline-srendline); break;
-		 case 3: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(0, 320, 240); break;
+		 case 0: gp2x_video_set_offs(0);  gp2x_video_RGB_setscaling(320, 240); break;
+		 case 1: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(256, 240); break;
+		 case 2: gp2x_video_set_offs(32+srendline*320); gp2x_video_RGB_setscaling(256, erendline-srendline); break;
+		 case 3: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(320, 240); break;
 	 }
 	 CleanSurface();
 	 gp2x_start_sound(Settings.sound_rate, 16, 0);
+	 RefreshThrottleFPS();
 	 FCEUI_Emulate();
 	}
 
@@ -466,13 +468,16 @@ static void DriverKill(void)
 
 void FCEUD_Update(uint8 *xbuf, int16 *Buffer, int Count)
 {
+ FCEUD_UpdateInput();	// must update input before blitting because of save confirmation stuff
+ BlitPrepare(xbuf == NULL);
  if(!(eoptions&EO_NOTHROTTLE))
  {
   if(Count)
    WriteSound(Buffer,Count);
   SpeedThrottle();
  }
- FCEUD_UpdateInput();	// must update input before blitting because of save confirmation stuff
- BlitScreen(xbuf);
+ BlitScreen(xbuf == NULL);
+ // make sure last frame won't get skipped, because we need it for menu bg
+ if (Exit) FSkip=0;
 }
 

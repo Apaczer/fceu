@@ -19,6 +19,8 @@ int GP2X_PORT_REV =
 #include "rev.h"
 ;
 
+extern uint8 PAL;
+
 int CLImain(int argc, char *argv[]);
 
 DSETTINGS Settings;
@@ -144,8 +146,8 @@ int main(int argc, char *argv[])
 
         ret = CLImain(argc,argv);
 
-        // unscale the screen, in case this is bad.
-        gp2x_video_RGB_setscaling(0, 320, 240);
+        // unscale the screen, in case it is bad.
+        gp2x_video_RGB_setscaling(320, 240);
 
 	if (mmuhack_status > 0)
 		mmuunhack();
@@ -175,9 +177,9 @@ void gp2x_opt_setup(void)
 	}
 }
 
-void gp2x_cpuclock_gamma_update(void)
+void gp2x_opt_update(void)
 {
-	static int prev_cpuclock = 200, prev_gamma = 100;
+	static int prev_cpuclock = 200, prev_gamma = 100, prev_vsync = 0, prev_pal = 0;
 	if (Settings.cpuclock != 0 && Settings.cpuclock != prev_cpuclock)
 	{
 		set_FCLK(Settings.cpuclock);
@@ -188,6 +190,20 @@ void gp2x_cpuclock_gamma_update(void)
 	{
 		set_gamma(Settings.gamma);
 		prev_gamma = Settings.gamma;
+	}
+
+	if (Settings.perfect_vsync != prev_vsync || (Settings.perfect_vsync && prev_pal != PAL))
+	{
+		if (Settings.perfect_vsync)
+		{
+			set_LCD_custom_rate(PAL ? LCDR_100_02 : LCDR_120_20);
+			prev_pal = PAL;
+		}
+		else
+		{
+			unset_LCD_custom_rate();
+		}
+		prev_vsync = Settings.perfect_vsync;
 	}
 }
 

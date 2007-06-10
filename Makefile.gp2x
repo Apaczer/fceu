@@ -71,7 +71,7 @@ ${B}rev.h: FORCE
 include Makefile.common
 
 up: fceu
-	cp -v fceu /mnt/gp2x/mnt/sd/emus/gpfce/gpfce
+	cp -v fceu /mnt/gp2x/mnt/sd/emus/gpfce/gpfce.gpe
 
 # ----------- release -----------
 ifneq ($(findstring rel,$(MAKECMDGOALS)),)

@@ -48,7 +48,13 @@ static int txt_xmin, txt_xmax, txt_ymin, txt_ymax;
 
 char menuErrorMsg[40] = {0, };
 
-static void gp2x_fceu_darken_reset(void)
+static void menu_flip(void)
+{
+	gp2x_video_flush_cache();
+	gp2x_video_flip();
+}
+
+static void menu_darken_reset(void)
 {
 	txt_xmin = 320; txt_xmax = 0;
 	txt_ymin = 240; txt_ymax = 0;
@@ -59,10 +65,10 @@ static void gp2x_fceu_copy_bg(void)
 	if (menu_bg)
 	     memcpy(gp2x_screen, menu_bg, 320*240*2);
 	else memset(gp2x_screen, 0, 320*240*2);
-	gp2x_fceu_darken_reset();
+	menu_darken_reset();
 }
 
-static void gp2x_fceu_darken_text_bg(void)
+static void menu_darken_text_bg(void)
 {
 	int x, y, xmin, xmax, ymax;
 	unsigned short *screen = gp2x_screen;
@@ -317,7 +323,7 @@ static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 		}
 	}
 	gp2x_text_out15(5, 120, ">");
-	gp2x_video_flip();
+	menu_flip();
 }
 
 static int scandir_cmp(const void *p1, const void *p2)
@@ -506,7 +512,7 @@ static void draw_patchlist(int sel)
 	if (pos < 24) gp2x_smalltext16_lim(14, pos*10, "done", 4);
 
 	gp2x_text_out15(5, 120, ">");
-	gp2x_video_flip();
+	menu_flip();
 }
 
 void patches_menu_loop(void)
@@ -631,7 +637,7 @@ static void draw_savestate_menu(int menu_sel, int is_loading)
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
-	gp2x_video_flip();
+	menu_flip();
 }
 
 static int savestate_menu_loop(int is_loading)
@@ -768,8 +774,8 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 	// draw cursor
 	gp2x_text_out15(x - 16, tl_y + sel*10, ">");
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_fceu_darken_reset();
+	menu_darken_text_bg();
+	menu_darken_reset();
 
 	if (sel < opt_cnt) {
 		gp2x_text_out15(30, 190, "Press a button to bind/unbind");
@@ -781,8 +787,8 @@ static void draw_key_config(const bind_action_t *opts, int opt_cnt, int player_i
 		gp2x_text_out15(30, 210, "to save controls");
 		gp2x_text_out15(30, 220, "Press B or X to exit");
 	}
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 static void key_config_loop(const bind_action_t *opts, int opt_cnt, int player_idx)
@@ -861,8 +867,8 @@ static void draw_kc_sel(int menu_sel)
 		gp2x_text_out15(tl_x, (y+=10), "none");
 	}
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 // b_turbo,a_turbo  RLDU SEBA
@@ -969,15 +975,15 @@ static void draw_fcemenu_options(int menu_sel)
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
 	if (menu_sel == 0) {
-		gp2x_fceu_darken_text_bg();
-		gp2x_fceu_darken_reset();
+		menu_darken_text_bg();
+		menu_darken_reset();
 
 		gp2x_text_out15(30, 210, "Press B to browse,");
 		gp2x_text_out15(30, 220, "START to use default");
 	}
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 static void fcemenu_loop_options(void)
@@ -1088,17 +1094,18 @@ static void draw_menu_options(int menu_sel)
 	gp2x_text_out15(tl_x, (y+=10), "Faster RAM timings         %s", Settings.ramtimings?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 10
 	gp2x_text_out15(tl_x, (y+=10), "Gamma correction           %i.%02i", Settings.gamma / 100, Settings.gamma%100);
-	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 12
+	gp2x_text_out15(tl_x, (y+=10), "Perfect VSYNC              %s", Settings.perfect_vsync?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 13
 	gp2x_text_out15(tl_x, (y+=10), "[FCE Ultra options]");
-	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");
+	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");						// 15
 	if (fceugi)
 		gp2x_text_out15(tl_x, (y+=10), "Save cfg for current game only");
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 static int sndrate_prevnext(int rate, int dir)
@@ -1116,7 +1123,6 @@ static int sndrate_prevnext(int rate, int dir)
 
 static void config_commit(void)
 {
-	gp2x_cpuclock_gamma_update();
 	if (Settings.region_force)
 		FCEUI_SetVidSystem(Settings.region_force - 1);
 }
@@ -1124,7 +1130,7 @@ static void config_commit(void)
 static int menu_loop_options(void)
 {
 	static int menu_sel = 0;
-	int menu_sel_max = 14;
+	int menu_sel_max = 15;
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_max++;
@@ -1138,15 +1144,16 @@ static int menu_loop_options(void)
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
 				case  1: Settings.showfps    = !Settings.showfps; break;
-				case  3: soundvol = soundvol ? 0 : 100; break;
+				case  3: soundvol = soundvol ? 0 : 50; break;
 				case  9: Settings.ramtimings = !Settings.ramtimings; break;
 				case 10: Settings.mmuhack    = !Settings.mmuhack; break;
-				case 13: fcemenu_loop_options(); break;
-				case 14: // done (update and write)
+				case 12: Settings.perfect_vsync = !Settings.perfect_vsync; break;
+				case 14: fcemenu_loop_options(); break;
+				case 15: // done (update and write)
 					config_commit();
 					SaveConfig(NULL);
 					return 1;
-				case 15: // done (update and write for current game)
+				case 16: // done (update and write for current game)
 					config_commit();
 					if (lastLoadedGameName[0])
 						SaveConfig(lastLoadedGameName);
@@ -1175,7 +1182,7 @@ static int menu_loop_options(void)
 				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
 				case  8: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
 				case 11: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
-				case 12:
+				case 13:
 					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
 						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
 						if (Settings.cpuclock < 0) Settings.cpuclock = 0; // 0 ~ do not change
@@ -1213,8 +1220,8 @@ static void draw_menu_credits(void)
 	gp2x_text_out15(20, 180, "  cpuctrl, gamma libs");
 	gp2x_text_out15(20, 190, "Squidge: squidgehack");
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 
@@ -1246,8 +1253,8 @@ static void draw_menu_root(int menu_sel)
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
-	gp2x_fceu_darken_text_bg();
-	gp2x_fceu_darken_reset();
+	menu_darken_text_bg();
+	menu_darken_reset();
 
 	// error / version
 	if (menuErrorMsg[0]) gp2x_text_out15(1, 229, menuErrorMsg);
@@ -1256,8 +1263,8 @@ static void draw_menu_root(int menu_sel)
 		sprintf(vstr, "v" GP2X_PORT_VERSION " r%i", GP2X_PORT_REV);
 		gp2x_text_out15(320-strlen(vstr)*8-1, 228, vstr);
 	}
-	gp2x_fceu_darken_text_bg();
-	gp2x_video_flip();
+	menu_darken_text_bg();
+	menu_flip();
 }
 
 
@@ -1409,8 +1416,8 @@ static void menu_gfx_prepare(void)
 	// switch bpp
 	gp2x_video_changemode(16);
 	gp2x_video_set_offs(0);
-	gp2x_video_RGB_setscaling(0, 320, 240);
-	gp2x_video_flip();
+	gp2x_video_RGB_setscaling(320, 240);
+	menu_flip();
 }
 
 

@@ -9,12 +9,13 @@ int InitSound(void);
 void WriteSound(int16 *Buffer, int Count);
 
 void KillSound(void);
-void SilenceSound(int s); /* DOS and SDL */
+void SilenceSound(int s);
 
 
 int InitVideo(void);
 void KillVideo(void);
-void BlitScreen(uint8 *buf);
+void BlitPrepare(int skip);
+void BlitScreen(int skip);
 void LockConsole(void);
 void UnlockConsole(void);
-void ToggleFS();		/* SDL */
+void ToggleFS();

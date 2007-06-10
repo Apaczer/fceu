@@ -181,6 +181,9 @@ ver 0.4 (by notaz)
           - Fixed an issue of MapIRQHook getting lost after loading a savestate
             (glitched Akumajou Densetsu and other games after savestate load).
           - A bug, which prevented configuring multiple USB pads fixed.
+          - Fixed sound breaking bug after switching it on/off multiple times.
+          - Added "Perfect VSYNC" option, which changes GP2X refresh rate and
+            syncs emu timing to LCD vsync.
   rev 153
           - Lots of work on the asm core. Timing fixed for some instructions.
             Some missing undocumented instruction handlers added. Lots of

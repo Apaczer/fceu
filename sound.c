@@ -873,22 +873,23 @@ int32 highp;                   // 0 through 65536, 0 = no high pass, 65536 = max
 
 int32 lowp;                    // 0 through 65536, 65536 = max low pass(total attenuation)
 				// 65536 = no low pass
+static int32 flt_acc=0, flt_acc2=0;
+
 static void FilterSound(uint32 *in, int16 *outMono, int count)
 {
- static int32 acc=0, acc2=0;
 // static int min=0, max=0;
 
  for(;count;count--,in++,outMono++)
  {
   int32 diff;
 
-  diff = *in - acc;
+  diff = *in - flt_acc;
 
-  acc += (diff*highp)>>16;
-  acc2+= (int32) (((int64)((diff-acc2)*lowp))>>16);
+  flt_acc += (diff*highp)>>16;
+  flt_acc2+= (int32) (((int64)((diff-flt_acc2)*lowp))>>16);
   *in=0;
 
-  *outMono = acc2*7 >> 2; // * 1.75
+  *outMono = flt_acc2*7 >> 2; // * 1.75
 //  if (acc2 < min) { printf("min: %i %04x\n", acc2, acc2); min = acc2; }
 //  if (acc2 > max) { printf("max: %i %04x\n", acc2, acc2); max = acc2; }
  }
@@ -1016,6 +1017,8 @@ void SetSoundVariables(void)
 
   if(highp>(1<<16)) highp=1<<16;
   if(lowp>(1<<16)) lowp=1<<16;
+
+  flt_acc=flt_acc2=0;
 }
 
 void FixOldSaveStateSFreq(void)

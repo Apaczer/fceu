@@ -15,10 +15,11 @@ typedef struct {
 	int mmuhack;
 	int ramtimings;
 	int gamma;
+	int perfect_vsync;
 } DSETTINGS;
 
 extern DSETTINGS Settings;
 
 void gp2x_opt_setup(void);
-void gp2x_cpuclock_gamma_update(void);
+void gp2x_opt_update(void);
 

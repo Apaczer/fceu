@@ -84,7 +84,7 @@ void gp2x_video_setpalette(int *pal, int len)
 }
 
 
-void gp2x_video_RGB_setscaling(int ln_offs, int W, int H)
+void gp2x_video_RGB_setscaling(int W, int H)
 {
 }
 

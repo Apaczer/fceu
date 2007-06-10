@@ -1,38 +1,68 @@
 #include <sys/time.h>
 #include "main.h"
 #include "gp2x.h"
+#include "minimal.h"
 #include "throttle.h"
 
 
 extern uint8 PAL;
 extern int FSkip;
-static int usec_aim = 0, usec_done = 0;
 static int skip_count = 0;
+static struct timeval tv_prev;
 
 void RefreshThrottleFPS(void)
 {
-	usec_aim = usec_done = skip_count = 0;
+	skip_count = 0;
+	if (Settings.perfect_vsync)
+	{
+		gp2x_video_wait_vsync();
+	}
+	gettimeofday(&tv_prev, 0);
 }
 
+#define tvdiff(tv1, tv2) \
+	((tv1.tv_sec - tv2.tv_sec) * 1000000 + tv1.tv_usec - tv2.tv_usec)
+
+#define tvadd(tv, usec) { \
+	tv.tv_usec += usec; \
+	if (tv.tv_usec >= 1000000) { \
+		tv.tv_sec += 1; \
+		tv.tv_usec -= 1000000; \
+	} \
+}
+
+#define tvsub(tv, usec) { \
+	tv.tv_usec -= usec; \
+	if (tv.tv_usec < 0) { \
+		tv.tv_sec -= 1; \
+		tv.tv_usec += 1000000; \
+	} \
+}
+
+static void wait_to(struct timeval *tv_aim)
+{
+	struct timeval tv_now;
+	int diff;
+
+	do
+	{
+		gettimeofday(&tv_now, 0);
+		diff = tvdiff((*tv_aim), tv_now);
+	}
+	while (diff > 0);
+}
+
+#include <stdio.h>
 void SpeedThrottle(void)
 {
-	static struct timeval tv_prev;
-	struct timeval tv_now;
-	int delta_nom = PAL ? 19997 : 16639; // ~50.007, 19.997 ms/frame : ~60.1, 16.639 ms/frame
+	struct timeval tv_now, tv_aim;
+	int tdiff;
 
-
-	if (usec_done == 0) { // first time
-		usec_done = 1;
-		gettimeofday(&tv_prev, 0);
-		return;
-	}
+	tv_aim = tv_prev;
+	tvadd(tv_aim, PAL ? 19997 : 16639); // ~50.007, 19.997 ms/frame : ~60.1, 16.639 ms/frame
 
 	gettimeofday(&tv_now, 0);
-
-	usec_aim += delta_nom;
-	if (tv_now.tv_sec != tv_prev.tv_sec)
-		usec_done += 1000000;
-	usec_done += tv_now.tv_usec - tv_prev.tv_usec;
+	tdiff = tvdiff(tv_now, tv_aim);
 
 #ifdef FRAMESKIP
 	if (Settings.frameskip >= 0)
@@ -44,29 +74,40 @@ void SpeedThrottle(void)
 			FSkip = 1;
 		}
 	}
-	else if (usec_done > usec_aim + 1024*4)
+	else if (tdiff > 0)
 	{
 		/* auto frameskip */
-		if (usec_done - usec_aim > 1024*32)
-			usec_done = usec_aim = 1; // too much behind, try to recover..
-		else
-			FSkip = 1;
 		tv_prev = tv_now;
+		if (tdiff < 1024*16)	// limit frameskip
+		{
+			FSkip = 1;
+			tvsub(tv_prev, tdiff);
+		}
 		return;
 	}
 #endif
 
-	tv_prev = tv_now;
-	while (usec_done < usec_aim)
+	/* throttle */
+	if (tdiff < 0)
 	{
-		gettimeofday(&tv_now, 0);
-
-		if (tv_now.tv_sec != tv_prev.tv_sec)
-			usec_done += 1000000;
-		usec_done += tv_now.tv_usec - tv_prev.tv_usec;
-		tv_prev = tv_now;
+		if (Settings.perfect_vsync)
+		{
+			if (tdiff <= (PAL ? 19997/2 : 16639/2))
+			{
+				struct timeval tv_tmp = tv_aim;
+				tvsub(tv_tmp, 5000);
+				wait_to(&tv_tmp);
+			}
+			gp2x_video_wait_vsync();
+			gettimeofday(&tv_prev, 0);
+			return;
+		}
+		else
+		{
+			wait_to(&tv_aim);
+		}
 	}
-	usec_done = usec_done - usec_aim + 1; // reset to prevent overflows
-	usec_aim = 0;
+
+	tv_prev = tv_aim;
 }
 

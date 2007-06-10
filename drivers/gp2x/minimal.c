@@ -54,7 +54,6 @@ void *gp2x_screen;
 #define FRAMEBUFF_ADDR3 (FRAMEBUFF_ADDR2+0x30000)
 
 static const int gp2x_screenaddrs[4] = { FRAMEBUFF_ADDR0, FRAMEBUFF_ADDR1, FRAMEBUFF_ADDR2, FRAMEBUFF_ADDR3 };
-static int gp2x_screenaddrs_use[4];
 static unsigned short gp2x_screenaddr_old[4];
 
 
@@ -62,14 +61,9 @@ static unsigned short gp2x_screenaddr_old[4];
 void gp2x_video_flip(void)
 {
 	unsigned short lsw, msw;
-	int addr = gp2x_screenaddrs_use[screensel&3];
+	int addr = gp2x_screenaddrs[screensel&3];
 
 	addr += gp2x_screen_offs;
-
-	// since we are using the mmu hack, we must flush the cache first
-	// (the params are most likely wrong, but they seem to work somehow)
-	//flushcache(addr, addr + 320*240*2, 0);
-	flushcache(gp2x_screen, (char *)gp2x_screen + 320*240*2, 0);
 
 	lsw = (unsigned short) addr;
 	msw = (unsigned short)(addr >> 16);
@@ -86,7 +80,7 @@ void gp2x_video_flip(void)
 /* doulblebuffered flip */
 void gp2x_video_flip2(void)
 {
-	unsigned short msw = (unsigned short)(gp2x_screenaddrs_use[screensel&1] >> 16);
+	unsigned short msw = (unsigned short)(gp2x_screenaddrs[screensel&1] >> 16);
 
   	gp2x_memregs[0x2910>>1] = msw;
   	gp2x_memregs[0x2914>>1] = msw;
@@ -126,17 +120,11 @@ void gp2x_video_setpalette(int *pal, int len)
 
 
 // TV Compatible function //
-void gp2x_video_RGB_setscaling(int ln_offs, int W, int H)
+void gp2x_video_RGB_setscaling(int W, int H)
 {
 	float escalaw, escalah;
 	int bpp = (gp2x_memregs[0x28DA>>1]>>9)&0x3;
 	unsigned short scalw;
-
-	// set offset
-	gp2x_screenaddrs_use[0] = gp2x_screenaddrs[0] + ln_offs * 320 * bpp;
-	gp2x_screenaddrs_use[1] = gp2x_screenaddrs[1] + ln_offs * 320 * bpp;
-	gp2x_screenaddrs_use[2] = gp2x_screenaddrs[2] + ln_offs * 320 * bpp;
-	gp2x_screenaddrs_use[3] = gp2x_screenaddrs[3] + ln_offs * 320 * bpp;
 
 	escalaw = 1024.0; // RGB Horiz LCD
 	escalah = 320.0; // RGB Vert LCD
@@ -162,6 +150,20 @@ void gp2x_video_RGB_setscaling(int ln_offs, int W, int H)
 void gp2x_video_set_offs(int offs)
 {
 	gp2x_screen_offs = offs;
+}
+
+void gp2x_video_wait_vsync(void)
+{
+	unsigned short v = gp2x_memregs[0x1182>>1];
+	while (!((v ^ gp2x_memregs[0x1182>>1]) & 0x10));
+}
+
+void gp2x_video_flush_cache(void)
+{
+	// since we are using the mmu hack, we must flush the cache first
+	// (the params are most likely wrong, but they seem to work somehow)
+	//flushcache(addr, addr + 320*240*2, 0);
+	flushcache(gp2x_screen, (char *)gp2x_screen + 320*240*2, 0);
 }
 
 void gp2x_memcpy_buffers(int buffers, void *data, int offset, int len)
@@ -301,7 +303,6 @@ void gp2x_init(void)
 	gp2x_screenaddr_old[2] = gp2x_memregs[0x2912>>1];
 	gp2x_screenaddr_old[3] = gp2x_memregs[0x2914>>1];
 
-	memcpy(gp2x_screenaddrs_use, gp2x_screenaddrs, sizeof(gp2x_screenaddrs));
 	gp2x_memset_all_buffers(0, 0, 320*240*2);
 
 	// snd

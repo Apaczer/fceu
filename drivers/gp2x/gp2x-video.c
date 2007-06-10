@@ -156,11 +156,11 @@ static INLINE void printFps(uint8 *screen)
 }
 
 
-void BlitScreen(uint8 *buf)
+void BlitPrepare(int skip)
 {
 	framesEmulated++;
 
-	if (!buf) {
+	if (skip) {
 		printFps(0);
 		return;
 	}
@@ -185,8 +185,18 @@ void BlitScreen(uint8 *buf)
 			memset32((int *)((char *)gp2x_screen + 32), 0, srendline*320*2/4);
 	}
 
-	gp2x_video_flip();
-	XBuf = gp2x_screen;
+	/* at this point we should be done with the frame */
+	gp2x_video_flush_cache();
+}
+
+
+void BlitScreen(int skip)
+{
+	if (!skip)
+	{
+		gp2x_video_flip();
+		XBuf = gp2x_screen;
+	}
 }
 
 

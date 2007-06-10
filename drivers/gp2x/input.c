@@ -22,8 +22,6 @@
 #include "../../video.h"
 #include "usbjoy.h"
 
-extern int FSkip;
-
 /* UsrInputType[] is user-specified.  InputType[] is current
        (game loading can override user settings)
 */
@@ -49,6 +47,13 @@ static void setsoundvol(int soundvolume)
 {
 	int soundvolIndex;
 	static char soundvolmeter[24];
+	static int prev_snd_on = 0;
+
+	if ((!!soundvolume) ^ prev_snd_on)
+	{
+		FCEUI_Sound(Settings.sound_rate);
+		prev_snd_on = !!soundvolume;
+	}
 
 	// draw on screen :D
 	gp2x_sound_volume(soundvolume, soundvolume);
@@ -194,10 +199,9 @@ static void FCEUD_UpdateInput(void)
 	uint32 all_acts[2] = {0,0};
 	int i;
 
-	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_L|GP2X_START)) == (GP2X_L|GP2X_L|GP2X_START))
+	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_START)) == (GP2X_L|GP2X_START))
 	{
 		Exit = 1;
-		FSkip = 0;	/* force rendering the last frame for menu */
 		return;
 	}
 	else if (down(VOL_UP))
