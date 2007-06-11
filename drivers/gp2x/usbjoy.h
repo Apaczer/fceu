@@ -72,6 +72,7 @@ struct usbjoy {
   int numhats;
   int statebuttons[32];
   int stateaxes[4];
+  int axevals[2];
   joy_type type;
 };
 

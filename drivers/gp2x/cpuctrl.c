@@ -162,12 +162,12 @@ static reg_setting rate_50[] =
 // 16639/2 ~120.20
 static reg_setting rate_120_20[] =
 {
-	{ 0x0914, 0xffff, (203<<8)|(2<<2)|1 },	/* UPLLSETVREG */
-	{ 0x0924, 0xff00, (2<<14)|(14<<8) },	/* DISPCSETREG */
-	{ 0x281A, 0x00ff, 29 },			/* .HSWID(T2) */
-	{ 0x281C, 0x00ff, 19 },			/* .HSSTR(T8) */
-	{ 0x281E, 0x00ff, 19 },			/* .HSEND(T7) */
-	{ 0x2822, 0x01ff, 11 },			/* .VSEND (T9) */
+	{ 0x0914, 0xffff, (96<<8)|(0<<2)|2 },	/* UPLLSETVREG */
+	{ 0x0924, 0xff00, (2<<14)|(7<<8) },	/* DISPCSETREG */
+	{ 0x281A, 0x00ff, 19 },			/* .HSWID(T2) */
+	{ 0x281C, 0x00ff, 7 },			/* .HSSTR(T8) */
+	{ 0x281E, 0x00ff, 7 },			/* .HSEND(T7) */
+	{ 0x2822, 0x01ff, 12 },			/* .VSEND (T9) */
 	{ 0x2826, 0x0ff0, 37<<4 },		/* .DESTR(T3) */
 	{ 0, 0, 0 }
 };
@@ -175,12 +175,12 @@ static reg_setting rate_120_20[] =
 // 19997/2 ~100.02
 static reg_setting rate_100_02[] =
 {
-	{ 0x0914, 0xffff, (63<<8)|(1<<2)|1 },	/* UPLLSETVREG */
-	{ 0x0924, 0xff00, (2<<14)|(7<<8) },	/* DISPCSETREG */
-	{ 0x281A, 0x00ff, 29 },			/* .HSWID(T2) */
-	{ 0x281C, 0x00ff, 21 },			/* .HSSTR(T8) */
-	{ 0x281E, 0x00ff, 20 },			/* .HSEND(T7) */
-	{ 0x2822, 0x01ff, 12 },			/* .VSEND (T9) */
+	{ 0x0914, 0xffff, (98<<8)|(0<<2)|2 },	/* UPLLSETVREG */
+	{ 0x0924, 0xff00, (2<<14)|(8<<8) },	/* DISPCSETREG */
+	{ 0x281A, 0x00ff, 26 },			/* .HSWID(T2) */
+	{ 0x281C, 0x00ff, 6 },			/* .HSSTR(T8) */
+	{ 0x281E, 0x00ff, 6 },			/* .HSEND(T7) */
+	{ 0x2822, 0x01ff, 31 },			/* .VSEND (T9) */
 	{ 0x2826, 0x0ff0, 37<<4 },		/* .DESTR(T3) */
 	{ 0, 0, 0 }
 };

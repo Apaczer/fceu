@@ -188,6 +188,10 @@ extension instead of .ips.
 
 
 ver 0.4 (by notaz)
+  rev 163
+          - Added A r k's fast-direction-change fix for usbjoy lib.
+          - Fixed an issue of usbjoys stopping to work when "Perfect vsync"
+            is enabled.
   rev 162
           - Fixed savestate subsections (were causing some mapper data not
             to be saved).
