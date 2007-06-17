@@ -33,10 +33,10 @@
 #define	H_FLIP	0x40
 #define	SP_BACK	0x20
 
-uint8 SPRAM[0x100];
-static uint8 SPRBUF[0x100];
+uint8 SPRAM[0x100] __attribute__ ((aligned (4)));
+uint8 SPRBUF[0x100] __attribute__ ((aligned (4)));
 
-uint8 sprlinebuf[256+8];
+uint8 sprlinebuf[256+8] __attribute__ ((aligned (4)));
 
 int32 sphitx;
 uint8 sphitdata;
@@ -49,7 +49,7 @@ int spork=0;            /* spork the world.  Any sprites on this line?
 extern void BGRender(uint8 *target);
 
 
-static int maxsprites=8;
+int maxsprites=8;
 static int sprlinebuf_empty=0;
 
 

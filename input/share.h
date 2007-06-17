@@ -2,6 +2,7 @@
 #include "../input.h"
 #include "../fce.h"
 #include "../ppu.h"
+#include "../ppu098.h"
 #include "../x6502.h"
 #include "../palette.h"
 

@@ -16,6 +16,7 @@ typedef struct {
 	int ramtimings;
 	int gamma;
 	int perfect_vsync;
+	int accurate_mode;
 } DSETTINGS;
 
 extern DSETTINGS Settings;

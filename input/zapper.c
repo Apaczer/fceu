@@ -86,7 +86,7 @@ static void FP_FASTAPASS(3) ZapperFrapper(int w, uint8 *bg, uint8 *spr, uint32 l
 
 static INLINE int CheckColor(int w)
 {
- //FCEUPPU_LineUpdate();
+ FCEUPPU_LineUpdate();
 
  if((ZD[w].zaphit+100)>=(timestampbase+timestamp)
   && !(ZD[w].mzb&2)) return(0);

@@ -379,11 +379,12 @@ int CLImain(int argc, char *argv[])
 	 {
 	  if (fceugi)
 	   CloseGame();
+	  LoadConfig(lastLoadedGameName);
+	  FCEUI_SetEmuMode(Settings.accurate_mode);
           fceugi=FCEUI_LoadGame(lastLoadedGameName);
 	  if (fceugi)
 	  {
 	   char infostring[32];
-	   LoadConfig(lastLoadedGameName);
 	   if (Settings.region_force)
 	    FCEUI_SetVidSystem(Settings.region_force - 1);
 	   ParseGI(fceugi);
@@ -438,6 +439,7 @@ int CLImain(int argc, char *argv[])
 	 CloseGame();
 
 	SaveLLGN();
+	FCEUI_Kill();
 	DriverKill();
         return 0;
 }

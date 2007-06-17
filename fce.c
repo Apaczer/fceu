@@ -26,6 +26,7 @@
 #include	"types.h"
 #include	"x6502.h"
 #include	"fce.h"
+#include	"fceu098.h"
 #include	"sound.h"
 #include        "svga.h"
 #include	"netplay.h"
@@ -69,8 +70,8 @@ static void PowerPPU(void);
 
 uint64 timestampbase=0;
 
-static int ppudead=1;
-static int kook=0;
+int ppudead=1;
+int kook=0;
 
 int MMC5Hack;
 uint32 MMC5HackVROMMask;
@@ -1097,6 +1098,10 @@ void ResetGameLoaded(void)
 	FCEUGameInfo.vidsys=GIV_USER;
 	FCEUGameInfo.input[0]=FCEUGameInfo.input[1]=-1;
 	FCEUGameInfo.inputfc=-1;
+
+	FCEUGameInfo.soundchan=0;
+	FCEUGameInfo.soundrate=0;
+        FCEUGameInfo.cspecial=0;
 }
 
 char lastLoadedGameName [2048];
@@ -1246,7 +1251,38 @@ int FCEUI_Initialize(void)
 	FSettings.UsrFirstSLine[1]=0;
         FSettings.UsrLastSLine[0]=FSettings.UsrLastSLine[1]=239;
 	FSettings.SoundVolume=100;
+
+	FCEUI_Initialize098();
+	FCEUI_SetEmuMode(0);
+
         return 1;
+}
+
+void FCEUI_Kill(void)
+{
+ FCEU_KillGenie();
+}
+
+static void EmLoop(void);
+
+void (*ResetNES)(void) = 0;
+void (*PowerNES)(void) = 0;
+void (*FCEUI_Emulate)(void) = 0;
+
+void FCEUI_SetEmuMode(int is_new)
+{
+   if (is_new)
+   {
+    ResetNES=ResetNES098;
+    PowerNES=PowerNES098;
+    FCEUI_Emulate=FCEUI_Emulate098;
+   }
+   else
+   {
+    ResetNES=ResetNES081;
+    PowerNES=PowerNES081;
+    FCEUI_Emulate=EmLoop;
+   }
 }
 
 void MMC5_hb(int);     /* Ugh ugh ugh. */
@@ -1306,7 +1342,7 @@ static void DoLine(void)
 }
 
 
-void EmLoop(void)
+static void EmLoop(void)
 {
  for(;;)
  {
@@ -1440,38 +1476,6 @@ update:
  } // for
 }
 
-#ifdef FPS
-#include <sys/time.h>
-uint64 frcount;
-#endif
-void FCEUI_Emulate(void)
-{
-	#ifdef FPS
-        uint64 starttime,end;
-        struct timeval tv;
-	frcount=0;
-        gettimeofday(&tv,0);
-        starttime=((uint64)tv.tv_sec*1000000)+tv.tv_usec;
-	#endif
-	EmLoop();
-
-        #ifdef FPS
-        // Probably won't work well on Windows port; for
-	// debugging/speed testing.
-	{
-	 uint64 w;
-	 int i,frac;
-         gettimeofday(&tv,0);
-         end=((uint64)tv.tv_sec*1000000)+tv.tv_usec;
-	 w=frcount*10000000000LL/(end-starttime);
-	 i=w/10000;
-	 frac=w-i*10000;
-         printf("Average FPS: %d.%04d\n",i,frac);
-	}
-        #endif
-
-}
-
 void FCEUI_CloseGame(void)
 {
         Exit=1;
@@ -1496,7 +1500,7 @@ static void PowerPPU(void)
 	ResetPPU();
 }
 
-void ResetNES(void)
+void ResetNES081(void)
 {
         if(!GameLoaded) return;
         GameInterface(GI_RESETM2, 0);
@@ -1517,7 +1521,7 @@ static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
  }
 }
 
-void PowerNES(void)
+void PowerNES081(void)
 {
         if(!GameLoaded) return;
 

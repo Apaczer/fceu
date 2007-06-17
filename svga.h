@@ -49,7 +49,6 @@ void FCEU_PrintError(char *format, ...);
 void FCEU_DispMessage(char *format, ...);
 #define FCEU_printf printf
 
-void SetNESDeemph(uint8 d, int force);
 void DrawTextTrans(uint8 *dest, uint32 width, uint8 *textmsg, uint8 fgcolor);
 void FCEU_PutImage(void);
 #ifdef FRAMESKIP
@@ -59,7 +58,6 @@ void FCEU_PutImageDummy(void);
 extern uint8 Exit;
 extern uint8 pale;
 extern uint8 vsdip;
-void SetNESPalette(void);
 
 #define JOY_A   1
 #define JOY_B   2

@@ -29,6 +29,7 @@
 #include "types.h"
 #include "fce.h"
 #include "ppu.h"
+#include "ppu098.h"
 
 #include "cart.h"
 #include "memory.h"
@@ -38,8 +39,6 @@
 
 #include "svga.h"
 #include "file.h"
-
-#define FCEUPPU_LineUpdate(...)
 
 /*
    This file contains all code for coordinating the mapping in of the

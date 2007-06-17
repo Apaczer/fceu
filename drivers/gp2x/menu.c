@@ -1058,7 +1058,7 @@ static void fcemenu_loop_options(void)
 
 static void draw_menu_options(int menu_sel)
 {
-	int tl_x = 25, tl_y = 32, y;
+	int tl_x = 25, tl_y = 20, y;
 	char strframeskip[8], *strscaling, *strssconfirm;
 	char *mms = mmuhack_status ? "active)  " : "inactive)";
 
@@ -1084,25 +1084,34 @@ static void draw_menu_options(int menu_sel)
 	gp2x_text_out15(tl_x,  y,      "Scaling:       %s", strscaling);				// 0
 	gp2x_text_out15(tl_x, (y+=10), "Show FPS                   %s", Settings.showfps?"ON":"OFF");	// 1
 	gp2x_text_out15(tl_x, (y+=10), "Frameskip                  %s", strframeskip);			// 2
+	gp2x_text_out15(tl_x, (y+=10), "Accurate mode (slow)       %s", Settings.accurate_mode?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", soundvol?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "Sound Rate:           %5iHz", Settings.sound_rate);		// 4
+	gp2x_text_out15(tl_x, (y+=10), "Sound Rate:           %5iHz", Settings.sound_rate);		// 5
 	gp2x_text_out15(tl_x, (y+=10), "Force Region:              %s",
-		Settings.region_force == 2 ? "PAL" : Settings.region_force == 1 ? "NTSC" : "OFF");	// 5
+		Settings.region_force == 2 ? "PAL" : Settings.region_force == 1 ? "NTSC" : "OFF");	// 6
 	gp2x_text_out15(tl_x, (y+=10), "Turbo rate                 %iHz", (Settings.turbo_rate_add*60/2) >> 24);
-	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);			// 7
+	gp2x_text_out15(tl_x, (y+=10), "Confirm savestate          %s", strssconfirm);			// 8
 	gp2x_text_out15(tl_x, (y+=10), "Save slot                  %i", CurrentState);
 	gp2x_text_out15(tl_x, (y+=10), "Faster RAM timings         %s", Settings.ramtimings?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 10
+	gp2x_text_out15(tl_x, (y+=10), "squidgehack (now %s %s",   mms, Settings.mmuhack?"ON":"OFF");	// 11
 	gp2x_text_out15(tl_x, (y+=10), "Gamma correction           %i.%02i", Settings.gamma / 100, Settings.gamma%100);
 	gp2x_text_out15(tl_x, (y+=10), "Perfect VSYNC              %s", Settings.perfect_vsync?"ON":"OFF");
-	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 13
+	gp2x_text_out15(tl_x, (y+=10), "GP2X CPU clock             %iMhz", Settings.cpuclock);		// 14
 	gp2x_text_out15(tl_x, (y+=10), "[FCE Ultra options]");
-	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");						// 15
+	gp2x_text_out15(tl_x, (y+=10), "Save cfg as default");						// 16
 	if (fceugi)
 		gp2x_text_out15(tl_x, (y+=10), "Save cfg for current game only");
 
 	// draw cursor
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
+
+	if (menu_sel == 3) {
+		gp2x_text_out15(tl_x, 210, "Must reload ROM for this");
+		gp2x_text_out15(tl_x, 220, "setting to take effect");
+	} else if (menu_sel == 10 || menu_sel == 11) {
+		gp2x_text_out15(tl_x, 210, "Must restart emu for this");
+		gp2x_text_out15(tl_x, 220, "setting to take effect");
+	}
 
 	menu_darken_text_bg();
 	menu_flip();
@@ -1130,7 +1139,7 @@ static void config_commit(void)
 static int menu_loop_options(void)
 {
 	static int menu_sel = 0;
-	int menu_sel_max = 15;
+	int menu_sel_max = 16;
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_max++;
@@ -1143,17 +1152,18 @@ static int menu_loop_options(void)
 		if(inp & GP2X_DOWN) { menu_sel++; if (menu_sel > menu_sel_max) menu_sel = 0; }
 		if((inp& GP2X_B)||(inp&GP2X_LEFT)||(inp&GP2X_RIGHT)) { // toggleable options
 			switch (menu_sel) {
-				case  1: Settings.showfps    = !Settings.showfps; break;
-				case  3: soundvol = soundvol ? 0 : 50; break;
-				case  9: Settings.ramtimings = !Settings.ramtimings; break;
-				case 10: Settings.mmuhack    = !Settings.mmuhack; break;
-				case 12: Settings.perfect_vsync = !Settings.perfect_vsync; break;
-				case 14: fcemenu_loop_options(); break;
-				case 15: // done (update and write)
+				case  1: Settings.showfps       = !Settings.showfps; break;
+				case  3: Settings.accurate_mode = !Settings.accurate_mode; break;
+				case  4: soundvol = soundvol ? 0 : 50; break;
+				case 10: Settings.ramtimings    = !Settings.ramtimings; break;
+				case 11: Settings.mmuhack       = !Settings.mmuhack; break;
+				case 13: Settings.perfect_vsync = !Settings.perfect_vsync; break;
+				case 15: fcemenu_loop_options(); break;
+				case 16: // done (update and write)
 					config_commit();
 					SaveConfig(NULL);
 					return 1;
-				case 16: // done (update and write for current game)
+				case 17: // done (update and write for current game)
 					config_commit();
 					if (lastLoadedGameName[0])
 						SaveConfig(lastLoadedGameName);
@@ -1168,21 +1178,21 @@ static int menu_loop_options(void)
 			switch (menu_sel) {
 				case  0: int_incdec(&Settings.scaling,   (inp & GP2X_LEFT) ? -1 : 1,  0,  3); break;
 				case  2: int_incdec(&Settings.frameskip, (inp & GP2X_LEFT) ? -1 : 1, -1, 32); break;
-				case  4:
+				case  5:
 					Settings.sound_rate = sndrate_prevnext(Settings.sound_rate, inp & GP2X_RIGHT);
 					InitSound();
 					break;
-				case  5: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
-				case  6: {
+				case  6: int_incdec(&Settings.region_force,   (inp & GP2X_LEFT) ? -1 : 1, 0, 2); break;
+				case  7: {
 					int hz = Settings.turbo_rate_add*60/2 >> 24;
 					int_incdec(&hz, (inp & GP2X_LEFT) ? -1 : 1, 1, 30);
 					Settings.turbo_rate_add = (hz*2 << 24) / 60 + 1;
 					break;
 				}
-				case  7: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
-				case  8: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
-				case 11: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
-				case 13:
+				case  8: int_incdec(&Settings.sstate_confirm, (inp & GP2X_LEFT) ? -1 : 1, 0, 3); break;
+				case  9: int_incdec(&CurrentState,            (inp & GP2X_LEFT) ? -1 : 1, 0, 9); break;
+				case 12: int_incdec(&Settings.gamma,          (inp & GP2X_LEFT) ? -1 : 1, 0, 300); break;
+				case 14:
 					while ((inp = gp2x_joystick_read(1)) & (GP2X_LEFT|GP2X_RIGHT)) {
 						Settings.cpuclock += (inp & GP2X_LEFT) ? -1 : 1;
 						if (Settings.cpuclock < 0) Settings.cpuclock = 0; // 0 ~ do not change

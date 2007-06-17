@@ -109,8 +109,11 @@ extern int LoadGameLastError;
 /* allocates memory.  0 on failure, 1 on success. */
 int FCEUI_Initialize(void);
 
+void FCEUI_Kill(void);
+void FCEUI_SetEmuMode(int is_new);
+
 /* begins emulation.  Returns after FCEUI_CloseGame() is called */
-void FCEUI_Emulate(void);
+extern void (*FCEUI_Emulate)(void);
 
 /* Closes currently loaded game, causes FCEUI_Emulate to return */
 void FCEUI_CloseGame(void);

@@ -24,8 +24,12 @@ void FlushGenieRW(void);
 void FCEU_ResetVidSys(void);
 
 void ResetMapping(void);
-void ResetNES(void);
-void PowerNES(void);
+
+extern void (*ResetNES)(void);
+extern void (*PowerNES)(void);
+
+void ResetNES081(void);
+void PowerNES081(void);
 
 
 extern uint64 timestampbase;

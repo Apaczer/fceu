@@ -29,7 +29,8 @@ include zlib/Makefile
 
 OBJDRIVER	 = drivers/gp2x_test/minimal.o drivers/gp2x_test/throttle.o ${B}gp2x.o ${B}main.o \
 		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}usbjoy.o ${B}menu.o ${B}fonts.o ${B}readpng.o \
-		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} ppu.o movie.o
+		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} \
+		ppu.o movie.o fceu098.o ppu098.o
 LDRIVER		+= -lm -lz -lpng `sdl-config --libs`
 
 OBJDRIVER += x6502.o
