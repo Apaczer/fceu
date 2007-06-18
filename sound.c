@@ -845,7 +845,7 @@ static void RDoNoise(int32 end)
    }
 }
 
-static DECLFW(Write_IRQFM)
+DECLFW(Write_IRQFM)
 {
  PSG[0x17]=V;
  V=(V&0xC0)>>6;
@@ -968,9 +968,7 @@ void ResetSound(void)
         nreg=1;
 }
 
-void (*SetSoundVariables)(void) = 0;
-
-void SetSoundVariables081(void)
+void SetSoundVariables(void)
 {
   int x;
 

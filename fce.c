@@ -28,8 +28,7 @@
 #include	"fce.h"
 #include	"fceu098.h"
 #include	"sound.h"
-#include	"sound098.h"
-#include        "svga.h"
+#include	"svga.h"
 #include	"netplay.h"
 #include	"general.h"
 #include	"endian.h"
@@ -1278,14 +1277,12 @@ void FCEUI_SetEmuMode(int is_new)
    {
     ResetNES=ResetNES098;
     PowerNES=PowerNES098;
-    SetSoundVariables=SetSoundVariables098;
     FCEUI_Emulate=FCEUI_Emulate098;
    }
    else
    {
     ResetNES=ResetNES081;
     PowerNES=PowerNES081;
-    SetSoundVariables=SetSoundVariables081;
     FCEUI_Emulate=EmLoop;
    }
 }

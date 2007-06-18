@@ -1084,7 +1084,7 @@ static void draw_menu_options(int menu_sel)
 	gp2x_text_out15(tl_x,  y,      "Scaling:       %s", strscaling);				// 0
 	gp2x_text_out15(tl_x, (y+=10), "Show FPS                   %s", Settings.showfps?"ON":"OFF");	// 1
 	gp2x_text_out15(tl_x, (y+=10), "Frameskip                  %s", strframeskip);			// 2
-	gp2x_text_out15(tl_x, (y+=10), "Accurate mode (slow)       %s", Settings.accurate_mode?"ON":"OFF");
+	gp2x_text_out15(tl_x, (y+=10), "Accurate renderer (slow)   %s", Settings.accurate_mode?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Enable sound               %s", soundvol?"ON":"OFF");
 	gp2x_text_out15(tl_x, (y+=10), "Sound Rate:           %5iHz", Settings.sound_rate);		// 5
 	gp2x_text_out15(tl_x, (y+=10), "Force Region:              %s",

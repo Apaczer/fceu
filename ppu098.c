@@ -26,13 +26,17 @@
 #include  "fce.h"
 #include  "ppu098.h"
 #include  "nsf.h"
-#include  "sound098.h"
+#include  "sound.h"
 #include  "memory.h"
 
 #include  "cart.h"
 #include  "palette.h"
 #include  "video.h"
 #include  "input.h"
+
+#ifdef GP2X
+#include	"drivers/gp2x/asmutils.h"
+#endif
 
 #define Pal     (PALRAM)
 
@@ -82,10 +86,32 @@ static void makeppulut(void)
  }
 }
 
-// TODO: make this compatible with the new sound code
 #ifdef ASM_6502
-#define asmcpu_update(c) \
-	FCEU_SoundCPUHook098((((c) >> 4) * 43) >> 7)
+static void asmcpu_update(int32 cycles)
+{
+ // some code from x6502.c
+ fhcnt-=cycles;
+ if(fhcnt<=0)
+ {
+  FrameSoundUpdate();
+  fhcnt+=fhinc;
+ }
+
+ if(PCMIRQCount>0)
+ {
+  PCMIRQCount-=cycles;
+  if(PCMIRQCount<=0)
+  {
+   vdis=1;
+   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
+   {
+    extern uint8 SIRQStat;
+    SIRQStat|=0x80;
+    X6502_IRQBegin(FCEU_IQDPCM);
+   }
+  }
+ }
+}
 #endif
 
 extern int ppudead;
@@ -193,7 +219,7 @@ static DECLFW(B2000)
                 {
 //     FCEU_printf("Trigger NMI, %d, %d\n",timestamp,ppudead);
 //                 TriggerNMI2();
-                 TriggerNMI(); // TODO
+                 TriggerNMI(); // TODO?
                 }
                 PPU[0]=V;
                 TempAddr&=0xF3FF;
@@ -338,7 +364,7 @@ static int tofix=0;
 
 static void ResetRL(uint8 *target)
 {
- memset(target,0xFF,256);
+ FCEU_dwmemset(target,0xffffffff,256);
  if(InputScanlineHook)
   InputScanlineHook(0,0,0,0);
  Plinef=target;
@@ -688,6 +714,19 @@ static void DoLine(void)
  if(SpriteON)
   CopySprites098(target);
 
+#ifdef GP2X
+ if(ScreenON || SpriteON)  // Yes, very el-cheapo.
+ {
+  if(PPU[1]&0x01)
+   block_and(target, 256, 0x30);
+ }
+ if((PPU[1]>>5)==0x7)
+  block_or(target, 256, 0xc0);
+ else if(PPU[1]&0xE0)
+  block_or(target, 256, 0x40);
+ else
+  block_andor(target, 256, 0x3f, 0x80);
+#else
  if(ScreenON || SpriteON)  // Yes, very el-cheapo.
  {
   if(PPU[1]&0x01)
@@ -707,6 +746,7 @@ static void DoLine(void)
  else
   for(x=63;x>=0;x--)
    *(uint32 *)&target[x<<2]=((*(uint32*)&target[x<<2])&0x3f3f3f3f)|0x80808080;
+#endif
 
  sphitx=0x100;
 

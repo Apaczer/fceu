@@ -42,9 +42,7 @@ extern uint8 PSG[0x18];
 extern uint32 PSG_base;
 extern int32 PCMIRQCount;
 
-extern void (*SetSoundVariables)(void);
-
-void SetSoundVariables081(void);
+void SetSoundVariables(void);
 void PowerSound(void);
 void ResetSound(void);
 extern uint8 decvolume[];
@@ -85,3 +83,4 @@ void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
 
+DECLFW(Write_IRQFM);
