@@ -1106,10 +1106,10 @@ static void draw_menu_options(int menu_sel)
 	gp2x_text_out15(tl_x - 16, tl_y + menu_sel*10, ">");
 
 	if (menu_sel == 3) {
-		gp2x_text_out15(tl_x, 210, "Must reload ROM for this");
+		gp2x_text_out15(tl_x, 210, "ROM reload required for this");
 		gp2x_text_out15(tl_x, 220, "setting to take effect");
 	} else if (menu_sel == 10 || menu_sel == 11) {
-		gp2x_text_out15(tl_x, 210, "Must restart emu for this");
+		gp2x_text_out15(tl_x, 210, "Emu restart required for this");
 		gp2x_text_out15(tl_x, 220, "setting to take effect");
 	}
 

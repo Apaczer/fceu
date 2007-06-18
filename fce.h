@@ -7,6 +7,8 @@ void asmcpu_pack(void);
 
 #define fceuindbg 0
 
+extern int use098code;
+
 extern int GameLoaded;
 void ResetGameLoaded(void);
 

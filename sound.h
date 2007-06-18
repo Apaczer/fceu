@@ -37,12 +37,14 @@ typedef struct {
 extern EXPSOUND GameExpSound;
 
 //extern int64 nesincsizeLL;
-extern int64 nesincsize;
-extern uint8 PSG[];
+extern int32 nesincsize;
+extern uint8 PSG[0x18];
 extern uint32 PSG_base;
 extern int32 PCMIRQCount;
 
-void SetSoundVariables(void);
+extern void (*SetSoundVariables)(void);
+
+void SetSoundVariables081(void);
 void PowerSound(void);
 void ResetSound(void);
 extern uint8 decvolume[];
@@ -72,9 +74,8 @@ uint8 FCEU_GetJoyJoy(void);
 
 int GetSoundBuffer(int16 **W);
 int FlushEmulateSound(void);
-extern uint32 Wave[2048];
-extern int32 WaveFinal[2048];
-extern int16 WaveFinalMono[2048];
+extern uint32 Wave[2048+512];
+extern int16 WaveFinalMono[2048+512];
 extern uint32 soundtsinc;
 
 extern uint32 soundtsoffs;
@@ -83,6 +84,4 @@ extern uint32 soundtsoffs;
 void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
-
-DECLFW(Write_IRQFM);
 

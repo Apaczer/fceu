@@ -39,13 +39,10 @@
 #include "svga.h"
 #include "sound.h"
 
-uint32 soundtsinc;
-uint32 soundtsi;
+uint32 Wave[2048+512];
+int16 WaveFinalMono[2048+512];
 
-uint32 Wave[2048];
-int16 WaveFinalMono[2048];
-
-EXPSOUND GameExpSound={0,0,0};
+EXPSOUND GameExpSound={0,0,0,0,0,0};
 
 uint8 trimode=0;
 uint8 tricoop=0;
@@ -63,7 +60,7 @@ uint32 soundtsoffs=0;
 #undef printf
 uint16 nreg;
 
-int32 lengthcount[4];
+static int32 lengthcount[4];
 
 extern int soundvol;
 
@@ -81,8 +78,10 @@ static const uint32 SNoiseFreqTable[0x10]=
 };
 static uint32 NoiseFreqTable[0x10];
 
-static int32 nesincsize32;
-int64 nesincsize;
+int32 nesincsize;
+uint32 soundtsinc;
+uint32 soundtsi;
+
 
 static const uint8 NTSCPCMTable[0x10]=
 {
@@ -574,7 +573,7 @@ static void RDoPCM(int32 end)
 
       for(V=start;V<end;V++)
       {
-       PCMacc-=nesincsize32;
+       PCMacc-=nesincsize;
        if(PCMacc<=0)
        {
 	if(!PCMBitIndex)
@@ -664,7 +663,7 @@ static void RDoSQ1(int32 end)
       for(V=start;V<end;V++)
       {
        Wave[V>>4]+=out;
-       sqacc[0]-=nesincsize32;
+       sqacc[0]-=nesincsize;
        if(sqacc[0]<=0)
        {
         rea:
@@ -710,7 +709,7 @@ static void RDoSQ2(int32 end)
       for(V=start;V<end;V++)
       {
        Wave[V>>4]+=out;
-       sqacc[1]-=nesincsize32;
+       sqacc[1]-=nesincsize;
        if(sqacc[1]<=0)
        {
         rea:
@@ -764,7 +763,7 @@ static void RDoTriangle(int32 end)
       freq<<=17;
       for(V=start;V<end;V++)
       {
-       triacc-=nesincsize32;
+       triacc-=nesincsize;
        if(triacc<=0)
        {
         rea:
@@ -846,7 +845,7 @@ static void RDoNoise(int32 end)
    }
 }
 
-DECLFW(Write_IRQFM)
+static DECLFW(Write_IRQFM)
 {
  PSG[0x17]=V;
  V=(V&0xC0)>>6;
@@ -969,7 +968,9 @@ void ResetSound(void)
         nreg=1;
 }
 
-void SetSoundVariables(void)
+void (*SetSoundVariables)(void) = 0;
+
+void SetSoundVariables081(void)
 {
   int x;
 
@@ -996,8 +997,7 @@ void SetSoundVariables(void)
    GameExpSound.RChange();
 
   // nesincsizeLL=(int64)((int64)562949953421312*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate OVERSAMPLE));
-  nesincsize=(int64)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16)); // 308845 - 1832727
-  nesincsize32=(int32)nesincsize;
+  nesincsize=(int32)(((int64)1<<17)*(double)(PAL?PAL_CPU:NTSC_CPU)/(FSettings.SndRate * 16)); // 308845 - 1832727
   PSG_base=(uint32)(PAL?(long double)PAL_CPU/16:(long double)NTSC_CPU/16);
 
   for(x=0;x<0x10;x++)

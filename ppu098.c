@@ -26,7 +26,7 @@
 #include  "fce.h"
 #include  "ppu098.h"
 #include  "nsf.h"
-#include  "sound.h" // TODO 098?
+#include  "sound098.h"
 #include  "memory.h"
 
 #include  "cart.h"
@@ -84,31 +84,8 @@ static void makeppulut(void)
 
 // TODO: make this compatible with the new sound code
 #ifdef ASM_6502
-static void asmcpu_update(int32 cycles)
-{
- // some code from x6502.c
- fhcnt-=cycles;
- if(fhcnt<=0)
- {
-  FrameSoundUpdate();
-  fhcnt+=fhinc;
- }
-
- if(PCMIRQCount>0)
- {
-  PCMIRQCount-=cycles;
-  if(PCMIRQCount<=0)
-  {
-   vdis=1;
-   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
-   {
-    extern uint8 SIRQStat;
-    SIRQStat|=0x80;
-    X6502_IRQBegin(FCEU_IQDPCM);
-   }
-  }
- }
-}
+#define asmcpu_update(c) \
+	FCEU_SoundCPUHook098((((c) >> 4) * 43) >> 7)
 #endif
 
 extern int ppudead;
@@ -216,7 +193,7 @@ static DECLFW(B2000)
                 {
 //     FCEU_printf("Trigger NMI, %d, %d\n",timestamp,ppudead);
 //                 TriggerNMI2();
-                 TriggerNMI();
+                 TriggerNMI(); // TODO
                 }
                 PPU[0]=V;
                 TempAddr&=0xF3FF;
@@ -1193,7 +1170,10 @@ void FCEUPPU_Loop(int skip)
   if(ppudead) /* Needed for Knight Rider, possibly others. */
   {
    //memset(XBuf, 0x80, 256*240);
-   X6502_Run(scanlines_per_frame*(256+85));
+   //X6502_Run(scanlines_per_frame*(256+85));
+   int lines;
+   for (lines=scanlines_per_frame;lines;lines--)
+     X6502_Run(256+85);
    ppudead--;
   }
   else
@@ -1215,7 +1195,13 @@ void FCEUPPU_Loop(int skip)
     if(VBlankON)
      TriggerNMI();
    }
-   X6502_Run((scanlines_per_frame-242)*(256+85)-12); //-12);
+   // Note: this is needed for asm core
+   {
+    int lines;
+    X6502_Run(256+85-12);
+    for (lines=scanlines_per_frame-242-1;lines;lines--)
+     X6502_Run(256+85);
+   }
    PPU_status&=0x1f;
    X6502_Run(256);
 
@@ -1247,12 +1233,14 @@ void FCEUPPU_Loop(int skip)
    }
    if(FCEUGameInfo.type==GIT_NSF)
    {
-    X6502_Run((256+85)*240);
+    // run scanlines for asm core to fuction
+    for(scanline=0;scanline<240;scanline++)
+      X6502_Run(256+85);
    }
    #ifdef FRAMESKIP
    else if(skip)
    {
-    int y;
+    int y, lines;
 
     y=SPRAM[0];
     y++;
@@ -1271,12 +1259,17 @@ void FCEUPPU_Loop(int skip)
     }
     else if(y<240)
     {
-     X6502_Run((256+85)*y);
+     for (lines=y;lines;lines--)
+      X6502_Run(256+85);
      if(SpriteON) PPU_status|=0x40; // Quick and very dirty hack.
-     X6502_Run((256+85)*(240-y));
+     for (lines=240-y;lines;lines--)
+      X6502_Run(256+85);
     }
     else
-     X6502_Run((256+85)*240);
+    {
+     for (lines=240;lines;lines--)
+      X6502_Run(256+85);
+    }
    }
    #endif
    else

@@ -33,6 +33,7 @@
 #include "version.h"
 #include "fce.h"
 #include "sound.h"
+#include "sound098.h"
 #define INESPRIV                // Take this out when old save state support is removed in a future version.
 #include "ines.h"
 #include "svga.h"
@@ -104,6 +105,8 @@ SFORMAT SFSND[]={
  { 0, }
 };
 
+extern SFORMAT FCEUSND_STATEINFO[]; // TODO: unify?
+#define get_snd_sf() (use098code ? FCEUSND_STATEINFO : SFSND)
 
 
 static int SubWrite(FILE *st, SFORMAT *sf)
@@ -256,7 +259,7 @@ for(;;)
 	  break;
    case 3:if(!ReadStateChunk(st,FCEUPPU_STATEINFO,size)) ret=0;break;
    case 4:if(!ReadStateChunk(st,FCEUCTRL_STATEINFO,size)) ret=0;break;
-   case 5:if(!ReadStateChunk(st,SFSND,size)) ret=0;break;
+   case 5:if(!ReadStateChunk(st,get_snd_sf(),size)) ret=0;break;
    case 0x10:if(!ReadStateChunk(st,SFMDATA,size)) ret=0;break;
    default:printf("ReadStateChunks: unknown chunk: %i\n", t);
            if(fseek(st,size,SEEK_CUR)<0) goto endo;break;
@@ -295,6 +298,7 @@ void SaveState(void)
 	  header[3]=VERSION_NUMERIC;
 	  fwrite(header,1,16,st);
 
+	  FCEUSND_SaveState();
 #ifdef ASM_6502
           asmcpu_pack();
 #endif
@@ -302,7 +306,7 @@ void SaveState(void)
 	  totalsize+=WriteStateChunk(st,2,SFCPUC);
 	  totalsize+=WriteStateChunk(st,3,FCEUPPU_STATEINFO);
 	  totalsize+=WriteStateChunk(st,4,FCEUCTRL_STATEINFO);
-	  totalsize+=WriteStateChunk(st,5,SFSND);
+	  totalsize+=WriteStateChunk(st,5,get_snd_sf());
 
 
 	  if(SPreSave) SPreSave();
@@ -346,6 +350,7 @@ int FCEUSS_LoadFP(FILE *st, int make_backup)
 	 if(x)
 	 {
 	  okload:
+	  FCEUSND_LoadState(header[3]);
           TempAddr=TempAddrT;
           RefreshAddr=RefreshAddrT;
 

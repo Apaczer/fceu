@@ -28,6 +28,7 @@
 #include	"fce.h"
 #include	"fceu098.h"
 #include	"sound.h"
+#include	"sound098.h"
 #include        "svga.h"
 #include	"netplay.h"
 #include	"general.h"
@@ -1265,22 +1266,26 @@ void FCEUI_Kill(void)
 
 static void EmLoop(void);
 
+int use098code = 0;
 void (*ResetNES)(void) = 0;
 void (*PowerNES)(void) = 0;
 void (*FCEUI_Emulate)(void) = 0;
 
 void FCEUI_SetEmuMode(int is_new)
 {
+   use098code = is_new;
    if (is_new)
    {
     ResetNES=ResetNES098;
     PowerNES=PowerNES098;
+    SetSoundVariables=SetSoundVariables098;
     FCEUI_Emulate=FCEUI_Emulate098;
    }
    else
    {
     ResetNES=ResetNES081;
     PowerNES=PowerNES081;
+    SetSoundVariables=SetSoundVariables081;
     FCEUI_Emulate=EmLoop;
    }
 }
@@ -1355,7 +1360,10 @@ static void EmLoop(void)
   if(ppudead) /* Needed for Knight Rider, possibly others. */
   {
    //memset(XBuf, 0, 320*240);
-   X6502_Run(scanlines_per_frame*(256+85));
+   //X6502_Run(scanlines_per_frame*(256+85));
+   int lines;
+   for (lines=scanlines_per_frame;lines;lines--)
+     X6502_Run(256+85);
    ppudead--;
    goto update;
   }

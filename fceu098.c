@@ -24,6 +24,7 @@
 #include	"fce.h"
 #include	"ppu098.h"
 #include	"sound.h"
+#include	"sound098.h"
 #include	"input.h"
 #include	"cart.h"
 #include	"cheat.h"
@@ -58,7 +59,7 @@ void FCEUI_Emulate098(void)
    break;
   }
 
-  ssize=FlushEmulateSound(); // TODO 098?
+  ssize=FlushEmulateSound098();
 
   timestampbase += timestamp;
   timestamp = 0;
@@ -83,7 +84,7 @@ void FCEUI_Emulate098(void)
 void ResetNES098(void)
 {
  ResetNES081();
-//TODO FCEUSND_Reset();
+ FCEUSND_Reset();
  FCEUPPU_Reset();
 }
 
@@ -91,7 +92,7 @@ void ResetNES098(void)
 void PowerNES098(void)
 {
  PowerNES081();
-//TODO FCEUSND_Power();
+ FCEUSND_Power();
  FCEUPPU_Power();
 }
 

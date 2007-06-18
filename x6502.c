@@ -24,6 +24,7 @@
 #include "x6502.h"
 #include "fce.h"
 #include "sound.h"
+#include "sound098.h"
 #include "cart.h"
 
 #include "dprintf.h"
@@ -520,6 +521,10 @@ void X6502_Run_c(void/*int32 cycles*/)
 	 ADDCYC(CycTable[b1]);
 	 temp=_tcount;
 
+	 if (use098code)
+	  FCEU_SoundCPUHook098(temp);
+	 else
+	 {
 	 temp*=48;
 
 	 fhcnt-=temp;
@@ -542,6 +547,7 @@ void X6502_Run_c(void/*int32 cycles*/)
 	    X6502_IRQBegin(FCEU_IQDPCM);
 	   }
 	  }
+	 }
 	 }
 
 #ifdef DEBUG_ASM_6502
