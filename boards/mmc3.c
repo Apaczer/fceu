@@ -170,11 +170,7 @@ DECLFW(MMC3_CMDWrite)
        break;
   case 0xA001:
        A001B=V;
-       //Write_IRQFM(0x4017,0x40);
-       {
-	writefunc f = GetWriteHandler(0x4017);
-	f(0x4017,0x40);
-       }
+       Write_IRQFM(0x4017,0x40);
        break;
  }
 }

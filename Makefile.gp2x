@@ -31,7 +31,7 @@ include zlib/Makefile
 OBJDRIVER	 = ${B}minimal.o ${B}cpuctrl.o ${B}squidgehack.o ${B}asmutils.o ${B}gp2x.o ${B}main.o ${B}throttle.o \
 		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}usbjoy.o ${B}menu.o ${B}fonts.o ${B}readpng.o \
 		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} \
-		ppu.o movie.o fceu098.o ppu098.o sound098.o filter098.o
+		ppu.o movie.o fceu098.o ppu098.o
 LDRIVER		+= -lm -lz -lpng -static -Wl,-Map=fceu.map
 
 ifeq ($(asm_6502),1)
