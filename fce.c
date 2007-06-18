@@ -111,6 +111,7 @@ static writefunc *BWriteG;
 static int RWWrap=0;
 
 #ifdef ASM_6502
+#ifndef DEBUG_ASM_6502
 static void asmcpu_update(int32 cycles)
 {
  // some code from x6502.c
@@ -136,6 +137,7 @@ static void asmcpu_update(int32 cycles)
   }
  }
 }
+#endif
 
 void asmcpu_unpack(void)
 {
@@ -1514,6 +1516,7 @@ void ResetNES081(void)
         X6502_Reset();
 }
 
+#ifndef DEBUG_ASM_6502
 static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
 {
  int x=0;
@@ -1525,6 +1528,7 @@ static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
   ptr++;
  }
 }
+#endif
 
 void PowerNES081(void)
 {

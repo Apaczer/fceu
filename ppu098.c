@@ -86,7 +86,7 @@ static void makeppulut(void)
  }
 }
 
-#ifdef ASM_6502
+#if defined(ASM_6502) && !defined(DEBUG_ASM_6502)
 static void asmcpu_update(int32 cycles)
 {
  // some code from x6502.c
@@ -695,7 +695,9 @@ static void Fixit1(void)
 void MMC5_hb(int);     /* Ugh ugh ugh. */
 static void DoLine(void)
 {
+#ifndef GP2X
  int x;
+#endif
  uint8 *target=XBuf+scanline*320+32;
 
  if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
