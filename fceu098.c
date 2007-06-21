@@ -83,16 +83,8 @@ void FCEUI_Emulate098(void)
 void ResetNES098(void)
 {
  ResetNES081();
+ // it was decided not to use 098 sound because of problems it causes
  //FCEUSND_Reset();
  FCEUPPU_Reset();
-}
-
-
-void PowerNES098(void)
-{
- PowerNES081();
- // it was decided not to use 098 sound because of problems it causes
- //FCEUSND_Power();
- FCEUPPU_Power();
 }
 

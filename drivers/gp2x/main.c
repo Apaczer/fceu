@@ -128,25 +128,44 @@ static CFGSTRUCT fceuconfig[]={
 	ENDCFGSTRUCT
 };
 
-void SaveConfig(const char *name)
+static const char *skip_path(const char *path)
 {
-	char tdir[2048];
-	if (name)
-	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
-	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
-	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
-        SaveFCEUConfig(tdir,fceuconfig);
+	const char *p;
+	if (path == NULL) return NULL;
+	for (p = path+strlen(path)-1; p > path && *p != '/'; p--);
+	if (*p == '/') p++;
+	return p;
 }
 
-static void LoadConfig(const char *name)
+int SaveConfig(const char *llgn_path)
 {
+	const char *name = skip_path(llgn_path);
 	char tdir[2048];
+	int ret;
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
+	printf("saving cfg to %s ... ", tdir); fflush(stdout);
+	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
+        ret=SaveFCEUConfig(tdir,fceuconfig);
+	printf(ret == 0 ? "done\n" : "failed\n");
+	return ret;
+}
+
+static int LoadConfig(const char *llgn_path)
+{
+	const char *name = skip_path(llgn_path);
+	char tdir[2048];
+	int ret;
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
+	printf("loading cfg from %s ... ", tdir); fflush(stdout);
 	FCEUI_GetNTSCTH(&ntsctint, &ntschue); /* Get default settings for if no config file exists. */
-        LoadFCEUConfig(tdir,fceuconfig);
+        ret=LoadFCEUConfig(tdir,fceuconfig);
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
+	printf(ret == 0 ? "done\n" : "failed\n");
+	return ret;
 }
 
 static void LoadLLGN(void)
@@ -333,7 +352,7 @@ static int DoArgs(int argc, char *argv[])
 
 int CLImain(int argc, char *argv[])
 {
-	int last_arg_parsed;
+	int last_arg_parsed, ret;
         /* TODO if(argc<=1)
         {
          ShowUsage(argv[0]);
@@ -379,7 +398,11 @@ int CLImain(int argc, char *argv[])
 	 {
 	  if (fceugi)
 	   CloseGame();
-	  LoadConfig(lastLoadedGameName);
+	  ret=LoadConfig(lastLoadedGameName);
+	  if (ret != 0)
+	  {
+	   LoadConfig(NULL);
+	  }
 	  FCEUI_SetEmuMode(Settings.accurate_mode);
           fceugi=FCEUI_LoadGame(lastLoadedGameName);
 	  if (fceugi)

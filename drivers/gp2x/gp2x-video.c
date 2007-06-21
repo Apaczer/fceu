@@ -176,6 +176,20 @@ void BlitPrepare(int skip)
 		}
 	}
 
+	if (Settings.accurate_mode && Settings.scaling < 2)
+	{
+		int i, *p = (int *)gp2x_screen + 32/4;
+		if (srendline > 0)
+			for (i = srendline; i > 0; i--, p += 320/4)
+				memset32(p, 0, 256/4);
+		if (erendline < 239)
+		{
+			int *p = (int *)gp2x_screen + erendline*320/4 + 32/4;
+			for (i = 239-srendline; i > 0; i--, p += 320/4)
+				memset32(p, 0, 256/4);
+		}
+	}
+
 	printFps(gp2x_screen);
 
 	if (Settings.scaling == 3)

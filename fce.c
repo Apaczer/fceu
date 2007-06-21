@@ -49,6 +49,7 @@
 #include	"file.h"
 #include	"crc32.h"
 #include        "ppu.h"
+#include        "ppu098.h"
 
 #include        "palette.h"
 #include        "movie.h"
@@ -1269,7 +1270,6 @@ static void EmLoop(void);
 
 int use098code = 0;
 void (*ResetNES)(void) = 0;
-void (*PowerNES)(void) = 0;
 void (*FCEUI_Emulate)(void) = 0;
 
 void FCEUI_SetEmuMode(int is_new)
@@ -1278,13 +1278,11 @@ void FCEUI_SetEmuMode(int is_new)
    if (is_new)
    {
     ResetNES=ResetNES098;
-    PowerNES=PowerNES098;
     FCEUI_Emulate=FCEUI_Emulate098;
    }
    else
    {
     ResetNES=ResetNES081;
-    PowerNES=PowerNES081;
     FCEUI_Emulate=EmLoop;
    }
 }
@@ -1530,7 +1528,7 @@ static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
 }
 #endif
 
-void PowerNES081(void)
+void PowerNES(void)
 {
         if(!GameLoaded) return;
 
@@ -1547,6 +1545,13 @@ void PowerNES081(void)
         ResetMapping();
         PowerSound();
 	PowerPPU();
+
+	if (use098code)
+	 FCEUPPU_Power();
+
+	/* Have the external game hardware "powered" after the internal NES stuff.
+	   Needed for the NSF code and VS System code.
+	*/
 	GameInterface(GI_POWER, 0);
         if(FCEUGameInfo.type==GIT_VSUNI)
          FCEU_VSUniPower();

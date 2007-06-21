@@ -38,7 +38,8 @@ CFGSTRUCT DriverConfig[]={
 	AC(Settings.mmuhack),
 	AC(Settings.ramtimings),
 	AC(Settings.gamma),
-	// TODO
+	AC(Settings.perfect_vsync),
+	AC(Settings.accurate_mode),
         ENDCFGSTRUCT
 };
 

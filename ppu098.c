@@ -370,7 +370,7 @@ static void ResetRL(uint8 *target)
  Plinef=target;
  Pline=target;
  firsttile=0;
- linestartts=timestamp*48+X.count;
+ linestartts=timestamp*48+X6502_GetCycleCount();
  tofix=0;
  FCEUPPU_LineUpdate098();
  tofix=1;
@@ -489,9 +489,13 @@ static void FASTAPASS(1) RefreshLine098(int lastpixel)
         if(!ScreenON && !SpriteON)
         {
          uint32 tem;
+         int tiles;
          tem=Pal[0]|(Pal[0]<<8)|(Pal[0]<<16)|(Pal[0]<<24);
          tem|=0x40404040;
-         FCEU_dwmemset(Pline,tem,numtiles*8);
+         tiles=numtiles;
+         if(firsttile+tiles > 256/8) tiles=256/8-firsttile;
+         if(tiles > 0)
+          FCEU_dwmemset(Pline,tem,tiles*8);
          P+=numtiles*8;
          Pline=P;
 

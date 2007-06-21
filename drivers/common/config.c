@@ -115,12 +115,12 @@ static void SaveParse(CFGSTRUCT *cfgst, FILE *fp)
         } while(cfgst[x].ptr);
 }
 
-void SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst)
+int SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst)
 {
 	FILE *fp;
 
         fp=fopen(filename,"wb");
-        if(fp==NULL) return;
+        if(fp==NULL) return -1;
 
 	SaveParse(cfgst,fp);
 
@@ -128,6 +128,7 @@ void SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst)
 #ifdef GP2X
 	sync();
 #endif
+	return 0;
 }
 
 static void LoadParse(CFGSTRUCT *cfgst, FILE *fp)
@@ -146,12 +147,13 @@ static void LoadParse(CFGSTRUCT *cfgst, FILE *fp)
         } while(cfgst[x].ptr);
 }
 
-void LoadFCEUConfig(char *filename, CFGSTRUCT *cfgst)
+int LoadFCEUConfig(char *filename, CFGSTRUCT *cfgst)
 {
         FILE *fp;
 
         fp=fopen(filename,"rb");
-        if(fp==NULL) return;
+        if(fp==NULL) return -1;
 	LoadParse(cfgst,fp);
         fclose(fp);
+	return 0;
 }

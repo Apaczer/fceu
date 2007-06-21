@@ -166,7 +166,7 @@ void gp2x_text_out15_lim(int x, int y, const char *texto, int max)
 	gp2x_text_out15(x,y,buffer);
 }
 
-static void gp2x_smalltext16(int x, int y, const char *texto)
+static void gp2x_smalltext16(int x, int y, const char *texto, unsigned short color)
 {
 	int i;
 	unsigned char  *src;
@@ -187,7 +187,7 @@ static void gp2x_smalltext16(int x, int y, const char *texto)
 			int w = 0x20;
 			while (w)
 			{
-				if( *src & w ) *dst = 0xffff;
+				if( *src & w ) *dst = color;
 				dst++;
 				w>>=1;
 			}
@@ -198,7 +198,7 @@ static void gp2x_smalltext16(int x, int y, const char *texto)
 	}
 }
 
-static void gp2x_smalltext16_lim(int x, int y, const char *texto, int max)
+static void gp2x_smalltext16_lim(int x, int y, const char *texto, unsigned short color, int max)
 {
 	char    buffer[320/6+1];
 
@@ -207,7 +207,7 @@ static void gp2x_smalltext16_lim(int x, int y, const char *texto, int max)
 	if (max < 0) max = 0;
 	buffer[max] = 0;
 
-	gp2x_smalltext16(x, y, buffer);
+	gp2x_smalltext16(x, y, buffer, color);
 }
 
 
@@ -299,6 +299,22 @@ static unsigned long wait_for_input_usbjoy(unsigned long interesting, int *joy)
 
 // -------------- ROM selector --------------
 
+// rrrr rggg gggb bbbb
+static unsigned short file2color(const char *fname)
+{
+	const char *ext = fname + strlen(fname) - 3;
+	static const char *rom_exts[]   = { "zip", "nes", "fds", "unf", "nez", "nif" }; // nif is for unif
+	static const char *other_exts[] = { "nsf", "ips", "fcm" };
+	int i;
+
+	if (ext < fname) ext = fname;
+	for (i = 0; i < sizeof(rom_exts)/sizeof(rom_exts[0]); i++)
+		if (strcasecmp(ext, rom_exts[i]) == 0) return 0xbdff;
+	for (i = 0; i < sizeof(other_exts)/sizeof(other_exts[0]); i++)
+		if (strcasecmp(ext, other_exts[i]) == 0) return 0xaff5;
+	return 0xffff;
+}
+
 static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 {
 	int start, i, pos;
@@ -310,16 +326,17 @@ static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 	gp2x_fceu_darken_all();
 
 	if(start - 2 >= 0)
-		gp2x_smalltext16_lim(14, (start - 2)*10, curdir, 53-2);
+		gp2x_smalltext16_lim(14, (start - 2)*10, curdir, 0xffff, 53-2);
 	for (i = 0; i < n; i++) {
 		pos = start + i;
 		if (pos < 0)  continue;
 		if (pos > 23) break;
 		if (namelist[i+1]->d_type == DT_DIR) {
-			gp2x_smalltext16_lim(14,   pos*10, "/", 1);
-			gp2x_smalltext16_lim(14+6, pos*10, namelist[i+1]->d_name, 53-3);
+			gp2x_smalltext16_lim(14,   pos*10, "/", 0xfff6, 1);
+			gp2x_smalltext16_lim(14+6, pos*10, namelist[i+1]->d_name, 0xfff6, 53-3);
 		} else {
-			gp2x_smalltext16_lim(14,   pos*10, namelist[i+1]->d_name, 53-2);
+			unsigned short color = file2color(namelist[i+1]->d_name);
+			gp2x_smalltext16_lim(14,   pos*10, namelist[i+1]->d_name, color, 53-2);
 		}
 	}
 	gp2x_text_out15(5, 120, ">");
@@ -490,9 +507,9 @@ static int clistcallb(char *name, uint32 a, uint8 v, int compare, int s, int typ
 	if (pos < 0)  return 1;
 	if (pos > 23) return 0;
 
-	gp2x_smalltext16_lim(14,     pos*10, s ? "ON " : "OFF", 3);
-	gp2x_smalltext16_lim(14+6*4, pos*10, type ? "S" : "R", 1);
-	gp2x_smalltext16_lim(14+6*6, pos*10, name, 53-8);
+	gp2x_smalltext16_lim(14,     pos*10, s ? "ON " : "OFF", 0xffff, 3);
+	gp2x_smalltext16_lim(14+6*4, pos*10, type ? "S" : "R", 0xffff, 1);
+	gp2x_smalltext16_lim(14+6*6, pos*10, name, 0xffff, 53-8);
 
 	return 1;
 }
@@ -509,7 +526,7 @@ static void draw_patchlist(int sel)
 	FCEUI_ListCheats(clistcallb,0);
 
 	pos = cheat_start + cheat_pos;
-	if (pos < 24) gp2x_smalltext16_lim(14, pos*10, "done", 4);
+	if (pos < 24) gp2x_smalltext16_lim(14, pos*10, "done", 0xffff, 4);
 
 	gp2x_text_out15(5, 120, ">");
 	menu_flip();
@@ -911,7 +928,7 @@ static void kc_sel_loop(void)
 		if(inp & GP2X_B) {
 			switch (menu_sel) {
 				case 0: key_config_loop(ctrl_actions, 10, 0); return;
-				case 1: key_config_loop(ctrl_actions,  8, 1); return;
+				case 1: key_config_loop(ctrl_actions, 10, 1); return;
 				case 2: key_config_loop(emuctrl_actions,
 						sizeof(emuctrl_actions)/sizeof(emuctrl_actions[0]), -1); return;
 				case 3: if (!fceugi) SaveConfig(NULL); return;
@@ -1139,7 +1156,7 @@ static void config_commit(void)
 static int menu_loop_options(void)
 {
 	static int menu_sel = 0;
-	int menu_sel_max = 16;
+	int ret, menu_sel_max = 16;
 	unsigned long inp = 0;
 
 	if (fceugi) menu_sel_max++;
@@ -1161,12 +1178,16 @@ static int menu_loop_options(void)
 				case 15: fcemenu_loop_options(); break;
 				case 16: // done (update and write)
 					config_commit();
-					SaveConfig(NULL);
+					ret = SaveConfig(NULL);
+					strcpy(menuErrorMsg, ret == 0 ? "default config saved" : "config save failed");
 					return 1;
 				case 17: // done (update and write for current game)
-					config_commit();
 					if (lastLoadedGameName[0])
-						SaveConfig(lastLoadedGameName);
+					{
+						config_commit();
+						ret = SaveConfig(lastLoadedGameName);
+						strcpy(menuErrorMsg, ret == 0 ? "game config saved" : "config save failed");
+					}
 					return 1;
 			}
 		}

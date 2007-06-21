@@ -24,8 +24,8 @@ typedef struct {
         int len;
 } CFGSTRUCT;
 
-void SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst);
-void LoadFCEUConfig(char *filename, CFGSTRUCT *cfgst);
+int SaveFCEUConfig(char *filename, CFGSTRUCT *cfgst);
+int LoadFCEUConfig(char *filename, CFGSTRUCT *cfgst);
 
 /* Macros for building CFGSTRUCT structures. */
 
@@ -39,7 +39,7 @@ void LoadFCEUConfig(char *filename, CFGSTRUCT *cfgst);
 #define ADDCFGSTRUCT(x) { 0,&x,0 }
 
 /* Oops.  The NAC* macros shouldn't have the # in front of the w, but
-   fixing this would break configuration files of previous versions and it 
+   fixing this would break configuration files of previous versions and it
    isn't really hurting much.
 */
 

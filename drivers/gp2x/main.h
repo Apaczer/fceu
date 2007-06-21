@@ -33,5 +33,5 @@ extern int NoWaiting;
 
 extern FCEUGI *fceugi;
 
-void SaveConfig(const char *name);
+int SaveConfig(const char *name);
 

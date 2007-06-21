@@ -87,7 +87,7 @@ game you wish to associate with and add the extension "pal". Examples:
                  BigBad.nes              BigBad.pal
                  BigBad.zip              BigBad.pal
                  BigBad.Better.nes       BigBad.Better.pal
-	
+
 
 With so many ways to choose a palette, figuring out which one will be active may
 be difficult. Here's a list of what palettes will be used, in order from highest
@@ -176,7 +176,8 @@ patched well with the IPS format because they are chunk-based with no fixed offs
 ------------------------------------------------------------------
 
 Version 0.4 has partial FCM movie support. Most of the movies desync due to
-different timing, but some of them can be played. There is only playback support.
+different timing, but some of them can be played. Note that 'accurate renderer'
+option solves some desync problems. There is only playback support.
 Files should be placed in the ROMs directory along with the ROMs themselves.
 Naming is the same as for IPS patches (see previous section), buf use .fcm
 extension instead of .ips.
@@ -188,6 +189,13 @@ extension instead of .ips.
 
 
 ver 0.4 (by notaz)
+  rev 171
+          - Added optional "Accurate renderer", which is the original FCE Ultra
+            0.98.x renderer + PPU emulation code. It's much slower, but it can
+            handle games which need more precise PPU timing emulation (like
+            Marble Madness).
+          - Fixed saving and loading of game specific configs.
+          - Some other minor changes.
   rev 163
           - Added A r k's fast-direction-change fix for usbjoy lib.
           - Fixed an issue of usbjoys stopping to work when "Perfect vsync"

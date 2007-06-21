@@ -55,7 +55,7 @@ Palettes can be set on a per-game basis. To do this, put a palette file in the <
    BigBad.nes              BigBad.pal
    BigBad.zip              BigBad.pal
    BigBad.Better.nes       BigBad.Better.pal
-	
+
 
 With so many ways to choose a palette, figuring out which one will be active may be difficult. Here's a list of what palettes will be used, in order from highest priority to least priority(if a condition doesn't exist for a higher priority palette, the emulator will continue down its list of palettes).
 
@@ -108,7 +108,7 @@ Patching is supported for all supported formats (iNES, FDS, UNIF, and NSF), but 
 
 
 [FCM movies]
-Version 0.4 has partial FCM movie support. Most of the movies desync due to different timing, but some of them can be played. There is only playback support. Files should be placed in the ROMs directory along with the ROMs themselves. Naming is the same as for IPS patches (see previous section), buf use .fcm extension instead of .ips.
+Version 0.4 has partial FCM movie support. Most of the movies desync due to different timing, but some of them can be played. Note that 'accurate renderer' option solves some desync problems. There is only playback support. Files should be placed in the ROMs directory along with the ROMs themselves. Naming is the same as for IPS patches (see previous section), buf use .fcm extension instead of .ips.
 
 
 [Credits/thanks]
