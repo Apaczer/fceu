@@ -185,13 +185,44 @@ static reg_setting rate_100_02[] =
 	{ 0, 0, 0 }
 };
 
+// 120.00 97/0/2/7|25/ 7/ 7/11/37
+static reg_setting rate_120[] =
+{
+	{ 0x0914, 0xffff, (97<<8)|(0<<2)|2 },	/* UPLLSETVREG */
+	{ 0x0924, 0xff00, (2<<14)|(7<<8) },	/* DISPCSETREG */
+	{ 0x281A, 0x00ff, 25 },			/* .HSWID(T2) */
+	{ 0x281C, 0x00ff, 7 },			/* .HSSTR(T8) */
+	{ 0x281E, 0x00ff, 7 },			/* .HSEND(T7) */
+	{ 0x2822, 0x01ff, 11 },			/* .VSEND (T9) */
+	{ 0x2826, 0x0ff0, 37<<4 },		/* .DESTR(T3) */
+	{ 0, 0, 0 }
+};
+
+// 100.00 96/0/2/7|29/25/53/15/37
+static reg_setting rate_100[] =
+{
+	{ 0x0914, 0xffff, (96<<8)|(0<<2)|2 },	/* UPLLSETVREG */
+	{ 0x0924, 0xff00, (2<<14)|(7<<8) },	/* DISPCSETREG */
+	{ 0x281A, 0x00ff, 29 },			/* .HSWID(T2) */
+	{ 0x281C, 0x00ff, 25 },			/* .HSSTR(T8) */
+	{ 0x281E, 0x00ff, 53 },			/* .HSEND(T7) */
+	{ 0x2822, 0x01ff, 15 },			/* .VSEND (T9) */
+	{ 0x2826, 0x0ff0, 37<<4 },		/* .DESTR(T3) */
+	{ 0, 0, 0 }
+};
 
 
-static reg_setting *possible_rates[] = { rate_almost60, rate_50, rate_120_20, rate_100_02 };
+
+static reg_setting *possible_rates[] = { rate_almost60, rate_50, rate_120_20, rate_100_02, rate_120, rate_100 };
 
 void set_LCD_custom_rate(lcd_rate_t rate)
 {
 	reg_setting *set;
+
+	if (MEM_REG[0x2800>>1] & 0x100) // tv-out
+	{
+		return;
+	}
 
 	printf("setting custom LCD refresh, mode=%i... ", rate); fflush(stdout);
 	for (set = possible_rates[rate]; set->reg; set++)

@@ -19,6 +19,8 @@ typedef enum
 	LCDR_50,	/* 50Hz, has interlacing problems */
 	LCDR_120_20,	/* ~60.10*2Hz, used by FCE Ultra */
 	LCDR_100_02,	/* ~50.01*2Hz, used by FCE Ultra */
+	LCDR_120,	/* 120Hz */
+	LCDR_100,	/* 100Hz */
 } lcd_rate_t;
 
 extern void set_LCD_custom_rate(lcd_rate_t rate);
