@@ -15,8 +15,8 @@ extern void set_gamma(int g100);
 
 typedef enum
 {
-	LCDR_60 = 0,	/* as close as possible to 60.00Hz, currently only managed to set to ~59.998Hz, has interlacing problems */
-	LCDR_50,	/* 50Hz, has interlacing problems */
+	LCDR_60 = 0,	/* ~59.998Hz, has interlacing problems, kills USB host */
+	LCDR_50,	/* 50Hz, has interlacing problems, kills USB host */
 	LCDR_120_20,	/* ~60.10*2Hz, used by FCE Ultra */
 	LCDR_100_02,	/* ~50.01*2Hz, used by FCE Ultra */
 	LCDR_120,	/* 120Hz */
