@@ -11,7 +11,7 @@ TFLAGS	+= -ggdb
 LDRIVER	+= -ggdb
 NOSTRIP = 1
 else
-TFLAGS	+= -ftracer -fstrength-reduce -funroll-loops -fomit-frame-pointer -fstrict-aliasing -ffast-math
+TFLAGS	+= -ftracer -fstrength-reduce -fomit-frame-pointer -fstrict-aliasing -ffast-math # -funroll-loops
 TFLAGS	+= -O3 #-pg -fno-omit-frame-pointer
 LDRIVER	+= -O3 #-pg -fno-omit-frame-pointer
 endif

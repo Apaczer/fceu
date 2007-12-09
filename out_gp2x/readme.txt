@@ -109,7 +109,7 @@ You will need the FDS BIOS ROM image in <where_you_put_gpfce>/fceultra directory
 It's size should be 8192 bytes and it must be named "disksys.rom".
 gpfce will not load FDS games without this file.
 
-You will also probably need configure keys for swapping the virtual FDS disks,
+You will also probably need to configure keys for swapping the virtual FDS disks,
 they are configurable in Controls menu.
 
 Two types of FDS disk images are supported: disk images with the FWNES-style header,
@@ -189,6 +189,11 @@ extension instead of .ips.
 
 
 ver 0.4 (by notaz)
+  ret 311
+          - Improved open bus emulation, fixes missing ground in some SMB3 levels.
+          - Improved auto frameskip behavior in cases when emu is not fast
+            enough to maintain 50/60 fps.
+          - Fixed a bug which prevented some key combo configurations from working.
   rev 171
           - Added optional "Accurate renderer", which is the original FCE Ultra
             0.98.x renderer + PPU emulation code. It's much slower, but it can

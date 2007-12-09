@@ -112,7 +112,9 @@ static writefunc *BWriteG;
 static int RWWrap=0;
 
 #ifdef ASM_6502
-#ifndef DEBUG_ASM_6502
+#ifdef DEBUG_ASM_6502
+extern uint8  nes_internal_ram[0x800];
+#else
 static void asmcpu_update(int32 cycles)
 {
  // some code from x6502.c
@@ -158,6 +160,10 @@ void asmcpu_unpack(void)
 	nes_registers[4]|= X.P & 0x5d;
 	nes_registers[5] = X.P << 24; // N
 	if (!(X.P&0x02)) nes_registers[5] |= 1; // Z
+
+#ifdef DEBUG_ASM_6502
+	memcpy(nes_internal_ram, RAM, 0x800);
+#endif
 }
 
 void asmcpu_pack(void)
@@ -184,6 +190,7 @@ DECLFW(BNull)
 
 DECLFR(ANull)
 {
+ //printf("open [%04x] %02x @ %04x (%04x)\n", A, X.DB, X.PC, X.PC&0x7ff);
  return(X.DB);
 }
 
@@ -1541,6 +1548,7 @@ void PowerNES(void)
         FCEU_MemoryRand(RAM,0x800);
 #else
         memset(RAM,0x00,0x800);
+	memset(nes_internal_ram,0x00,0x800);
 #endif
         ResetMapping();
         PowerSound();

@@ -161,10 +161,13 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@
 @@@ アドレスを読む
 @@@
-.macro	ZP_READ_ADDR
+.macro	ZP_READ_ADDR update_db=0
 	ZP_READ
 	ldrb	REG_ADDR, [REG_ADDR, #1]
 	orr	REG_ADDR, r0, REG_ADDR, lsl #8
+.if \update_db
+	strb    r0, [REG_OP_TABLE, #(OTOFFS_X + 0x10)]		@ X.DB
+.endif
 .endm
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -382,7 +385,7 @@ ldmfd sp!,{r0-r3,r12,lr}
 @@@ ($nn), Y
 .macro	INDY_ADDR
 	ZERO_ADDR
-	ZP_READ_ADDR
+	ZP_READ_ADDR 1                            @ SMB3 relies on open bus here
 	add	REG_ADDR, REG_ADDR, REG_Y
 	bic	REG_ADDR, REG_ADDR, #0x10000
 	and	r0,REG_ADDR,#0xff

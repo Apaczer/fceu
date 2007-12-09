@@ -353,7 +353,7 @@ static int scandir_cmp(const void *p1, const void *p2)
 }
 
 static char *filter_exts[] = {
-	".gpe", ".png", "ck.o", ".txt"
+	".gpe", ".png", "ck.o", ".txt", ".srm"
 };
 
 static int scandir_filter(const struct dirent *ent)

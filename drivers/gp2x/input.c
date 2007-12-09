@@ -251,6 +251,7 @@ static void FCEUD_UpdateInput(void)
 					if ((keys & (1 << u)) && (Settings.KeyBinds[u] & acts))
 					{
 						keys &= ~(1 << u);
+						acts &= Settings.KeyBinds[u];
 						break;
 					}
 				}
@@ -350,33 +351,38 @@ static void InitOtherInput(void)
 
 static void PrepareOtherInput(void)
 {
-	uint32 act, key, seen_acts;
+	uint32 act;
 
-	combo_acts = combo_keys = prev_emu_acts = seen_acts = 0;
+	combo_acts = combo_keys = prev_emu_acts = 0;
 
-	// find combo_acts
-	for (act = 1; act; act <<= 1)
+	for (act = 0; act < 32; act++)
 	{
-		for (key = 1; key < 32; key++)
+		int u, keyc = 0, keyc2 = 0;
+		if (act == 16 || act == 17) continue; // player2 flag
+		if (act > 17)
 		{
-			if (Settings.KeyBinds[key] & act)
-			{
-				if (seen_acts & act) combo_acts |= act;
-				else seen_acts |= act;
-			}
+			for (u = 0; u < 32; u++)
+				if (Settings.KeyBinds[u] & (1 << act)) keyc++;
 		}
-	}
-
-	combo_acts &= ~0x00030000; // don't take player_id bits
-
-	// find combo_keys
-	for (act = 1; act; act <<= 1)
-	{
-		for (key = 0; key < 32; key++)
+		else
 		{
-			if (Settings.KeyBinds[key] & combo_acts)
+			for (u = 0; u < 32; u++)
+				if ((Settings.KeyBinds[u] & 0x30000) == 0 && // pl. 1
+					(Settings.KeyBinds[u] & (1 << act))) keyc++;
+			for (u = 0; u < 32; u++)
+				if ((Settings.KeyBinds[u] & 0x30000) == 1 && // pl. 2
+					(Settings.KeyBinds[u] & (1 << act))) keyc2++;
+			if (keyc2 > keyc) keyc = keyc2;
+		}
+		if (keyc > 1)
+		{
+			// loop again and mark those keys and actions as combo
+			for (u = 0; u < 32; u++)
 			{
-				combo_keys |= 1 << key;
+				if (Settings.KeyBinds[u] & (1 << act)) {
+					combo_keys |= 1 << u;
+					combo_acts |= 1 << act;
+				}
 			}
 		}
 	}

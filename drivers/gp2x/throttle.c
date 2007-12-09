@@ -10,16 +10,6 @@ extern int FSkip;
 static int skip_count = 0;
 static struct timeval tv_prev;
 
-void RefreshThrottleFPS(void)
-{
-	skip_count = 0;
-	if (Settings.perfect_vsync)
-	{
-		gp2x_video_wait_vsync();
-	}
-	gettimeofday(&tv_prev, 0);
-}
-
 #define tvdiff(tv1, tv2) \
 	((tv1.tv_sec - tv2.tv_sec) * 1000000 + tv1.tv_usec - tv2.tv_usec)
 
@@ -39,6 +29,17 @@ void RefreshThrottleFPS(void)
 	} \
 }
 
+void RefreshThrottleFPS(void)
+{
+	skip_count = 0;
+	if (Settings.perfect_vsync)
+	{
+		gp2x_video_wait_vsync();
+	}
+	gettimeofday(&tv_prev, 0);
+	tvsub(tv_prev, PAL ? 19997 : 16639);
+}
+
 static void wait_to(struct timeval *tv_aim)
 {
 	struct timeval tv_now;
@@ -56,10 +57,11 @@ static void wait_to(struct timeval *tv_aim)
 void SpeedThrottle(void)
 {
 	struct timeval tv_now, tv_aim;
+	int frame_time = PAL ? 19997 : 16639; // ~50.007, 19.997 ms/frame : ~60.1, 16.639 ms/frame
 	int tdiff;
 
 	tv_aim = tv_prev;
-	tvadd(tv_aim, PAL ? 19997 : 16639); // ~50.007, 19.997 ms/frame : ~60.1, 16.639 ms/frame
+	tvadd(tv_aim, frame_time);
 
 	gettimeofday(&tv_now, 0);
 	tdiff = tvdiff(tv_now, tv_aim);
@@ -74,17 +76,23 @@ void SpeedThrottle(void)
 			FSkip = 1;
 		}
 	}
-	else if (tdiff > 0)
+	else if (tdiff >= frame_time)
 	{
 		/* auto frameskip */
-		tv_prev = tv_now;
-		if (tdiff < 1024*16)	// limit frameskip
-		{
+		if (/*tdiff < 36*1024 &&*/ skip_count < 6) {	// limit frameskip
 			FSkip = 1;
-			tvsub(tv_prev, tdiff);
-		}
+			skip_count++;
+		} else
+			skip_count = 0;
+
+		if (tdiff < 92*1024)
+			tv_prev = tv_aim;
+		else
+			tv_prev = tv_now; // something went wrong, try to recover
 		return;
 	}
+	else
+		skip_count = 0;
 #endif
 
 	/* throttle */

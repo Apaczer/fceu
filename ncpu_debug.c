@@ -120,9 +120,9 @@ static void compare_state(void)
 	if (fail) leave();
 }
 
-#if 1
 static void compare_ram(void)
 {
+#if 1
 	int i, fail = 0;
 	for (i = 0; i < 0x800/4; i++)
 	{
@@ -136,8 +136,8 @@ static void compare_ram(void)
 	}
 
 	if (fail) leave();
-}
 #endif
+}
 
 void TriggerIRQ_d(void)
 {
