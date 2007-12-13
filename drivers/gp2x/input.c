@@ -207,7 +207,7 @@ static void FCEUD_UpdateInput(void)
 	else if (down(VOL_UP))
 	{
 		/* wait for at least 10 updates, because user may be just trying to enter menu */
-		if (volpushed_frames++ > 10) {
+		if (volpushed_frames++ > 10 && (volpushed_frames&1)) {
 			soundvol++;
 			if (soundvol > 100) soundvol=100;
 			//FCEUI_SetSoundVolume(soundvol);
@@ -216,7 +216,7 @@ static void FCEUD_UpdateInput(void)
 	}
 	else if (down(VOL_DOWN))
 	{
-		if (volpushed_frames++ > 10) {
+		if (volpushed_frames++ > 10 && (volpushed_frames&1)) {
 			soundvol-=1;
 			if (soundvol < 0) soundvol=0;
 			//FCEUI_SetSoundVolume(soundvol);

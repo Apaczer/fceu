@@ -189,11 +189,12 @@ extension instead of .ips.
 
 
 ver 0.4 (by notaz)
-  ret 311
+  ret 313
           - Improved open bus emulation, fixes missing ground in some SMB3 levels.
           - Improved auto frameskip behavior in cases when emu is not fast
             enough to maintain 50/60 fps.
           - Fixed a bug which prevented some key combo configurations from working.
+          - Some other minor changes.
   rev 171
           - Added optional "Accurate renderer", which is the original FCE Ultra
             0.98.x renderer + PPU emulation code. It's much slower, but it can

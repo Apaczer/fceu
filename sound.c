@@ -877,6 +877,8 @@ static int32 flt_acc=0, flt_acc2=0;
 static void FilterSound(uint32 *in, int16 *outMono, int count)
 {
 // static int min=0, max=0;
+ int sh=2;
+ if (soundvol < 5) sh += 5 - soundvol;
 
  for(;count;count--,in++,outMono++)
  {
@@ -888,7 +890,7 @@ static void FilterSound(uint32 *in, int16 *outMono, int count)
   flt_acc2+= (int32) (((int64)((diff-flt_acc2)*lowp))>>16);
   *in=0;
 
-  *outMono = flt_acc2*7 >> 2; // * 1.75
+  *outMono = flt_acc2*7 >> sh; // * 7 >> 2 = * 1.75
 //  if (acc2 < min) { printf("min: %i %04x\n", acc2, acc2); min = acc2; }
 //  if (acc2 > max) { printf("max: %i %04x\n", acc2, acc2); max = acc2; }
  }
