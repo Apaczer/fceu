@@ -21,10 +21,10 @@
 
 #include "../../video.h"
 
-#include "main.h"
+#include "../common/main.h"
 #include "gp2x.h"
 #include "minimal.h"
-#include "fonts.h"
+#include "../libpicofe/fonts.h"
 #include "asmutils.h"
 
 static char fps_str[32];

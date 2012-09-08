@@ -1,7 +1,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "../gp2x/main.h"
+#include "../common/main.h"
 #include "../gp2x/gp2x.h"
 #include "../gp2x/throttle.h"
 

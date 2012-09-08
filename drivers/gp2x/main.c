@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "main.h"
+#include "../common/main.h"
 #include "minimal.h"
 #include "throttle.h"
 #include "menu.h"

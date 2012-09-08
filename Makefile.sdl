@@ -3,7 +3,9 @@ CC	= $(CROSS)gcc
 STRIP	= $(CROSS)strip
 TFLAGS  = -Winline -Izlib -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT `sdl-config --cflags`
 RM	= rm -f
-B	= drivers/gp2x/
+C	= drivers/common/
+G	= drivers/gp2x/
+L	= drivers/libpicofe/
 
 DEBUG   = 1
 
@@ -27,10 +29,13 @@ gpfce.gpe: fceu
 
 include zlib/Makefile
 
-OBJDRIVER	 = drivers/gp2x_test/minimal.o drivers/gp2x_test/throttle.o ${B}gp2x.o ${B}main.o \
-		${B}unix-netplay.o ${B}gp2x-sound.o ${B}gp2x-video.o ${B}usbjoy.o ${B}menu.o ${B}fonts.o ${B}readpng.o \
-		drivers/common/cheat.o drivers/common/config.o drivers/common/args.o drivers/common/vidblit.o ${UNZIPOBJS} \
-		ppu.o movie.o fceu098.o ppu098.o
+OBJDRIVER = drivers/gp2x_test/minimal.o drivers/gp2x_test/throttle.o \
+	${G}gp2x.o ${G}main.o ${G}gp2x-sound.o ${G}gp2x-video.o \
+	${G}usbjoy.o ${G}menu.o \
+	${L}fonts.o ${L}readpng.o ${L}linux/plat.o \
+	${C}cheat.o ${C}config.o ${C}args.o ${C}vidblit.o ${C}unix-netplay.o \
+	${UNZIPOBJS} \
+	ppu.o movie.o fceu098.o ppu098.o
 LDRIVER		+= -lm -lz -lpng `sdl-config --libs`
 
 OBJDRIVER += x6502.o
@@ -58,3 +63,4 @@ ${B}rev.h: FORCE
 
 include Makefile.common
 
+# vim:filetype=make

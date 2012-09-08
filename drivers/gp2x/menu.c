@@ -12,17 +12,17 @@
 #include "usbjoy.h"
 #include "asmutils.h"
 #include "menu.h"
-#include "main.h"
-#include "fonts.h"
+#include "../common/main.h"
+#include "../libpicofe/fonts.h"
 #include "gp2x.h"
 
 #include "../../input.h"
 #include "../../state.h"
 #include "../../palette.h"
-#include "readpng.h"
+#include "../libpicofe/readpng.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
-#error "need d_type for file browser
+#error need d_type for file browser
 #endif
 
 extern int GP2X_PORT_REV;
@@ -345,7 +345,8 @@ static void draw_dirlist(char *curdir, struct dirent **namelist, int n, int sel)
 
 static int scandir_cmp(const void *p1, const void *p2)
 {
-	struct dirent **d1 = (struct dirent **)p1, **d2 = (struct dirent **)p2;
+	const struct dirent **d1 = (const struct dirent **)p1;
+	const struct dirent **d2 = (const struct dirent **)p2;
 	if ((*d1)->d_type == (*d2)->d_type) return alphasort(d1, d2);
 	if ((*d1)->d_type == DT_DIR) return -1; // put before
 	if ((*d2)->d_type == DT_DIR) return  1;
@@ -392,10 +393,10 @@ static char *filesel_loop(char *curr_path, char *final_dest)
 		fname = p+1;
 	}
 
-	n = scandir(curr_path, &namelist, scandir_filter, scandir_cmp);
+	n = scandir(curr_path, &namelist, scandir_filter, (void *)scandir_cmp);
 	if (n < 0) {
 		// try root
-		n = scandir("/", &namelist, scandir_filter, scandir_cmp);
+		n = scandir("/", &namelist, scandir_filter, (void *)scandir_cmp);
 		if (n < 0) {
 			// oops, we failed
 			printf("dir: %s\n", curr_path);
@@ -1436,7 +1437,7 @@ static void menu_prepare_bg(void)
 	else
 	{
 		memset32((int *)menu_bg, 0, 320*240*2/4);
-		readpng(menu_bg, "background.png");
+		readpng(menu_bg, "background.png", READPNG_BG, 320, 240);
 	}
 }
 
