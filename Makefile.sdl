@@ -1,10 +1,9 @@
-CROSS	= 
-CC	= $(CROSS)gcc
-STRIP	= $(CROSS)strip
+#CROSS_COMPILE =
+CC	= $(CROSS_COMPILE)gcc
+STRIP	= $(CROSS_COMPILE)strip
 TFLAGS  = -Winline -Izlib -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT `sdl-config --cflags`
 RM	= rm -f
 C	= drivers/common/
-G	= drivers/gp2x/
 L	= drivers/libpicofe/
 
 DEBUG   = 1
@@ -26,10 +25,10 @@ all:		fceu
 
 include zlib/Makefile
 
-OBJDRIVER = drivers/sdl/sdl.o drivers/sdl/minimal.o drivers/sdl/throttle.o \
-	${G}gp2x-sound.o ${G}gp2x-video.o ${G}usbjoy.o \
+OBJDRIVER = drivers/sdl/sdl.o drivers/sdl/throttle.o \
 	${L}fonts.o ${L}readpng.o ${L}input.o ${L}in_sdl.o ${L}linux/plat.o \
-	${C}main.o ${C}menu.o \
+	${L}linux/sndout_oss.o \
+	${C}main.o ${C}menu.o ${C}sound-oss.o \
 	${C}cheat.o ${C}config.o ${C}args.o ${C}vidblit.o ${C}unix-netplay.o \
 	${UNZIPOBJS} \
 	ppu.o movie.o fceu098.o ppu098.o
@@ -42,9 +41,6 @@ x6502.o: x6502.c x6502.h ops.h fce.h sound.h dprintf.h
 include Makefile.base
 
 ${C}menu.o:		${C}revision.h
-${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
-${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h ${B}rev.h
-${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
 ppu.o:			ppu.c ppu.h
 
 ${C}revision.h: FORCE

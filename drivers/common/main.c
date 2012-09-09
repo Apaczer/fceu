@@ -413,7 +413,6 @@ int main(int argc, char *argv[])
         LoadConfig(NULL);
         last_arg_parsed=DoArgs(argc-1,&argv[1]);
 	platform_late_init();
-	in_probe();
 
 	LoadLLGN();
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
