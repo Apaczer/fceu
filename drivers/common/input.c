@@ -20,7 +20,8 @@
 #include "../../input.h"
 #include "../../svga.h"
 #include "../../video.h"
-#include "usbjoy.h"
+#include "../libpicofe/input.h"
+#include "input.h"
 
 /* UsrInputType[] is user-specified.  InputType[] is current
        (game loading can override user settings)
@@ -55,8 +56,9 @@ static void setsoundvol(int soundvolume)
 		prev_snd_on = !!soundvolume;
 	}
 
+	platform_set_volume(soundvolume);
+
 	// draw on screen :D
-	gp2x_sound_volume(soundvolume, soundvolume);
 	int meterval=soundvolume/5;
 	for (soundvolIndex = 0; soundvolIndex < 20; soundvolIndex++)
 	{
@@ -80,51 +82,78 @@ static void do_emu_acts(uint32 acts)
 	acts &= acts ^ prev_emu_acts;
 	prev_emu_acts = actsc;
 
-	if (acts & (3 << 30))
+	if (acts & (EACT_SAVE_STATE | EACT_LOAD_STATE))
 	{
-		unsigned long keys;
 		int do_it = 1;
-		if (acts & (1 << 30))
+		int need_confirm = 0;
+		const char *nm;
+		char tmp[64];
+		int keys, len;
+
+		if (acts & EACT_LOAD_STATE)
 		{
 			if (Settings.sstate_confirm & 2)
 			{
-				FCEU_DispMessage("LOAD STATE? (Y=yes, X=no)");
-				FCEU_PutImage();
-				FCEUD_Update(XBuf+8,NULL,0);
-				while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
-				if (keys & GP2X_X) do_it = 0;
-				FCEU_CancelDispMessage();
+				need_confirm = 1;
 			}
-			if (do_it) FCEUI_LoadState();
 		}
 		else
 		{
 			if (Settings.sstate_confirm & 1)
 			{
 				char *fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
-				FILE *st=fopen(fname,"rb");
+				FILE *st = fopen(fname, "rb");
 				free(fname);
 				if (st)
 				{
 					fclose(st);
-					FCEU_DispMessage("OVERWRITE SAVE? (Y=yes, X=no)");
-					FCEU_PutImage();
-					FCEUD_Update(XBuf+8,NULL,0);
-					while( !((keys = gp2x_joystick_read(1)) & (GP2X_X|GP2X_Y)) ) usleep(50*1024);
-					if (keys & GP2X_X) do_it = 0;
-					FCEU_CancelDispMessage();
+					need_confirm = 1;
 				}
 			}
-			if (do_it) FCEUI_SaveState();
 		}
+
+		if (need_confirm) {
+			strcpy(tmp, (acts & EACT_LOAD_STATE) ?
+				"LOAD STATE?" : "OVERWRITE SAVE?");
+			len = strlen(tmp);
+			nm = in_get_key_name(-1, -PBTN_MA3);
+			snprintf(tmp + len, sizeof(tmp) - len, "(%s=yes, ", nm);
+			len = strlen(tmp);
+			nm = in_get_key_name(-1, -PBTN_MBACK);
+			snprintf(tmp + len, sizeof(tmp) - len, "%s=no)", nm);
+
+			FCEU_DispMessage(tmp);
+			FCEU_PutImage();
+			FCEUD_Update(XBuf+8, NULL, 0);
+
+			in_set_config_int(0, IN_CFG_BLOCKING, 1);
+			while (in_menu_wait_any(NULL, 50) & (PBTN_MA3|PBTN_MBACK))
+				;
+			while ( !((keys = in_menu_wait_any(NULL, 50)) & (PBTN_MA3|PBTN_MBACK)) )
+				;
+			if (keys & PBTN_MBACK)
+				do_it = 0;
+			while (in_menu_wait_any(NULL, 50) & (PBTN_MA3|PBTN_MBACK))
+				;
+			in_set_config_int(0, IN_CFG_BLOCKING, 0);
+
+			FCEU_CancelDispMessage();
+		}
+		if (do_it) {
+			if (acts & EACT_LOAD_STATE)
+				FCEUI_LoadState();
+			else
+				FCEUI_SaveState();
+		}
+
 		RefreshThrottleFPS();
 	}
-	else if (acts & (3 << 28)) // state slot next/prev
+	else if (acts & (EACT_NEXT_SLOT|EACT_PREV_SLOT))
 	{
 		FILE *st;
 		char *fname;
 
-		CurrentState += (acts & (1 << 29)) ? 1 :  -1;
+		CurrentState += (acts & EACT_NEXT_SLOT) ? 1 : -1;
 		if (CurrentState > 9) CurrentState = 0;
 		if (CurrentState < 0) CurrentState = 9;
 
@@ -134,17 +163,17 @@ static void do_emu_acts(uint32 acts)
 		FCEU_DispMessage("[%s] State Slot %i", st ? "USED" : "FREE", CurrentState);
 		if (st) fclose(st);
 	}
-	else if (acts & (1 << 27)) // FDS insert/eject
+	else if (acts & EACT_FDS_INSERT)
 	{
         	if(FCEUGameInfo.type == GIT_FDS)
 			FCEU_DoSimpleCommand(FCEUNPCMD_FDSINSERT);
 	}
-	else if (acts & (1 << 26)) // FDS select
+	else if (acts & EACT_FDS_SELECT)
 	{
         	if(FCEUGameInfo.type == GIT_FDS)
 			FCEU_DoSimpleCommand(FCEUNPCMD_FDSSELECT);
 	}
-	else if (acts & (1 << 25)) // VS Unisystem insert coin
+	else if (acts & EACT_INSERT_COIN)
 	{
         	if(FCEUGameInfo.type == GIT_VSUNI)
 			FCEU_DoSimpleCommand(FCEUNPCMD_VSUNICOIN);
@@ -152,32 +181,31 @@ static void do_emu_acts(uint32 acts)
 }
 
 
-#define down(b) (keys & GP2X_##b)
-static void do_fake_mouse(unsigned long keys)
+static void do_fake_mouse(uint32 acts)
 {
 	static int x=256/2, y=240/2;
 	int speed = 3;
 
-	if (down(A)) speed = 1;
-	if (down(Y)) speed = 5;
+	if (acts & NKEY_B_TURBO) speed = 1;
+	if (acts & NKEY_A_TURBO) speed = 5;
 
-	if (down(LEFT))
+	if (acts & NKEY_LEFT)
 	{
 		x -= speed;
 		if (x < 0) x = 0;
 	}
-	else if (down(RIGHT))
+	else if (acts & NKEY_RIGHT)
 	{
 		x += speed;
 		if (x > 255) x = 255;
 	}
 
-	if (down(UP))
+	if (acts & NKEY_UP)
 	{
 		y -= speed;
 		if (y < 0) y = 0;
 	}
-	else if (down(DOWN))
+	else if (acts & NKEY_DOWN)
 	{
 		y += speed;
 		if (y > 239) y = 239;
@@ -186,8 +214,8 @@ static void do_fake_mouse(unsigned long keys)
 	MouseData[0] = x;
 	MouseData[1] = y;
 	MouseData[2] = 0;
-	if (down(B)) MouseData[2] |= 1;
-	if (down(X)) MouseData[2] |= 2;
+	if (acts & NKEY_A) MouseData[2] |= 1;
+	if (acts & NKEY_B) MouseData[2] |= 2;
 }
 
 
@@ -195,16 +223,20 @@ static void FCEUD_UpdateInput(void)
 {
 	static int volpushed_frames = 0;
 	static int turbo_rate_cnt_a[2] = {0,0}, turbo_rate_cnt_b[2] = {0,0};
-	unsigned long keys = gp2x_joystick_read(0);
-	uint32 all_acts[2] = {0,0};
-	int i;
+	uint32 all_acts[2], emu_acts;
+	int actions[IN_BINDTYPE_COUNT] = { 0, };
 
-	if ((down(VOL_DOWN) && down(VOL_UP)) || (keys & (GP2X_L|GP2X_START)) == (GP2X_L|GP2X_START))
+	in_update(actions);
+	all_acts[0] = actions[IN_BINDTYPE_PLAYER12];
+	all_acts[1] = actions[IN_BINDTYPE_PLAYER12] >> 16;
+	emu_acts = actions[IN_BINDTYPE_EMU];
+
+	if (emu_acts & EACT_ENTER_MENU)
 	{
 		Exit = 1;
 		return;
 	}
-	else if (down(VOL_UP))
+	else if (emu_acts & EACT_VOLUME_UP)
 	{
 		/* wait for at least 10 updates, because user may be just trying to enter menu */
 		if (volpushed_frames++ > 10 && (volpushed_frames&1)) {
@@ -214,7 +246,7 @@ static void FCEUD_UpdateInput(void)
 			setsoundvol(soundvol);
 		}
 	}
-	else if (down(VOL_DOWN))
+	else if (emu_acts & EACT_VOLUME_DOWN)
 	{
 		if (volpushed_frames++ > 10 && (volpushed_frames&1)) {
 			soundvol-=1;
@@ -233,74 +265,32 @@ static void FCEUD_UpdateInput(void)
 	if (InputType[1] != SI_GAMEPAD)
 	{
 		/* try to feed fake mouse there */
-		do_fake_mouse(keys);
-	}
-
-	for (i = 0; i < 32; i++)
-	{
-		if (keys & (1 << i))
-		{
-			uint32 acts, u = 32;
-			acts = Settings.KeyBinds[i];
-			if (!acts) continue;
-			if ((1 << i) & combo_keys)
-			{
-				// combo key detected, try to find if other is pressed
-				for (u = i+1; u < 32; u++)
-				{
-					if ((keys & (1 << u)) && (Settings.KeyBinds[u] & acts))
-					{
-						keys &= ~(1 << u);
-						acts &= Settings.KeyBinds[u];
-						break;
-					}
-				}
-			}
-			if (u != 32) acts &=  combo_acts; // other combo key pressed
-			else         acts &= ~combo_acts;
-			all_acts[(acts>>16)&1] |= acts;
-		}
-	}
-
-	// add joy inputs
-	if (num_of_joys > 0)
-	{
-		int joy;
-		gp2x_usbjoy_update();
-		for (joy = 0; joy < num_of_joys; joy++) {
-			int keys = gp2x_usbjoy_check2(joy);
-			for (i = 0; i < 32; i++) {
-				if (keys & (1 << i)) {
-					int acts = Settings.JoyBinds[joy][i];
-					all_acts[(acts>>16)&1] |= acts;
-				}
-			}
-		}
+		do_fake_mouse(all_acts[0]);
 	}
 
 	// player 1
 	JSreturn |= all_acts[0] & 0xff;
-	if (all_acts[0] & 0x100) {		// A turbo
+	if (all_acts[0] & NKEY_A_TURBO) {
 		turbo_rate_cnt_a[0] += Settings.turbo_rate_add;
 		JSreturn |= (turbo_rate_cnt_a[0] >> 24) & 1;
 	}
-	if (all_acts[0] & 0x200) {		// B turbo
+	if (all_acts[0] & NKEY_B_TURBO) {
 		turbo_rate_cnt_b[0] += Settings.turbo_rate_add;
 		JSreturn |= (turbo_rate_cnt_b[0] >> 23) & 2;
 	}
 
 	// player 2
 	JSreturn |= (all_acts[1] & 0xff) << 16;
-	if (all_acts[1] & 0x100) {		// A turbo
+	if (all_acts[1] & NKEY_A_TURBO) {
 		turbo_rate_cnt_a[1] += Settings.turbo_rate_add;
 		JSreturn |= (turbo_rate_cnt_a[1] >> 8) & 0x10000;
 	}
-	if (all_acts[1] & 0x200) {		// B turbo
+	if (all_acts[1] & NKEY_B_TURBO) {
 		turbo_rate_cnt_b[1] += Settings.turbo_rate_add;
 		JSreturn |= (turbo_rate_cnt_b[1] >> 7) & 0x20000;
 	}
 
-	do_emu_acts(all_acts[0]|all_acts[1]);
+	do_emu_acts(emu_acts);
 }
 
 

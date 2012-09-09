@@ -27,27 +27,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../common/main.h"
-#include "minimal.h"
+#include "main.h"
 #include "throttle.h"
+#include "config.h"
+#include "args.h"
+#include "unixdsp.h"
+#include "cheat.h"
+#include "dface.h"
+#include "platform.h"
 #include "menu.h"
-#include "gp2x.h"
-
-#include "../common/config.h"
-#include "../common/args.h"
-#include "../common/unixdsp.h"
-#include "../common/cheat.h"
+#include "settings.h"
 
 #include "../../fce.h"
 #include "../../cart.h"
 
-#include "dface.h"
 
+// these are now here to try to make compatible configs
+// between different versions of the emu
+DSETTINGS Settings;
+CFGSTRUCT DriverConfig[]={
+	AC(Settings.turbo_rate_add),
+	AC(Settings.sound_rate),
+	AC(Settings.showfps),
+	AC(Settings.scaling),
+	AC(Settings.frameskip),
+	AC(Settings.sstate_confirm),
+	AC(Settings.region_force),
+	AC(Settings.cpuclock),
+	AC(Settings.mmuhack),
+	AC(Settings.ramtimings),
+	AC(Settings.gamma),
+	AC(Settings.perfect_vsync),
+	AC(Settings.accurate_mode),
+	ENDCFGSTRUCT
+};
 
 void CleanSurface(void);
 
 // internals
-extern char lastLoadedGameName[2048];
 extern uint8 Exit; // exit emu loop flag
 extern int FSkip;
 void CloseGame(void);
@@ -260,6 +277,9 @@ static int DoArgs(int argc, char *argv[])
 	static char *inputa[2]={0,0};
 	static char *fcexp=0;
 	static int docheckie[4];
+#ifdef NETWORK
+        static int docheckie2[2]={0,0};
+#endif
 
         static ARGPSTRUCT FCEUArgs[]={
          {"-soundvol",0,&soundvol,0},
@@ -279,8 +299,15 @@ static int DoArgs(int argc, char *argv[])
 	 {"-noautowrite",0,&eoptions,0x8000|EO_NOAUTOWRITE},
          {"-slstart",0,&srendlinev[0],0},{"-slend",0,&erendlinev[0],0},
          {"-slstartp",0,&srendlinev[1],0},{"-slendp",0,&erendlinev[1],0},
-	 {0,(void *)DriverArgs,0,0},
-	 {0,0,0,0}
+         {"-sound",0,&Settings.sound_rate,0},
+         {"-showfps",0,&Settings.showfps,0},
+         #ifdef NETWORK
+         {"-connect",&docheckie2[0],&netplayhost,0x4001},
+         {"-server",&docheckie2[1],0,0},
+         {"-netport",0,&Port,0},
+         #endif
+         {0,(void *)DriverArgs,0,0},
+         {0,0,0,0}
         };
 
         memset(docheckie,0,sizeof(docheckie));
@@ -308,6 +335,15 @@ static int DoArgs(int argc, char *argv[])
 
         FCEUI_SetRenderedLines(srendlinev[0],erendlinev[0],srendlinev[1],erendlinev[1]);
         FCEUI_SetSoundVolume(80);
+	#ifdef NETWORK
+        if(docheckie2[0])
+         netplay=2;
+        else if(docheckie2[1])
+         netplay=1;
+
+        if(netplay)
+         FCEUI_SetNetworkPlay(netplay);
+	#endif
 	DoDriverArgs();
 
 	if(fcexp)
@@ -350,7 +386,7 @@ static int DoArgs(int argc, char *argv[])
 
 #include "usage.h"
 
-int CLImain(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int last_arg_parsed, ret;
         /* TODO if(argc<=1)
@@ -359,6 +395,7 @@ int CLImain(int argc, char *argv[])
          return 1;
         }*/
 
+        platform_init();
         if(!DriverInitialize())
         {
 	 return 1;
@@ -369,11 +406,15 @@ int CLImain(int argc, char *argv[])
         GetBaseDirectory(BaseDirectory);
 	FCEUI_SetBaseDirectory(BaseDirectory);
 	lastLoadedGameName[0] = 0;
+	menu_init();
+	in_init();
 
 	CreateDirs();
         LoadConfig(NULL);
         last_arg_parsed=DoArgs(argc-1,&argv[1]);
-	gp2x_opt_setup();
+	platform_late_init();
+	in_probe();
+
 	LoadLLGN();
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 	if(cpalette)
@@ -424,17 +465,17 @@ int CLImain(int argc, char *argv[])
 	  else
 	  {
 	   switch(LoadGameLastError) {
-	    default: strcpy(menuErrorMsg, "failed to load ROM"); break;
-	    case  2: strcpy(menuErrorMsg, "Can't find a ROM for ips/movie"); break;
-	    case 10: strcpy(menuErrorMsg, "FDS BIOS ROM is missing, read docs"); break;
-	    case 11: strcpy(menuErrorMsg, "Error reading auxillary FDS file"); break;
+	    default: menu_update_msg("failed to load ROM"); break;
+	    case  2: menu_update_msg("Can't find a ROM for ips/movie"); break;
+	    case 10: menu_update_msg("FDS BIOS ROM is missing, read docs"); break;
+	    case 11: menu_update_msg("Error reading auxillary FDS file"); break;
 	   }
 	  }
 	 }
          if(Exit || !fceugi)
          {
           int ret;
-	  ret = gp2x_menu_do();
+	  ret = menu_loop();
 	  if (ret == 1) break;		// exit emu
 	  if (ret == 2) {		// reload ROM
 	   Exit = 0;
@@ -442,18 +483,11 @@ int CLImain(int argc, char *argv[])
 	  }
          }
 
-	 gp2x_opt_update();
 	 PrepareOtherInput();
 	 FCEUI_GetCurrentVidSystem(&srendline,&erendline);
-	 gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
-	 switch (Settings.scaling & 3) {
-		 case 0: gp2x_video_set_offs(0);  gp2x_video_RGB_setscaling(320, 240); break;
-		 case 1: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(256, 240); break;
-		 case 2: gp2x_video_set_offs(32+srendline*320); gp2x_video_RGB_setscaling(256, erendline-srendline); break;
-		 case 3: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(320, 240); break;
-	 }
+	 platform_apply_config();
 	 CleanSurface();
-	 gp2x_start_sound(Settings.sound_rate, 16, 0);
+	 StartSound();
 	 RefreshThrottleFPS();
 	 FCEUI_Emulate();
 	}
@@ -464,7 +498,8 @@ int CLImain(int argc, char *argv[])
 	SaveLLGN();
 	FCEUI_Kill();
 	DriverKill();
-        return 0;
+	platform_finish();
+	return 0;
 }
 
 static int DriverInitialize(void)
@@ -505,4 +540,5 @@ void FCEUD_Update(uint8 *xbuf, int16 *Buffer, int Count)
  // make sure last frame won't get skipped, because we need it for menu bg
  if (Exit) FSkip=0;
 }
+
 

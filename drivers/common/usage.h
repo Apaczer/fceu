@@ -23,7 +23,12 @@ void ShowUsage(char *prog)
 printf("\nUsage is as follows:\n%s <options> filename\n\n",prog);
 puts("Options:");
 puts(DriverUsage);
-puts("-cpalette x     Load a custom global palette from file x.\n\
+puts(
+"-sound x        Sound.\n\
+                 0 = Disabled.\n\
+                 Otherwise, x = playback rate.\n\
+-showfps x      Display fps counter if x is nonzero\n\
+-cpalette x     Load a custom global palette from file x.\n\
 -ntsccol x      Emulate an NTSC's TV's colors.\n\
                  0 = Disabled.\n\
                  1 = Enabled.\n\

@@ -22,7 +22,7 @@
 #include "../../video.h"
 
 #include "../common/main.h"
-#include "gp2x.h"
+#include "../common/settings.h"
 #include "minimal.h"
 #include "../libpicofe/fonts.h"
 #include "asmutils.h"

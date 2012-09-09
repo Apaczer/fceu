@@ -1,6 +1,6 @@
 #include <sys/time.h>
+#include "../common/settings.h"
 #include "main.h"
-#include "gp2x.h"
 #include "minimal.h"
 #include "throttle.h"
 

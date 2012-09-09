@@ -24,19 +24,16 @@ endif
 
 all:		fceu
 
-gpfce.gpe: fceu
-	cp fceu $@
-
 include zlib/Makefile
 
-OBJDRIVER = drivers/gp2x_test/minimal.o drivers/gp2x_test/throttle.o \
-	${G}gp2x.o ${G}main.o ${G}gp2x-sound.o ${G}gp2x-video.o \
-	${G}usbjoy.o ${G}menu.o \
-	${L}fonts.o ${L}readpng.o ${L}linux/plat.o \
+OBJDRIVER = drivers/sdl/sdl.o drivers/sdl/minimal.o drivers/sdl/throttle.o \
+	${G}gp2x-sound.o ${G}gp2x-video.o ${G}usbjoy.o \
+	${L}fonts.o ${L}readpng.o ${L}input.o ${L}in_sdl.o ${L}linux/plat.o \
+	${C}main.o ${C}menu.o \
 	${C}cheat.o ${C}config.o ${C}args.o ${C}vidblit.o ${C}unix-netplay.o \
 	${UNZIPOBJS} \
 	ppu.o movie.o fceu098.o ppu098.o
-LDRIVER		+= -lm -lz -lpng `sdl-config --libs`
+LDRIVER += -lm -lz -lpng `sdl-config --libs`
 
 OBJDRIVER += x6502.o
 
@@ -44,21 +41,16 @@ x6502.o: x6502.c x6502.h ops.h fce.h sound.h dprintf.h
 
 include Makefile.base
 
+${C}menu.o:		${C}revision.h
 ${B}main.o:		${B}main.c ${B}main.h ${B}usage.h ${B}input.c
 ${B}gp2x.o:		${B}gp2x.c ${B}gp2x.h ${B}rev.h
 ${B}throttle.o:         ${B}throttle.c ${B}main.h ${B}throttle.h
 ppu.o:			ppu.c ppu.h
 
-${B}rev.h: FORCE
-	@if [ -f $@ ]; then prevrev=`cat $@`; else prevrev="00"; fi; \
-	if [ "`which svn`" != "" ]; then \
-		rev=`svn update|tail -n 1|sed 's/.*\ \(.*\)\./\1/g'|sed "s/'//g"`; \
-	fi; \
-	if [ "$$rev"  = "" ]; then rev="0"; fi; \
-	if [ "$$rev" != "$$prevrev" ]; then \
-		echo "$$rev" > $@; \
-	fi
-
+${C}revision.h: FORCE
+	@(git describe || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
+	@diff -q $@_ $@ > /dev/null 2>&1 || cp $@_ $@
+	@rm $@_
 .PHONY: FORCE
 
 include Makefile.common

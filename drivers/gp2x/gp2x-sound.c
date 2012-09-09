@@ -18,9 +18,9 @@
 #include <stdio.h>
 
 #include "../../driver.h"
-#include "gp2x.h"
+#include "../common/settings.h"
+#include "../common/throttle.h"
 #include "minimal.h"
-#include "throttle.h"
 
 
 extern int soundvol;
@@ -52,6 +52,11 @@ uint32 GetMaxSound(void)
 uint32 GetWriteSound(void)
 {
 	return 1024;
+}
+
+void StartSound(void)
+{
+	 gp2x_start_sound(Settings.sound_rate, 16, 0);
 }
 
 int KillSound(void)

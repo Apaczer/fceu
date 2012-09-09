@@ -2,8 +2,8 @@
 #include <unistd.h>
 
 #include "../common/main.h"
-#include "../gp2x/gp2x.h"
-#include "../gp2x/throttle.h"
+#include "../common/throttle.h"
+#include "../common/settings.h"
 
 
 extern uint8 PAL;

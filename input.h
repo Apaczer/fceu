@@ -38,3 +38,4 @@ void FCEUI_VSUniCoin(void);
 void FCEUI_ResetNES(void);
 void FCEUI_PowerNES(void);
 
+extern char lastLoadedGameName [2048];

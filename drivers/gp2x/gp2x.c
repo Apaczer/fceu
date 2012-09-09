@@ -5,7 +5,9 @@
 #include "../../driver.h"
 #include "../common/config.h"
 #include "../common/args.h"
-#include "gp2x.h"
+#include "../common/platform.h"
+#include "../common/settings.h"
+#include "../common/revision.h"
 #include "gp2x-video.h"
 #ifdef NETWORK
 #include "unix-netplay.h"
@@ -15,70 +17,20 @@
 #include "cpuctrl.h"
 #include "squidgehack.h"
 
-int GP2X_PORT_REV =
-#include "rev.h"
-;
-
 extern uint8 PAL;
 
-int CLImain(int argc, char *argv[]);
-
-DSETTINGS Settings;
-CFGSTRUCT DriverConfig[]={
-        ACA(Settings.KeyBinds),
-	ACA(Settings.JoyBinds),
-        AC(Settings.turbo_rate_add),
-        AC(Settings.sound_rate),
-	AC(Settings.showfps),
-	AC(Settings.scaling),
-	AC(Settings.frameskip),
-	AC(Settings.sstate_confirm),
-	AC(Settings.region_force),
-	AC(Settings.cpuclock),
-	AC(Settings.mmuhack),
-	AC(Settings.ramtimings),
-	AC(Settings.gamma),
-	AC(Settings.perfect_vsync),
-	AC(Settings.accurate_mode),
-        ENDCFGSTRUCT
-};
-
-
 char *DriverUsage=
-"-joyx   y       Use joystick y as virtual joystick x.\n\
--sound x        Sound.\n\
-                 0 = Disabled.\n\
-                 Otherwise, x = playback rate.\n\
--showfps x      Display fps counter if x is nonzero\n\
--mmuhack x      Enable squidge's MMU hack if x is nonzero (GP2X).\n\
+"-mmuhack x      Enable squidge's MMU hack if x is nonzero (GP2X).\n\
 -ramtimings x   Enable RAM overclocking if x is nonzero (GP2X).\n\
-"
-#ifdef NETWORK
-"-connect s      Connect to server 's' for TCP/IP network play.\n\
--server         Be a host/server for TCP/IP network play.\n\
--netport x      Use TCP/IP port x for network play."
-#endif
-;
+";
 
-#ifdef NETWORK
-static int docheckie[2]={0,0};
-#endif
 ARGPSTRUCT DriverArgs[]={
-         {"-sound",0,&Settings.sound_rate,0},
-         {"-showfps",0,&Settings.showfps,0},
          {"-mmuhack",0,&Settings.mmuhack,0},
          {"-ramtimings",0,&Settings.ramtimings,0},
          {"-menu",0,&ext_menu,0x4001},
          {"-menustate",0,&ext_state,0x4001},
-	 #ifdef NETWORK
-         {"-connect",&docheckie[0],&netplayhost,0x4001},
-         {"-server",&docheckie[1],0,0},
-         {"-netport",0,&Port,0},
-	 #endif
          {0,0,0,0}
 };
-
-
 
 void GetBaseDirectory(char *BaseDirectory)
 {
@@ -113,29 +65,15 @@ static void SetDefaults(void)
 
 void DoDriverArgs(void)
 {
-	#ifdef NETWORK
-        if(docheckie[0])
-         netplay=2;
-        else if(docheckie[1])
-         netplay=1;
-
-        if(netplay)
-         FCEUI_SetNetworkPlay(netplay);
-	#endif
 }
 
 
-char **g_argv;
 int mmuhack_status = 0;
 
 
-// TODO: cleanup
-int main(int argc, char *argv[])
+void platform_init(void)
 {
-	int ret;
-	g_argv = argv;
-
-        printf("Starting GPFCE - Port version " GP2X_PORT_VERSION " r%i (" __DATE__ ")\n", GP2X_PORT_REV);
+        printf("Starting GPFCE " REV " (" __DATE__ ")\n");
         puts("Based on FCE Ultra "VERSION_STRING" and 0.98.1x versions");
         puts("Original port by Zheng Zhu");
         puts("Menu/optimization/misc work by notaz\n");
@@ -144,9 +82,10 @@ int main(int argc, char *argv[])
 	cpuctrl_init();
 
         SetDefaults();
+}
 
-        ret = CLImain(argc,argv);
-
+void platform_finish(void)
+{
         // unscale the screen, in case it is bad.
         gp2x_video_RGB_setscaling(320, 240);
 
@@ -160,9 +99,13 @@ int main(int argc, char *argv[])
         return(ret?0:-1);
 }
 
+void platform_set_volume(int val) // 0-100
+{
+	platform_set_volume(val, val);
+}
 
 /* optional GP2X stuff to be done after config is loaded */
-void gp2x_opt_setup(void)
+void platform_late_init(void)
 {
 	if (Settings.mmuhack) {
 		int ret = mmuhack();
@@ -178,7 +121,7 @@ void gp2x_opt_setup(void)
 	}
 }
 
-void gp2x_opt_update(void)
+void platform_apply_config(void)
 {
 	static int prev_cpuclock = 200, prev_gamma = 100, prev_vsync = 0, prev_pal = 0;
 	if (Settings.cpuclock != 0 && Settings.cpuclock != prev_cpuclock)
@@ -205,6 +148,14 @@ void gp2x_opt_update(void)
 			unset_LCD_custom_rate();
 		}
 		prev_vsync = Settings.perfect_vsync;
+	}
+
+	gp2x_video_changemode(Settings.scaling == 3 ? 15 : 8);
+	switch (Settings.scaling & 3) {
+		case 0: gp2x_video_set_offs(0);  gp2x_video_RGB_setscaling(320, 240); break;
+		case 1: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(256, 240); break;
+		case 2: gp2x_video_set_offs(32+srendline*320); gp2x_video_RGB_setscaling(256, erendline-srendline); break;
+		case 3: gp2x_video_set_offs(32); gp2x_video_RGB_setscaling(320, 240); break;
 	}
 }
 

@@ -2,3 +2,4 @@
 cscope.out
 tags
 *.swp
+drivers/common/revision.h
