@@ -37,7 +37,7 @@ static int ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
 {
   int y=0,ret=0;
 
-  do
+  while(argsps[y].var || argsps[y].subs)
   {
    if(!argsps[y].name)
    {
@@ -83,7 +83,7 @@ static int ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)
     break;
    }
    y++;
-  } while(argsps[y].var || argsps[y].subs);
+  }
   return ret;
 }
 

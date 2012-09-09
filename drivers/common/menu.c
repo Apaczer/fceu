@@ -95,7 +95,7 @@ static int emu_check_save_file(int slot, int *time)
 	int retval = 0;
 	int ret;
 	
-	fname = FCEU_MakeFName(FCEUMKF_STATE,CurrentState,0);
+	fname = FCEU_MakeFName(FCEUMKF_STATE, slot, 0);
 	st = fopen(fname,"rb");
 	if (st == NULL)
 		goto out;
@@ -436,12 +436,14 @@ static const char h_renderer[] = "ROM reload required for this\n"
 static int sndrate_i;
 static int sndon;
 static int turbo_i;
+static int frameskip_i;
 
 static void config_commit(void)
 {
 	Settings.sound_rate = men_rates_i[sndrate_i];
 	soundvol = sndon ? 0 : 50;
 	Settings.turbo_rate_add = (turbo_i * 2 << 24) / 60 + 1;
+	Settings.frameskip = frameskip_i - 1;
 
 	if (Settings.region_force)
 		FCEUI_SetVidSystem(Settings.region_force - 1);
@@ -450,7 +452,7 @@ static void config_commit(void)
 static menu_entry e_menu_options[] =
 {
 	mee_onoff      ("Show FPS",                MA_OPT_SHOWFPS, Settings.showfps, 1),
-	mee_enum       ("Frameskip",               MA_OPT_FSKIP, Settings.frameskip, men_frameskip),
+	mee_enum       ("Frameskip",               MA_OPT_FSKIP, frameskip_i, men_frameskip),
 	mee_onoff_h    ("Accurate renderer (slow)",MA_OPT_RENDERER, Settings.accurate_mode, 1, h_renderer),
 	mee_onoff      ("Enable sound",            MA_OPT_SOUNDON, sndon, 1),
 	mee_enum       ("Sound Rate",              MA_OPT_SOUNDRATE, sndrate_i, men_rates),
@@ -480,6 +482,7 @@ static int menu_loop_options(int id, int keys)
 	}
 	sndon = soundvol != 0;
 	turbo_i = (Settings.turbo_rate_add * 60 / 2) >> 24;
+	frameskip_i = Settings.frameskip + 1;
 
 	me_loop(e_menu_options, &sel);
 
@@ -534,21 +537,18 @@ static int main_menu_handler(int id, int keys)
 		break;
 	case MA_MAIN_SAVE_STATE:
 		if (fceugi) {
-			Exit = 0;
 			return menu_loop_savestate(0);
 		}
 		break;
 	case MA_MAIN_LOAD_STATE:
 		if (fceugi) {
-			Exit = 0;
 			return menu_loop_savestate(1);
 		}
 		break;
 	case MA_MAIN_RESET_GAME:
 		if (fceugi) {
 			FCEU_DoSimpleCommand(FCEUNPCMD_RESET);
-			Exit = 0;
-			return 0;
+			return 1;
 		}
 		break;
 	case MA_MAIN_LOAD_ROM:
@@ -606,7 +606,7 @@ int menu_loop(void)
 
 	do {
 		me_loop_d(e_menu_main, &sel, NULL, NULL);
-	} while (!fceugi && menu_loop_ret == 0);
+	} while (!fceugi);
 
 	/* wait until menu, ok, back is released */
 	while (in_menu_wait_any(NULL, 50) & (PBTN_MENU|PBTN_MOK|PBTN_MBACK))
@@ -615,6 +615,7 @@ int menu_loop(void)
 	in_set_config_int(0, IN_CFG_BLOCKING, 0);
 	plat_video_menu_leave();
 
+	Exit = 0;
 	return menu_loop_ret;
 }
 
