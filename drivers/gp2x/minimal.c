@@ -33,7 +33,7 @@
 
 #include "minimal.h"
 #include "usbjoy.h"
-#include "asmutils.h"
+#include "../arm/asmutils.h"
 
 volatile unsigned short *gp2x_memregs;
 //static

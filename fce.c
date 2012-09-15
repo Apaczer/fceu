@@ -56,8 +56,8 @@
 
 #include        "dprintf.h"
 
-#ifdef GP2X
-#include	"drivers/gp2x/asmutils.h"
+#ifdef __arm__
+#include	"drivers/arm/asmutils.h"
 #endif
 
 #define Pal     (PALRAM)
@@ -660,7 +660,7 @@ static void LineUpdate(uint8 *target)
 
 static void LineUpdateEnd(uint8 *target)
 {
-#ifdef GP2X
+#ifdef __arm__
  if(ScreenON || SpriteON)  // Yes, very el-cheapo.
  {
   if(PPU[1]&0x01)

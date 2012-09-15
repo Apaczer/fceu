@@ -25,7 +25,7 @@
 #include "../common/settings.h"
 #include "minimal.h"
 #include "../libpicofe/fonts.h"
-#include "asmutils.h"
+#include "../arm/asmutils.h"
 
 static char fps_str[32];
 static int framesEmulated, framesRendered;

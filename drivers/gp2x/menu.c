@@ -10,7 +10,7 @@
 
 #include "minimal.h"
 #include "usbjoy.h"
-#include "asmutils.h"
+#include "../arm/asmutils.h"
 #include "menu.h"
 #include "../common/main.h"
 #include "../libpicofe/fonts.h"

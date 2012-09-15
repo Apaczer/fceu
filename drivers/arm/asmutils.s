@@ -216,18 +216,18 @@ soft_scale_loop_line:
     bx      lr
 
 
-@ void convert2RGB555(unsigned short *dst, unsigned char *src, unsigned short *pal, int count);
+@ void do_clut(unsigned short *dst, unsigned char *src, unsigned short *pal, int pixels);
 
-.global convert2RGB555
+.global do_clut
 
-convert2RGB555:
+do_clut:
     stmfd   sp!,{r4-r8,lr}
     mov     lr, #0xff
     mov     lr, lr, lsl #1
 
     mov     r3, r3, lsr #3
 
-convert2RGB555_loop:
+do_clut_loop:
     ldmia   r1!,{r4,r5}
 
     and     r6, lr, r4, lsl #1
@@ -254,7 +254,7 @@ convert2RGB555_loop:
 
     stmia   r0!,{r6,r7,r8,r12}
     subs    r3, r3, #1
-    bne     convert2RGB555_loop
+    bne     do_clut_loop
 
     ldmfd   sp!,{r4-r8,lr}
     bx      lr

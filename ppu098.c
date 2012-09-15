@@ -34,8 +34,8 @@
 #include  "video.h"
 #include  "input.h"
 
-#ifdef GP2X
-#include	"drivers/gp2x/asmutils.h"
+#ifdef __arm__
+#include	"drivers/arm/asmutils.h"
 #endif
 
 #define Pal     (PALRAM)
@@ -699,7 +699,7 @@ static void Fixit1(void)
 void MMC5_hb(int);     /* Ugh ugh ugh. */
 static void DoLine(void)
 {
-#ifndef GP2X
+#ifndef __arm__
  int x;
 #endif
  uint8 *target=XBuf+scanline*320+32;
@@ -720,7 +720,7 @@ static void DoLine(void)
  if(SpriteON)
   CopySprites098(target);
 
-#ifdef GP2X
+#ifdef __arm__
  if(ScreenON || SpriteON)  // Yes, very el-cheapo.
  {
   if(PPU[1]&0x01)
