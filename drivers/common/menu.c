@@ -441,7 +441,7 @@ static int frameskip_i;
 static void config_commit(void)
 {
 	Settings.sound_rate = men_rates_i[sndrate_i];
-	soundvol = sndon ? 0 : 50;
+	soundvol = sndon ? 50 : 0;
 	Settings.turbo_rate_add = (turbo_i * 2 << 24) / 60 + 1;
 	Settings.frameskip = frameskip_i - 1;
 
@@ -606,7 +606,7 @@ int menu_loop(void)
 
 	do {
 		me_loop_d(e_menu_main, &sel, NULL, NULL);
-	} while (!fceugi);
+	} while (!fceugi && menu_loop_ret == 0);
 
 	/* wait until menu, ok, back is released */
 	while (in_menu_wait_any(NULL, 50) & (PBTN_MENU|PBTN_MOK|PBTN_MBACK))

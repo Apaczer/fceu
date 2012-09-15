@@ -231,23 +231,23 @@ do_clut_loop:
     ldmia   r1!,{r4,r5}
 
     and     r6, lr, r4, lsl #1
-    ldrh    r6, [r2, r6]
     and     r7, lr, r4, lsr #7
-    ldrh    r7, [r2, r7]
+    ldrh    r6, [r2, r6]
     and     r8, lr, r4, lsr #15
-    ldrh    r8, [r2, r8]
+    ldrh    r7, [r2, r7]
     and     r4, lr, r4, lsr #23
+    ldrh    r8, [r2, r8]
     ldrh    r4, [r2, r4]
 
     orr     r6, r6, r7, lsl #16
     and     r12,lr, r5, lsl #1
-    ldrh    r12, [r2, r12]
     orr     r7, r8, r4, lsl #16
     and     r8, lr, r5, lsr #7
-    ldrh    r8, [r2, r8]
+    ldrh    r12, [r2, r12]
     and     r4, lr, r5, lsr #15
-    ldrh    r4, [r2, r4]
+    ldrh    r8, [r2, r8]
     and     r5, lr, r5, lsr #23
+    ldrh    r4, [r2, r4]
     ldrh    r5, [r2, r5]
     orr     r8, r12,r8, lsl #16
     orr     r12,r4, r5, lsl #16

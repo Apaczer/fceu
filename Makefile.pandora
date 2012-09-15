@@ -1,0 +1,52 @@
+#CROSS_COMPILE =
+CC	= $(CROSS_COMPILE)gcc
+AS	= $(CROSS_COMPILE)as
+STRIP	= $(CROSS_COMPILE)strip
+TFLAGS  = -Winline -Izlib -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT
+RM	= rm -f
+C	= drivers/common/
+L	= drivers/libpicofe/
+
+ifdef DEBUG
+TFLAGS	+= -ggdb
+LDRIVER	+= -ggdb
+else
+TFLAGS	+= -mcpu=cortex-a8 -mtune=cortex-a8 -mfloat-abi=softfp -mfpu=neon -ffast-math
+TFLAGS	+= -O2
+LDRIVER	+= -O2
+endif
+ASFLAGS += -mcpu=cortex-a8
+NOSTRIP = 1
+
+all:		fceu
+
+include zlib/Makefile
+
+OBJDRIVER = drivers/pandora/pandora.o drivers/sdl/throttle.o drivers/arm/asmutils.o \
+	${L}fonts.o ${L}readpng.o ${L}input.o ${L}linux/in_evdev.o ${L}linux/plat.o \
+	${L}linux/sndout_oss.o ${L}linux/fbdev.o ${L}linux/xenv.o ${L}pandora/plat.o \
+	${C}main.o ${C}menu.o ${C}sound-oss.o \
+	${C}cheat.o ${C}config.o ${C}args.o ${C}vidblit.o ${C}unix-netplay.o \
+	${UNZIPOBJS} \
+	ppu.o movie.o fceu098.o ppu098.o
+LDRIVER += -lm -lz -lpng `sdl-config --libs`
+
+OBJDRIVER += x6502.o
+
+x6502.o: x6502.c x6502.h ops.h fce.h sound.h dprintf.h
+
+include Makefile.base
+
+${C}menu.o:		${C}revision.h
+ppu.o:			ppu.c ppu.h
+x6502.o:		TFLAGS += -Wno-inline
+
+${C}revision.h: FORCE
+	@(git describe || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
+	@diff -q $@_ $@ > /dev/null 2>&1 || cp $@_ $@
+	@rm $@_
+.PHONY: FORCE
+
+include Makefile.common
+
+# vim:filetype=make
