@@ -17,6 +17,7 @@ typedef struct {
 	int perfect_vsync;
 	// pandora
 	int hw_filter;
+	int sw_filter;
 } DSETTINGS;
 
 extern DSETTINGS Settings;

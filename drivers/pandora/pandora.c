@@ -16,6 +16,8 @@
 #include "../common/args.h"
 #include "../../video.h"
 #include "../arm/asmutils.h"
+#include "../arm/neon_scale2x.h"
+#include "../arm/neon_eagle2x.h"
 #include "../libpicofe/input.h"
 #include "../libpicofe/plat.h"
 #include "../libpicofe/menu.h"
@@ -28,12 +30,19 @@ static struct vout_fbdev *main_fb, *layer_fb;
 static void *layer_buf;
 static int bounce_buf[320 * 241 / 4];
 static unsigned short pal[256];
+static unsigned int pal2[256]; // for neon_*2x
 
 enum scaling {
-	SCALING_1X,
+	SCALING_1X = 0,
 	SCALING_PROPORTIONAL,
 	SCALING_4_3,
 	SCALING_FULLSCREEN,
+};
+
+enum sw_filter {
+	SWFILTER_NONE = 0,
+	SWFILTER_SCALE2X,
+	SWFILTER_EAGLE2X,
 };
 
 static const struct in_default_bind in_evdev_defbinds[] = {
@@ -84,8 +93,8 @@ static int omap_setup_layer_(int fd, int enabled, int x, int y, int w, int h)
 			perror("SETUP_PLANE");
 	}
 
-	if (mi.size < 640*512*3*3) {
-		mi.size = 640*512*3*3;
+	if (mi.size < 256*2*240*2*3) {
+		mi.size = 256*2*240*2*3;
 		ret = ioctl(fd, OMAPFB_SETUP_MEM, &mi);
 		if (ret != 0) {
 			perror("SETUP_MEM");
@@ -166,8 +175,8 @@ void platform_init(void)
 	g_menuscreen_h = h;
 	g_menuscreen_ptr = vout_fbdev_flip(main_fb);
 
-	w = 640;
-	h = 512;
+	w = 256*2;
+	h = 240*2;
 	layer_fb = vout_fbdev_init(layer_fb_name, &w, &h, 16, 3);
 	if (layer_fb == NULL) {
 		fprintf(stderr, "couldn't init fb: %s\n", layer_fb_name);
@@ -225,7 +234,9 @@ int InitVideo(void)
 // 16: rrrr rggg gg0b bbbb
 void FCEUD_SetPalette(uint8 index, uint8 r, uint8 g, uint8 b)
 {
-	pal[index] = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+	unsigned int v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+	pal[index] = v;
+	pal2[index] = v;
 }
 
 void FCEUD_GetPalette(uint8 index, uint8 *r, uint8 *g, uint8 *b)
@@ -238,8 +249,8 @@ void FCEUD_GetPalette(uint8 index, uint8 *r, uint8 *g, uint8 *b)
 
 void BlitPrepare(int skip)
 {
-	char *s;
-	short *d;
+	unsigned char *s;
+	unsigned short *d;
 	int *p, i;
 
 	if (skip)
@@ -266,11 +277,23 @@ void BlitPrepare(int skip)
 	}
 
 	/* this is called before throttle, so we blit here too */
-	s = (char *)bounce_buf + 32;
-	d = (short *)layer_buf;
+	s = (unsigned char *)bounce_buf + 32;
+	d = (unsigned short *)layer_buf;
 
-	for (i = 0; i < 239; i++, d += 256, s += 320)
-		do_clut(d, s, pal, 256);
+	switch (Settings.sw_filter)
+	{
+	case SWFILTER_SCALE2X:
+		neon_scale2x_8_16(s, d, pal2, 256, 320, 256*2*2, 240);
+		break;
+	case SWFILTER_EAGLE2X:
+		neon_eagle2x_8_16(s, d, pal2, 256, 320, 256*2*2, 240);
+		break;
+	case SWFILTER_NONE:
+	default:
+		for (i = 0; i < 239; i++, d += 256, s += 320)
+			do_clut(d, s, pal, 256);
+		break;
+	}
 	
 	layer_buf = vout_fbdev_flip(layer_fb);
 }
@@ -345,26 +368,50 @@ void SpeedThrottle(void)
 /* called just before emulation */
 void platform_apply_config(void)
 {
+	static int old_layer_w, old_layer_h;
+	int fb_w = 256, fb_h = 240;
 	float mult;
+
+	if (Settings.sw_filter == SWFILTER_SCALE2X
+	    || Settings.sw_filter == SWFILTER_EAGLE2X)
+	{
+		fb_w *= 2;
+		fb_h *= 2;
+	}
+
+	if (fb_w != old_layer_w || fb_h != old_layer_h)
+	{
+		layer_buf = vout_fbdev_resize(layer_fb, fb_w, fb_h, 16,
+				0, 0, 0, 0, 3);
+		if (layer_buf == NULL) {
+			fprintf(stderr, "fatal: mode change %dx%x -> %dx%d failed\n",
+				old_layer_w, old_layer_h, fb_w, fb_h);
+			exit(1);
+		}
+
+		old_layer_w = fb_w;
+		old_layer_h = fb_h;
+	}
 
 	switch (Settings.scaling)
 	{
 	case SCALING_1X:
-		g_layer_w = 256;
-		g_layer_h = 240;
+		g_layer_w = fb_w;
+		g_layer_h = fb_h;
 		break;
 	case SCALING_PROPORTIONAL:
 		// assumes screen width > height
-		mult = (float)g_menuscreen_h / 240;
-		g_layer_w = (int)(256 * mult);
-		g_layer_h = g_menuscreen_h;
-		break;
-	case SCALING_4_3:
-		g_layer_w = g_menuscreen_h * 4 / 3;
+		mult = (float)g_menuscreen_h / fb_h;
+		g_layer_w = (int)(fb_w * mult);
 		g_layer_h = g_menuscreen_h;
 		break;
 	case SCALING_FULLSCREEN:
 		g_layer_w = g_menuscreen_w;
+		g_layer_h = g_menuscreen_h;
+		break;
+	case SCALING_4_3:
+	default:
+		g_layer_w = g_menuscreen_h * 4 / 3;
 		g_layer_h = g_menuscreen_h;
 		break;
 	}

@@ -57,8 +57,9 @@ typedef enum
 	MA_OPT_GG,
 	MA_OPT_SHOWFPS,
 	MA_OPT_FSKIP,
-	MA_OPT_SCALING,
+	MA_OPT_SWFILTER,
 	MA_OPT_HWFILTER,
+	MA_OPT_SCALING,
 	MA_OPT_RENDERER,
 	MA_OPT_SOUNDON,
 	MA_OPT_SOUNDRATE,
@@ -428,6 +429,7 @@ static int menu_loop_fceu_options(int id, int keys)
 // -------------- options --------------
 
 static const char *men_frameskip[] = { "Auto", "0", "1", "2", "3", "4", NULL };
+static const char *men_swfilter[] = { "none", "Scale2x", "Eagle2x", NULL };
 static const char *men_scaling[] = { "1x", "proportional", "4:3 scaled", "fullscreen", NULL };
 static const char *men_rates[]   = { "8000", "11025", "16000", "22050", "44100", NULL };
 static const int   men_rates_i[] = {  8000 ,  11025 ,  16000 ,  22050 ,  44100 };
@@ -456,7 +458,8 @@ static menu_entry e_menu_options[] =
 {
 //	mee_onoff      ("Show FPS",                MA_OPT_SHOWFPS, Settings.showfps, 1),
 	mee_enum       ("Frameskip",               MA_OPT_FSKIP, frameskip_i, men_frameskip),
-	mee_enum       ("HW filter",               MA_OPT_HWFILTER, Settings.hw_filter, NULL),
+	mee_enum       ("Softwere filter",         MA_OPT_SWFILTER, Settings.sw_filter, men_swfilter),
+	mee_enum       ("Hardware filter",         MA_OPT_HWFILTER, Settings.hw_filter, NULL),
 	mee_enum       ("Scaling",                 MA_OPT_SCALING, Settings.scaling, men_scaling),
 	mee_onoff_h    ("Accurate renderer (slow)",MA_OPT_RENDERER, Settings.accurate_mode, 1, h_renderer),
 	mee_onoff      ("Enable sound",            MA_OPT_SOUNDON, sndon, 1),
@@ -512,7 +515,8 @@ static const char credits_text[] =
 	"         - Credits -\n"
 	"Bero: FCE\n"
 	"Xodnizel: FCE Ultra\n"
-	"FCA author: 6502 core\n";
+	"FCA author: 6502 core\n"
+	"M-HT: NEON scalers\n";
 
 static void draw_frame_credits(void)
 {

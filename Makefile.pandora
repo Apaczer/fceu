@@ -4,6 +4,7 @@ AS	= $(CROSS_COMPILE)as
 STRIP	= $(CROSS_COMPILE)strip
 TFLAGS  = -Winline -Izlib -DLSB_FIRST -DUNIX -DPSS_STYLE=1 -DHAVE_ASPRINTF -DZLIB -DFRAMESKIP -D_REENTRANT
 RM	= rm -f
+A	= drivers/arm/
 C	= drivers/common/
 L	= drivers/libpicofe/
 
@@ -15,7 +16,7 @@ else
 TFLAGS	+= -O2
 LDRIVER	+= -O2
 endif
-ASFLAGS += -mcpu=cortex-a8
+ASFLAGS += -mcpu=cortex-a8 -mfpu=neon
 NOSTRIP = 1
 asm_6502=1
 
@@ -23,7 +24,8 @@ all:		fceu
 
 include zlib/Makefile
 
-OBJDRIVER = drivers/pandora/pandora.o drivers/arm/asmutils.o \
+OBJDRIVER = drivers/pandora/pandora.o \
+	${A}asmutils.o ${A}neon_scale2x.o ${A}neon_eagle2x.o \
 	${L}fonts.o ${L}readpng.o ${L}input.o ${L}config_file.o \
 	${L}linux/in_evdev.o ${L}linux/plat.o ${L}linux/sndout_oss.o \
 	${L}linux/fbdev.o ${L}linux/xenv.o ${L}pandora/plat.o \

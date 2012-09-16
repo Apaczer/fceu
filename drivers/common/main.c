@@ -60,6 +60,7 @@ CFGSTRUCT DriverConfig[]={
 	AC(Settings.gamma),
 	AC(Settings.perfect_vsync),
 	AC(Settings.accurate_mode),
+	AC(Settings.sw_filter),
 	AC(Settings.hw_filter),
 	ENDCFGSTRUCT
 };
