@@ -37,6 +37,7 @@
 #include "platform.h"
 #include "menu.h"
 #include "settings.h"
+#include "../libpicofe/config_file.h"
 
 #include "../../fce.h"
 #include "../../cart.h"
@@ -59,6 +60,7 @@ CFGSTRUCT DriverConfig[]={
 	AC(Settings.gamma),
 	AC(Settings.perfect_vsync),
 	AC(Settings.accurate_mode),
+	AC(Settings.hw_filter),
 	ENDCFGSTRUCT
 };
 
@@ -158,7 +160,9 @@ int SaveConfig(const char *llgn_path)
 {
 	const char *name = skip_path(llgn_path);
 	char tdir[2048];
+	FILE *f;
 	int ret;
+
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
@@ -166,6 +170,17 @@ int SaveConfig(const char *llgn_path)
 	FCEUI_GetNTSCTH(&ntsctint, &ntschue);
         ret=SaveFCEUConfig(tdir,fceuconfig);
 	printf(ret == 0 ? "done\n" : "failed\n");
+
+	// keys
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s_keys.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu_keys.cfg",BaseDirectory);
+	f=fopen(tdir, "w");
+	if (f!=NULL) {
+	 config_write_keys(f);
+	 fclose(f);
+	}
+
 	return ret;
 }
 
@@ -173,7 +188,9 @@ static int LoadConfig(const char *llgn_path)
 {
 	const char *name = skip_path(llgn_path);
 	char tdir[2048];
-	int ret;
+	FILE *f;
+	int ret, l;
+
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
@@ -182,6 +199,19 @@ static int LoadConfig(const char *llgn_path)
         ret=LoadFCEUConfig(tdir,fceuconfig);
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
 	printf(ret == 0 ? "done\n" : "failed\n");
+
+	// keys
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s_keys.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu_keys.cfg",BaseDirectory);
+	f=fopen(tdir, "r");
+	if (f!=NULL) {
+	 l=fread(tdir,1,sizeof(tdir)-1,f);
+	 tdir[l]=0;
+	 config_read_keys(tdir);
+	 fclose(f);
+	}
+
 	return ret;
 }
 
@@ -477,6 +507,7 @@ int main(int argc, char *argv[])
 	  ret = menu_loop();
 	  if (ret == 1) break;		// exit emu
 	  if (ret == 2) {		// reload ROM
+	   SaveLLGN();
 	   Exit = 0;
 	   continue;
 	  }
@@ -494,7 +525,6 @@ int main(int argc, char *argv[])
 	if (fceugi)
 	 CloseGame();
 
-	SaveLLGN();
 	FCEUI_Kill();
 	DriverKill();
 	platform_finish();

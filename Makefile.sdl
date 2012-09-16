@@ -26,8 +26,8 @@ all:		fceu
 include zlib/Makefile
 
 OBJDRIVER = drivers/sdl/sdl.o drivers/sdl/throttle.o \
-	${L}fonts.o ${L}readpng.o ${L}input.o ${L}in_sdl.o ${L}linux/plat.o \
-	${L}linux/sndout_oss.o \
+	${L}fonts.o ${L}readpng.o ${L}input.o ${L}config_file.o ${L}in_sdl.o \
+	${L}linux/plat.o ${L}linux/sndout_oss.o \
 	${C}main.o ${C}menu.o ${C}sound-oss.o \
 	${C}cheat.o ${C}config.o ${C}args.o ${C}vidblit.o ${C}unix-netplay.o \
 	${UNZIPOBJS} \
