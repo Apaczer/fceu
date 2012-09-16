@@ -229,6 +229,10 @@ static void LoadLLGN(void)
   lastLoadedGameName[len] = 0;
   fclose(f);
  }
+ else
+ {
+  platform_get_def_rompath(lastLoadedGameName, sizeof(lastLoadedGameName));
+ }
 }
 
 static void SaveLLGN(void)

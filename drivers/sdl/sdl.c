@@ -206,6 +206,11 @@ void GetBaseDirectory(char *BaseDirectory)
 	strcpy(BaseDirectory, "fceultra");
 }
 
+void platform_get_def_rompath(char *buf, int size)
+{
+	buf[0] = 0;
+}
+
 void platform_finish(void)
 {
 	SDL_Quit();

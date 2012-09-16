@@ -43,6 +43,11 @@ include Makefile.base
 ${C}menu.o:		${C}revision.h
 ppu.o:			ppu.c ppu.h
 
+drivers/sdl/sdl.o: ${L}menu.h
+${L}menu.h:
+	@echo "please run: git submodule init; git submodule update"
+	@false
+
 ${C}revision.h: FORCE
 	@(git describe || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
 	@diff -q $@_ $@ > /dev/null 2>&1 || cp $@_ $@

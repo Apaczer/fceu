@@ -498,6 +498,11 @@ void GetBaseDirectory(char *BaseDirectory)
 	strcpy(BaseDirectory, "fceultra");
 }
 
+void platform_get_def_rompath(char *buf, int size)
+{
+	strcpy(buf, "/media");
+}
+
 void platform_finish(void)
 {
 	omap_enable_layer(0);

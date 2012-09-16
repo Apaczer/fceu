@@ -52,6 +52,11 @@ ${C}main.o:		${C}input.c
 ppu.o:			ppu.c ppu.h
 x6502.o:		TFLAGS += -Wno-inline
 
+drivers/pandora/pandora.o: ${L}menu.h
+${L}menu.h:
+	@echo "please run: git submodule init; git submodule update"
+	@false
+
 ${C}revision.h: FORCE
 	@(git describe || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
 	@diff -q $@_ $@ > /dev/null 2>&1 || cp $@_ $@
@@ -59,5 +64,17 @@ ${C}revision.h: FORCE
 .PHONY: FORCE
 
 include Makefile.common
+
+PND_MAKE ?= $(HOME)/dev/pnd/src/pandora-libraries/testdata/scripts/pnd_make.sh
+VER ?= $(shell git describe master)
+
+rel: fceu drivers/pandora/fceu.sh drivers/pandora/readme.txt drivers/pandora/skin \
+	drivers/pandora/fceu.png drivers/pandora/fceu.pxml.templ COPYING
+	rm -rf out
+	mkdir out
+	cp -r $^ out/
+	sed -e 's/%PR%/$(VER)/g' out/fceu.pxml.templ > out/fceu.pxml
+	rm out/fceu.pxml.templ
+	$(PND_MAKE) -p gpfce_$(VER).pnd -d out -x out/fceu.pxml -i drivers/pandora/fceu.png -c
 
 # vim:filetype=make
