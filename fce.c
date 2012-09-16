@@ -631,7 +631,14 @@ static void LineUpdate(uint8 *target)
 	 return;
 	}
 
-	if(scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
+	if(!ScreenON)
+	{
+	  tem=Pal[0]|0x40;
+	  tem|=tem << 8;
+	  tem|=tem << 16;
+	  FCEU_dwmemset(target,tem,256);
+	}
+	else if(scanline < FSettings.FirstSLine || scanline > FSettings.LastSLine)
 	{
 	   if(PPU_hook)
  	    PRefreshLine();
@@ -640,17 +647,7 @@ static void LineUpdate(uint8 *target)
 	}
 	else
 	{
-	 if(ScreenON)
-	 {
-	   BGRender(target);
-	 }
-	 else
-	 {
-	   tem=Pal[0]|0x40;
-	   tem|=tem << 8;
-	   tem|=tem << 16;
-	   FCEU_dwmemset(target,tem,256);
-	 }
+	 BGRender(target);
 	}
 
         if(InputScanlineHook)
