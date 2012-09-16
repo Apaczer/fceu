@@ -185,7 +185,7 @@ void BlitPrepare(int skip)
 		if (erendline < 239)
 		{
 			int *p = (int *)gp2x_screen + erendline*320/4 + 32/4;
-			for (i = 239-srendline; i > 0; i--, p += 320/4)
+			for (i = 239-erendline; i > 0; i--, p += 320/4)
 				memset32(p, 0, 256/4);
 		}
 	}

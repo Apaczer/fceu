@@ -57,6 +57,8 @@ typedef enum
 	MA_OPT_GG,
 	MA_OPT_SHOWFPS,
 	MA_OPT_FSKIP,
+	MA_OPT_SCALING,
+	MA_OPT_HWFILTER,
 	MA_OPT_RENDERER,
 	MA_OPT_SOUNDON,
 	MA_OPT_SOUNDRATE,
@@ -426,6 +428,7 @@ static int menu_loop_fceu_options(int id, int keys)
 // -------------- options --------------
 
 static const char *men_frameskip[] = { "Auto", "0", "1", "2", "3", "4", NULL };
+static const char *men_scaling[] = { "1x", "proportional", "4:3 scaled", "fullscreen", NULL };
 static const char *men_rates[]   = { "8000", "11025", "16000", "22050", "44100", NULL };
 static const int   men_rates_i[] = {  8000 ,  11025 ,  16000 ,  22050 ,  44100 };
 static const char *men_region[] = { "Auto", "NTSC", "PAL", NULL };
@@ -451,8 +454,10 @@ static void config_commit(void)
 
 static menu_entry e_menu_options[] =
 {
-	mee_onoff      ("Show FPS",                MA_OPT_SHOWFPS, Settings.showfps, 1),
+//	mee_onoff      ("Show FPS",                MA_OPT_SHOWFPS, Settings.showfps, 1),
 	mee_enum       ("Frameskip",               MA_OPT_FSKIP, frameskip_i, men_frameskip),
+	mee_enum       ("HW filter",               MA_OPT_HWFILTER, Settings.hw_filter, NULL),
+	mee_enum       ("Scaling",                 MA_OPT_SCALING, Settings.scaling, men_scaling),
 	mee_onoff_h    ("Accurate renderer (slow)",MA_OPT_RENDERER, Settings.accurate_mode, 1, h_renderer),
 	mee_onoff      ("Enable sound",            MA_OPT_SOUNDON, sndon, 1),
 	mee_enum       ("Sound Rate",              MA_OPT_SOUNDRATE, sndrate_i, men_rates),
@@ -460,7 +465,7 @@ static menu_entry e_menu_options[] =
 	mee_range      ("Turbo rate (Hz)",         MA_OPT_TURBO, turbo_i, 1, 30),
 	mee_enum       ("Confirm savestate",       MA_OPT_SSTATE, Settings.sstate_confirm, men_sstate),
 	mee_range      ("Save slot",               MA_OPT_SSLOT, CurrentState, 0, 9),
-	mee_range      ("Gamma correction",        MA_OPT_GAMMA, Settings.gamma, 0, 300),
+//	mee_range      ("Gamma correction",        MA_OPT_GAMMA, Settings.gamma, 0, 300),
 	mee_handler    ("[FCE Ultra options]",     menu_loop_fceu_options),
 	mee_cust_nosave("Save global config",      MA_OPT_SAVECFG,      mh_savecfg, mgn_saveloadcfg),
 	mee_cust_nosave("Save cfg for loaded game",MA_OPT_SAVECFG_GAME, mh_savecfg, mgn_saveloadcfg),
@@ -472,6 +477,10 @@ static int menu_loop_options(int id, int keys)
 	static int sel = 0;
 	int oldrate;
 	int i;
+
+	i = me_id2offset(e_menu_options, MA_OPT_HWFILTER);
+	e_menu_options[i].data = plat_target.filters;
+	me_enable(e_menu_options, MA_OPT_HWFILTER, plat_target.filters != NULL);
 
 	oldrate = Settings.sound_rate;
 	for (i = 0; i < array_size(men_rates_i); i++) {
@@ -602,6 +611,7 @@ int menu_loop(void)
 	me_enable(e_menu_main, MA_MAIN_CHEATS,      fceugi && cheats);
 
 	plat_video_menu_enter(fceugi != NULL);
+	memcpy(g_menubg_ptr, g_menubg_src_ptr, g_menuscreen_w * g_menuscreen_h * 2);
 	in_set_config_int(0, IN_CFG_BLOCKING, 1);
 
 	do {

@@ -29,6 +29,13 @@ static void *layer_buf;
 static int bounce_buf[320 * 241 / 4];
 static unsigned short pal[256];
 
+enum scaling {
+	SCALING_1X,
+	SCALING_PROPORTIONAL,
+	SCALING_4_3,
+	SCALING_FULLSCREEN,
+};
+
 static const struct in_default_bind in_evdev_defbinds[] = {
   { KEY_UP,       IN_BINDTYPE_PLAYER12, NKEYB_UP },
   { KEY_DOWN,     IN_BINDTYPE_PLAYER12, NKEYB_DOWN },
@@ -40,6 +47,13 @@ static const struct in_default_bind in_evdev_defbinds[] = {
   { KEY_PAGEUP,   IN_BINDTYPE_PLAYER12, NKEYB_A_TURBO },
   { KEY_LEFTCTRL, IN_BINDTYPE_PLAYER12, NKEYB_SELECT },
   { KEY_LEFTALT,  IN_BINDTYPE_PLAYER12, NKEYB_START },
+  { KEY_1,        IN_BINDTYPE_EMU, EACTB_SAVE_STATE },
+  { KEY_2,        IN_BINDTYPE_EMU, EACTB_LOAD_STATE },
+  { KEY_3,        IN_BINDTYPE_EMU, EACTB_PREV_SLOT },
+  { KEY_4,        IN_BINDTYPE_EMU, EACTB_NEXT_SLOT },
+  { KEY_5,        IN_BINDTYPE_EMU, EACTB_FDS_INSERT },
+  { KEY_6,        IN_BINDTYPE_EMU, EACTB_FDS_SELECT },
+  { KEY_7,        IN_BINDTYPE_EMU, EACTB_INSERT_COIN },
   { KEY_SPACE,    IN_BINDTYPE_EMU, EACTB_ENTER_MENU },
   { 0, 0, 0 }
 };
@@ -111,6 +125,7 @@ void platform_init(void)
 	Settings.turbo_rate_add = (8*2 << 24) / 60 + 1; // 8Hz turbofire
 	Settings.gamma = 100;
 	Settings.sstate_confirm = 1;
+	Settings.scaling = SCALING_4_3;
 
 	main_fb_name = getenv("FBDEV_MAIN");
 	if (main_fb_name == NULL)
@@ -166,7 +181,6 @@ void platform_init(void)
 	}
 
 	plat_target_init();
-	omap_enable_layer(1);
 
 	XBuf = (void *)bounce_buf;
 
@@ -224,6 +238,10 @@ void FCEUD_GetPalette(uint8 index, uint8 *r, uint8 *g, uint8 *b)
 
 void BlitPrepare(int skip)
 {
+	char *s;
+	short *d;
+	int *p, i;
+
 	if (skip)
 		return;
 
@@ -236,29 +254,20 @@ void BlitPrepare(int skip)
 		}
 	}
 
-	if (Settings.accurate_mode)
+	p = bounce_buf + 32/4;
+	if (srendline > 0)
+		for (i = srendline; i > 0; i--, p += 320/4)
+			memset(p, 0, 256);
+	if (erendline < 239)
 	{
-		int i, *p = bounce_buf + 32/4;
-		if (srendline > 0)
-			for (i = srendline; i > 0; i--, p += 320/4)
-				memset(p, 0, 256);
-		if (erendline < 239)
-		{
-			int *p = bounce_buf + erendline*320/4 + 32/4;
-			for (i = 239-srendline; i > 0; i--, p += 320/4)
-				memset(p, 0, 256);
-		}
+		p = bounce_buf + erendline*320/4 + 32/4;
+		for (i = 239-erendline; i > 0; i--, p += 320/4)
+			memset(p, 0, 256);
 	}
-}
 
-void BlitScreen(int skip)
-{
-	char *s = (char *)bounce_buf + 32;
-	short *d = (short *)layer_buf;
-	int i;
-
-	if (skip)
-		return;
+	/* this is called before throttle, so we blit here too */
+	s = (char *)bounce_buf + 32;
+	d = (short *)layer_buf;
 
 	for (i = 0; i < 239; i++, d += 256, s += 320)
 		do_clut(d, s, pal, 256);
@@ -266,8 +275,113 @@ void BlitScreen(int skip)
 	layer_buf = vout_fbdev_flip(layer_fb);
 }
 
+void BlitScreen(int skip)
+{
+}
+
+/* throttle */
+extern uint8 PAL;
+extern int FSkip;
+static struct timeval tv_expect;
+static int skip_count = 0;
+static int us_interval, us_interval1024;
+#define MAX_LAG_FRAMES 3
+
+void RefreshThrottleFPS(void)
+{
+	skip_count = 0;
+	us_interval = PAL ? 20000 : 16667;
+	us_interval1024 = PAL ? 20000*1024 : 17066667;
+
+	vout_fbdev_wait_vsync(layer_fb);
+	gettimeofday(&tv_expect, 0);
+	tv_expect.tv_usec *= 1024;
+}
+
+void SpeedThrottle(void)
+{
+	struct timeval now;
+	int diff;
+
+	gettimeofday(&now, 0);
+
+	// usec*1024 units to prevent drifting
+	tv_expect.tv_usec += us_interval1024;
+	if (tv_expect.tv_usec > 1000000 * 1024) {
+		tv_expect.tv_usec -= 1000000 * 1024;
+		tv_expect.tv_sec++;
+	}
+
+	diff = (tv_expect.tv_sec - now.tv_sec) * 1000000 +
+		(tv_expect.tv_usec >> 10) - now.tv_usec;
+
+	if (Settings.frameskip >= 0)
+	{
+		if (skip_count >= Settings.frameskip)
+			skip_count = 0;
+		else {
+			skip_count++;
+			FSkip = 1;
+		}
+	}
+	else 
+	{
+		FSkip = diff < -us_interval;
+	}
+
+	if (diff > MAX_LAG_FRAMES * us_interval
+	    || diff < -MAX_LAG_FRAMES * us_interval)
+	{
+		//printf("reset %d\n", diff);
+		RefreshThrottleFPS();
+		return;
+	}
+	else if (diff > us_interval)
+	{
+		usleep(diff - us_interval);
+	}
+}
+
+/* called just before emulation */
 void platform_apply_config(void)
 {
+	float mult;
+
+	switch (Settings.scaling)
+	{
+	case SCALING_1X:
+		g_layer_w = 256;
+		g_layer_h = 240;
+		break;
+	case SCALING_PROPORTIONAL:
+		// assumes screen width > height
+		mult = (float)g_menuscreen_h / 240;
+		g_layer_w = (int)(256 * mult);
+		g_layer_h = g_menuscreen_h;
+		break;
+	case SCALING_4_3:
+		g_layer_w = g_menuscreen_h * 4 / 3;
+		g_layer_h = g_menuscreen_h;
+		break;
+	case SCALING_FULLSCREEN:
+		g_layer_w = g_menuscreen_w;
+		g_layer_h = g_menuscreen_h;
+		break;
+	}
+	if (g_layer_w > g_menuscreen_w)
+		g_layer_w = g_menuscreen_w;
+	if (g_layer_h > g_menuscreen_h)
+		g_layer_h = g_menuscreen_h;
+	g_layer_x = g_menuscreen_w / 2 - g_layer_w / 2;
+	g_layer_y = g_menuscreen_h / 2 - g_layer_h / 2;
+
+	plat_target_set_filter(Settings.hw_filter);
+	plat_target_set_lcdrate(PAL);
+
+	// adjust since we run at 60Hz, and real NES doesn't
+	FCEUI_Sound(Settings.sound_rate + Settings.sound_rate / 980);
+
+	omap_enable_layer(1);
 }
 
 void platform_set_volume(int val)
@@ -276,7 +390,34 @@ void platform_set_volume(int val)
 
 void plat_video_menu_enter(int is_rom_loaded)
 {
+	unsigned short *d = g_menubg_src_ptr;
+	unsigned char *s, *sr = (void *)bounce_buf;
+	int u, v = 240 / 2;
+	int x, y, w;
+
 	omap_enable_layer(0);
+
+	if (!fceugi)
+		return;
+
+	for (y = 0; y < g_menuscreen_h; y++)
+	{
+		s = sr + v * 320 + 32;
+		u = 256 / 2;
+		for (x = 0; x < g_menuscreen_w; )
+		{
+			w = g_menuscreen_w - x;
+			if (w > 256 - u)
+				w = 256 - u;
+			do_clut(d + x, s + u, pal, w);
+			u = (u + w) & 255;
+			x += w;
+		}
+		d += x;
+		v++;
+		if (v > erendlinev[PAL])
+			v = srendlinev[PAL];
+	}
 }
 
 void plat_video_menu_begin(void)
@@ -292,8 +433,7 @@ void plat_video_menu_leave(void)
 {
 	memset(g_menuscreen_ptr, 0, g_menuscreen_w * g_menuscreen_h * 2);
 	g_menuscreen_ptr = vout_fbdev_flip(main_fb);
-
-	omap_enable_layer(1);
+	// layer enabled in platform_apply_config()
 }
 
 char *DriverUsage="";

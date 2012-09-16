@@ -10,11 +10,13 @@ typedef struct {
 	// gp2x specific
 	int KeyBinds[32];
 	int JoyBinds[4][32];
-	int scaling;		// unscaled=0, hw_hor, hw_hor_vert, sw_hor
+	int scaling;		// gp2x: unscaled=0, hw_hor, hw_hor_vert, sw_hor
 	int cpuclock;
 	int mmuhack;
 	int ramtimings;
 	int perfect_vsync;
+	// pandora
+	int hw_filter;
 } DSETTINGS;
 
 extern DSETTINGS Settings;

@@ -7,6 +7,7 @@
 #include "../libpicofe/menu.h"
 #include "../libpicofe/input.h"
 #include "../libpicofe/in_sdl.h"
+#include "../libpicofe/plat.h"
 #include "../../video.h"
 
 static const struct in_default_bind in_sdl_defbinds[] = {
@@ -27,6 +28,8 @@ static const struct in_default_bind in_sdl_defbinds[] = {
 static SDL_Surface *screen;
 static char fps_str[32];
 static SDL_Color psdl[256];
+
+struct plat_target plat_target;
 
 static int changemode(int bpp)
 {
