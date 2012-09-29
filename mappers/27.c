@@ -4,26 +4,21 @@ static uint32 regchr[9];
 
 static DECLFW(Mapper27_write)
 {
- A&=0xF00F;
  int regnum;
+ A&=0xF00F;
  if((A>=0xB000) && (A<=0xE003)) {
     regnum=((((A>>12)+1)&0x03)<<1)|((A&0x02)>>1);
     if(A&1)
-       regchr[regnum]=(regchr[regnum]&0x0F)|(V<<4);
+       regchr[regnum]=(regchr[regnum]&0x00F)|(V<<4);
     else
-       regchr[regnum]=(regchr[regnum]&0xFF0)|(V&0xF);
+       regchr[regnum]=(regchr[regnum]&0x1F0)|(V&0xF);
     VROM_BANK1(regnum<<10,regchr[regnum]);
  }
  switch(A)
  {
-  case 0x8000: if(regchr[8]&2)
-                  ROM_BANK8(0xc000,V);
-               else
-                  ROM_BANK8(0x8000,V);
-               break;
+  case 0x8000: ROM_BANK8(0x8000|((regchr[8]&2)<<13),V); break;
   case 0xA000: ROM_BANK8(0xa000,V); break;
-  case 0x9000:
-               switch(V&3){
+  case 0x9000: switch(V&3){
                   case 0:setmirror(MI_V);break;
                   case 1:setmirror(MI_H);break;
                   case 2:setmirror(MI_0);break;
@@ -40,8 +35,8 @@ static DECLFW(Mapper27_write)
                            X6502_IRQEnd(FCEU_IQEXT);
                break;
   case 0xF002: IRQa=V&3;
-                           if(IRQa&0x02) IRQCount=IRQLatch;
-                           X6502_IRQEnd(FCEU_IQEXT);
+                           if(IRQa&0x02) IRQCount=IRQLatch-1;
+//                           X6502_IRQEnd(FCEU_IQEXT);
                            break;
  }
 // if((A&0xF000)==0xF000) FCEU_printf("$%04x:$%02x, %d\n",A,V, scanline);

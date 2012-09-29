@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -34,11 +34,11 @@ void DoVRC7Sound(void)
 {
  int32 z,a;
 
- //if(FSettings.soundq>=1) return;
+ if(FSettings.soundq>=1) return;
  z=((SOUNDTS<<16)/soundtsinc)>>4;
  a=z-dwave;
 
- moocow(VRC7Sound, (int32 *)&Wave[dwave], a, 1);
+ moocow(VRC7Sound, &Wave[dwave], a, 1);
 
  dwave+=a;
 }
@@ -56,7 +56,7 @@ void UpdateOPL(int Count)
  a=z-dwave;
 
  if(VRC7Sound && a)
-  moocow(VRC7Sound, (int32 *)&Wave[dwave], a, 1);
+  moocow(VRC7Sound, &Wave[dwave], a, 1);
 
  dwave=0;
 }
@@ -113,7 +113,7 @@ DECLFW(Mapper85_write)
         }
 }
 
-static void FP_FASTAPASS(1) KonamiIRQHook(int a)
+static void KonamiIRQHook(int a)
 {
   #define ACBOO 341
 //  #define ACBOO ((227*2)+1)

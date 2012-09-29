@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -36,10 +36,10 @@ static SFORMAT Rambo_StateRegs[]={
   {0}
 };
 
-static void FP_FASTAPASS(2) (*setchr1wrap)(unsigned int A, unsigned int V);
-static int nomirror;
+static void (*setchr1wrap)(unsigned int A, unsigned int V);
+//static int nomirror;
 
-static void FP_FASTAPASS(1) RAMBO1_IRQHook(int a)
+static void RAMBO1_IRQHook(int a)
 {
   static int smallcount;
   if(!IRQmode) return;
@@ -104,7 +104,7 @@ static DECLFW(RAMBO1_write)
   switch(A&0xF001)
   {
     case 0xa000: mir=V&1;
-                 if(!nomirror)
+//                 if(!nomirror)
                    setmirror(mir^1);
                  break;
     case 0x8000: cmd = V;
@@ -138,7 +138,7 @@ static DECLFW(RAMBO1_write)
 static void RAMBO1_Restore(int version)
 {
   Synco();
-  if(!nomirror)
+//  if(!nomirror)
     setmirror(mir^1);
 }
 
@@ -148,7 +148,7 @@ static void RAMBO1_init(void)
   for(x=0;x<11;x++)
      DRegs[x]=~0;
   cmd=mir=0;
-  if(!nomirror)
+//  if(!nomirror)
     setmirror(1);
   Synco();
   GameHBIRQHook=RAMBO1_hb;
@@ -158,7 +158,7 @@ static void RAMBO1_init(void)
   AddExState(Rambo_StateRegs, ~0, 0, 0);
 }
 
-static void FP_FASTAPASS(2) CHRWrap(unsigned int A, unsigned int V)
+static void CHRWrap(unsigned int A, unsigned int V)
 {
   setchr1(A,V);
 }
@@ -166,14 +166,14 @@ static void FP_FASTAPASS(2) CHRWrap(unsigned int A, unsigned int V)
 void Mapper64_init(void)
 {
   setchr1wrap=CHRWrap;
-  nomirror=0;
+//  nomirror=0;
   RAMBO1_init();
 }
-
+/*
 static int MirCache[8];
 static unsigned int PPUCHRBus;
 
-static void FP_FASTAPASS(2) MirWrap(unsigned int A, unsigned int V)
+static void MirWrap(unsigned int A, unsigned int V)
 {
   MirCache[A>>10]=(V>>7)&1;
   if(PPUCHRBus==(A>>10))
@@ -181,7 +181,7 @@ static void FP_FASTAPASS(2) MirWrap(unsigned int A, unsigned int V)
   setchr1(A,V);
 }
 
-static void FP_FASTAPASS(1) MirrorFear(uint32 A)
+static void MirrorFear(uint32 A)
 {
   A&=0x1FFF;
   A>>=10;
@@ -196,3 +196,5 @@ void Mapper158_init(void)
   nomirror=1;
   RAMBO1_init();
 }
+*/
+

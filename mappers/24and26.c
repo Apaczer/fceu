@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -34,7 +34,7 @@ static int swaparoo;
 
 static int acount=0;
 
-static void FP_FASTAPASS(1) KonamiIRQHook(int a)
+static void KonamiIRQHook(int a)
 {
   #define LCYCS 341
 //  #define LCYCS ((227*2)+1)
@@ -222,10 +222,9 @@ static void DoSawV(void)
    }
 }
 
-#if 0
 static INLINE void DoSQVHQ(int x)
 {
- int32 V;
+ uint32 V; //mbg merge 7/17/06 made uint
  int32 amp=((VPSG[x<<2]&15)<<8)*6/8;
 
  if(VPSG[(x<<2)|0x2]&0x80)
@@ -268,7 +267,7 @@ static void DoSawVHQ(void)
 {
  static uint8 b3=0;
  static int32 phaseacc=0;
- int32 V;
+ uint32 V; //mbg merge 7/17/06 made uint32
 
  if(VPSG2[2]&0x80)
  {
@@ -292,7 +291,6 @@ static void DoSawVHQ(void)
  }
  CVBC[2]=SOUNDTS;
 }
-#endif
 
 
 void VRC6Sound(int Count)
@@ -306,7 +304,6 @@ void VRC6Sound(int Count)
      CVBC[x]=Count;
 }
 
-#if 0
 void VRC6SoundHQ(void)
 {
     DoSQV1HQ();
@@ -319,21 +316,19 @@ void VRC6SyncHQ(int32 ts)
  int x;
  for(x=0;x<3;x++) CVBC[x]=ts;
 }
-#endif
 
 static void VRC6_ESI(void)
 {
         GameExpSound.RChange=VRC6_ESI;
         GameExpSound.Fill=VRC6Sound;
-        GameExpSound.HiFill=0;//VRC6SoundHQ;
-        GameExpSound.HiSync=0;//VRC6SyncHQ;
+        GameExpSound.HiFill=VRC6SoundHQ;
+        GameExpSound.HiSync=VRC6SyncHQ;
 
         memset(CVBC,0,sizeof(CVBC));
         memset(vcount,0,sizeof(vcount));
         memset(dcount,0,sizeof(dcount));
         if(FSettings.SndRate)
         {
-#if 0
          if(FSettings.soundq>=1)
          {
           sfun[0]=DoSQV1HQ;
@@ -341,7 +336,6 @@ static void VRC6_ESI(void)
           sfun[2]=DoSawVHQ;
          }
          else
-#endif
          {
           sfun[0]=DoSQV1;
           sfun[1]=DoSQV2;

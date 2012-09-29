@@ -15,9 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * Family Study Box by Fukutake Shoten
  */
 
 #include "mapinc.h"
@@ -89,12 +88,12 @@ static void MRestore(int version)
 
 void Mapper185_Init(CartInfo *info)
 {
+  int x;
   Sync=Sync185;
   info->Power=MPower;
   info->Close=MClose;
   GameStateRestore=MRestore;
   DummyCHR=(uint8*)FCEU_gmalloc(8192);
-  int x;
   for(x=0;x<8192;x++)
      DummyCHR[x]=0xff;
   SetupCartCHRMapping(0x10,DummyCHR,8192,0);
@@ -103,12 +102,12 @@ void Mapper185_Init(CartInfo *info)
 
 void Mapper181_Init(CartInfo *info)
 {
+  int x;
   Sync=Sync181;
   info->Power=MPower;
   info->Close=MClose;
   GameStateRestore=MRestore;
   DummyCHR=(uint8*)FCEU_gmalloc(8192);
-  int x;
   for(x=0;x<8192;x++)
      DummyCHR[x]=0xff;
   SetupCartCHRMapping(0x10,DummyCHR,8192,0);

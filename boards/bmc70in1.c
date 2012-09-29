@@ -15,12 +15,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 
-static uint8 is_large_banks;
+static uint8 is_large_banks, hw_switch;
 static uint8 large_bank;
 static uint8 prg_bank;
 static uint8 chr_bank;
@@ -29,6 +29,7 @@ static uint8 mirroring;
 static SFORMAT StateRegs[]=
 {
   {&large_bank, 1, "LB"},
+  {&hw_switch, 1, "DIPSW"},
   {&prg_bank, 1, "PRG"},
   {&chr_bank, 1, "CHR"},
   {&bank_mode, 1, "BM"},
@@ -58,10 +59,10 @@ static void Sync(void)
 static DECLFR(BMC70in1Read)
 {
   if(bank_mode==0x10)
-    if(is_large_banks)
-      return CartBR((A&0xFFF0)|0x06);
-    else
-      return CartBR((A&0xFFF0)|0x0d);
+//    if(is_large_banks)
+      return CartBR((A&0xFFF0)|hw_switch);
+//    else
+//      return CartBR((A&0xFFF0)|hw_switch);
   else
     return CartBR(A);
 }
@@ -84,6 +85,15 @@ static DECLFW(BMC70in1Write)
   Sync();
 }
 
+static void BMC70in1Reset(void)
+{
+  bank_mode=0;
+  large_bank=0;
+  Sync();
+  hw_switch++;
+  hw_switch&=0xf;
+}
+
 static void BMC70in1Power(void)
 {
   setchr8(0);
@@ -102,7 +112,9 @@ static void StateRestore(int version)
 void BMC70in1_Init(CartInfo *info)
 {
   is_large_banks=0;
+  hw_switch=0xd;
   info->Power=BMC70in1Power;
+  info->Reset=BMC70in1Reset;
   GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
 }
@@ -110,7 +122,9 @@ void BMC70in1_Init(CartInfo *info)
 void BMC70in1B_Init(CartInfo *info)
 {
   is_large_banks=1;
+  hw_switch=0x6;
   info->Power=BMC70in1Power;
+  info->Reset=BMC70in1Reset;
   GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
 }

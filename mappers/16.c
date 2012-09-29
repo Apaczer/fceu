@@ -16,12 +16,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 
-static void FP_FASTAPASS(1) BandaiIRQHook(int a)
+static void BandaiIRQHook(int a)
 {
   if(IRQa)
   {
@@ -70,7 +70,7 @@ static DECLFW(Mapper16_write)
 // of it a hack(I think the current PRG block would depend on whatever the
 // lowest bit of the CHR bank switching register that corresponds to the
 // last CHR address read).
-
+/*
 static void PRGO(void)
 {
  uint32 base=(mapbyte1[0]&1)<<4;
@@ -110,21 +110,21 @@ static DECLFW(Mapper153_write)
                    IRQLatch|=V<<8;
                   break;
         }
-}
+}*/
 
-void Mapper16_init(void)
-{
- MapIRQHook=BandaiIRQHook;
- SetWriteHandler(0x6000,0xFFFF,Mapper16_write);
-}
+//void Mapper16_init(void)
+//{
+// MapIRQHook=BandaiIRQHook;
+//SetWriteHandler(0x6000,0xFFFF,Mapper16_write);
+//}
 
-void Mapper153_init(void)
-{
- MapIRQHook=BandaiIRQHook;
- SetWriteHandler(0x8000,0xFFFF,Mapper153_write);
+//void Mapper153_init(void)
+//{
+// MapIRQHook=BandaiIRQHook;
+// SetWriteHandler(0x8000,0xFFFF,Mapper153_write);
  /* This mapper/board seems to have WRAM at $6000-$7FFF, so I'll let the
     main ines code take care of that memory region. */
-}
+//}
 
 
 static uint8 BarcodeData[256];
@@ -260,7 +260,7 @@ int FCEUI_DatachSet(const uint8 *rcode)
         return(1);
 }
 
-static void FP_FASTAPASS(1) BarcodeIRQHook(int a)
+static void BarcodeIRQHook(int a)
 {
  BandaiIRQHook(a);
 
@@ -291,7 +291,7 @@ static DECLFR(Mapper157_read)
 
 void Mapper157_init(void)
 {
- FCEUGameInfo.cspecial = SIS_DATACH;
+ GameInfo->cspecial = SIS_DATACH;
  MapIRQHook=BarcodeIRQHook;
  SetWriteHandler(0x6000,0xFFFF,Mapper16_write);
  SetReadHandler(0x6000,0x7FFF,Mapper157_read);

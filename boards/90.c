@@ -16,13 +16,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 //#define DEBUG90
 
-static int is209;
+// Mapper 090 is simpliest mapper hardware and have not extended nametable control and latched chr banks in 4k mode
+// Mapper 209 much compicated hardware with decribed above features disabled by default and switchable by command
+// Mapper 211 the same mapper 209 but with forced nametable control
+
+static int is209; 
 static int is211;
 
 static uint8 IRQMode;        // from $c001
@@ -40,20 +44,23 @@ static uint8 prgb[4];
 static uint8 chrlow[8];
 static uint8 chrhigh[8];
 
+static uint8 chr[2];
+
 static uint16 names[4];
 static uint8 tekker;
 
 static SFORMAT Tek_StateRegs[]={
-  {&IRQMode, 1, "IRQMODE"},
-  {&IRQPre, 1, "IRQPRE"},
-  {&IRQPreSize, 1, "IRQPRESIZE"},
+  {&IRQMode, 1, "IRQM"},
+  {&IRQPre, 1, "IRQP"},
+  {&IRQPreSize, 1, "IRQS"},
   {&IRQCount, 1, "IRQC"},
-  {&IRQXOR, 1, "IRQXOR"},
+  {&IRQXOR, 1, "IRQX"},
   {&IRQa, 1, "IRQa"},
   {mul, 2, "MUL"},
   {&regie, 1, "REGI"},
   {tkcom, 4, "TKCO"},
   {prgb, 4, "PRGB"},
+  {chr, 2, "CHRA"},
   {chrlow, 4, "CHRL"},
   {chrhigh, 8, "CHRH"},
   {&names[0], 2|FCEUSTATE_RLSB, "NMS0"},
@@ -159,8 +166,10 @@ static void tekvrom(void)
          setchr8(((chrlow[0]|(chrhigh[0]<<8))&mask)|bank);
          break;
     case 0x08:      // 4KB
-         for(x=0;x<8;x+=4)
-            setchr4(x<<10,((chrlow[x]|(chrhigh[x]<<8))&mask)|bank);
+//         for(x=0;x<8;x+=4)
+//            setchr4(x<<10,((chrlow[x]|(chrhigh[x]<<8))&mask)|bank);
+         setchr4(0x0000,((chrlow[chr[0]]|(chrhigh[chr[0]]<<8))&mask)|bank);
+         setchr4(0x1000,((chrlow[chr[1]]|(chrhigh[chr[1]]<<8))&mask)|bank);
          break;
     case 0x10:      // 2KB
          for(x=0;x<8;x+=2)
@@ -175,7 +184,7 @@ static void tekvrom(void)
 
 static DECLFW(M90TekWrite)
 {
-  switch(A)
+  switch(A&0x5C03)
   {
     case 0x5800: mul[0]=V; break;
     case 0x5801: mul[1]=V; break;
@@ -185,35 +194,40 @@ static DECLFW(M90TekWrite)
 
 static DECLFR(M90TekRead)
 {
-  switch(A)
+  switch(A&0x5C03)
   {
     case 0x5800: return (mul[0]*mul[1]);
     case 0x5801: return((mul[0]*mul[1])>>8);
     case 0x5803: return (regie);
+    default: return tekker;
   }
-  return(tekker);
+  return(0xff);
 }
 
 static DECLFW(M90PRGWrite)
 {
+//  FCEU_printf("bs %04x %02x\n",A,V);
   prgb[A&3]=V;
   tekprom();
 }
 
 static DECLFW(M90CHRlowWrite)
 {
+//  FCEU_printf("bs %04x %02x\n",A,V);
   chrlow[A&7]=V;
   tekvrom();
 }
 
 static DECLFW(M90CHRhiWrite)
 {
+//  FCEU_printf("bs %04x %02x\n",A,V);
   chrhigh[A&7]=V;
   tekvrom();
 }
 
 static DECLFW(M90NTWrite)
 {
+//  FCEU_printf("bs %04x %02x\n",A,V);
   if(A&4)
   {
     names[A&3]&=0x00FF;
@@ -229,6 +243,7 @@ static DECLFW(M90NTWrite)
 
 static DECLFW(M90IRQWrite)
 {
+//  FCEU_printf("bs %04x %02x\n",A,V);
   switch(A&7)
   {
     case 00: //FCEU_printf("%s IRQ (C000)\n",V&1?"Enable":"Disable");
@@ -238,20 +253,20 @@ static DECLFW(M90IRQWrite)
     case 03: //FCEU_printf("Enable IRQ (C003) scanline=%d\n", scanline);
              IRQa=1;break;
     case 01: IRQMode=V;
-/*               FCEU_printf("IRQ Count method: ");
-               switch (IRQMode&3)
-               {
-                 case 00: FCEU_printf("M2 cycles\n");break;
-                 case 01: FCEU_printf("PPU A12 toggles\n");break;
-                 case 02: FCEU_printf("PPU reads\n");break;
-                 case 03: FCEU_printf("Writes to CPU space\n");break;
-               }
-               FCEU_printf("Counter prescaler size: %s\n",(IRQMode&4)?"3 bits":"8 bits");
-               FCEU_printf("Counter prescaler size adjust: %s\n",(IRQMode&8)?"Used C007":"Normal Operation");
-               if((IRQMode>>6)==2) FCEU_printf("Counter Down\n");
-                else if((IRQMode>>6)==1) FCEU_printf("Counter Up\n");
-                else FCEU_printf("Counter Stopped\n");
-*/               break;
+             //  FCEU_printf("IRQ Count method: ");
+             //  switch (IRQMode&3)
+             //  {
+             //    case 00: FCEU_printf("M2 cycles\n");break;
+             //    case 01: FCEU_printf("PPU A12 toggles\n");break;
+             //    case 02: FCEU_printf("PPU reads\n");break;
+             //    case 03: FCEU_printf("Writes to CPU space\n");break;
+             //  }
+             //  FCEU_printf("Counter prescaler size: %s\n",(IRQMode&4)?"3 bits":"8 bits");
+             //  FCEU_printf("Counter prescaler size adjust: %s\n",(IRQMode&8)?"Used C007":"Normal Operation");
+             //  if((IRQMode>>6)==2) FCEU_printf("Counter Down\n");
+             //   else if((IRQMode>>6)==1) FCEU_printf("Counter Up\n");
+             //   else FCEU_printf("Counter Stopped\n");
+              break;
     case 04: //FCEU_printf("Pre Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
              IRQPre=V^IRQXOR;break;
     case 05: //FCEU_printf("Main Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
@@ -259,14 +274,15 @@ static DECLFW(M90IRQWrite)
     case 06: //FCEU_printf("Xor Value: %d\n",V);
              IRQXOR=V;break;
     case 07: //if(!(IRQMode&8)) FCEU_printf("C001 is clear, no effect applied\n");
-                 // else if(V==0xFF) FCEU_printf("Prescaler is changed for 12bits\n");
-                 // else FCEU_printf("Counter Stopped\n");
+             //     else if(V==0xFF) FCEU_printf("Prescaler is changed for 12bits\n");
+             //     else FCEU_printf("Counter Stopped\n");
              IRQPreSize=V;break;
   }
 }
 
 static DECLFW(M90ModeWrite)
 {
+//    FCEU_printf("bs %04x %02x\n",A,V);
     tkcom[A&3]=V;
     tekprom();
     tekvrom();
@@ -303,6 +319,11 @@ static DECLFW(M90ModeWrite)
             FCEU_printf("CHR Bank mirroring: %s\n",(V&0x80)?"Swapped":"Normal operate");
   }
 #endif
+}
+
+static DECLFW(M90DummyWrite)
+{
+//    FCEU_printf("bs %04x %02x\n",A,V);
 }
 
 static void CCL(void)
@@ -345,7 +366,7 @@ static void ClockCounter(void)
   }
 }
 
-void FP_FASTAPASS(1) CPUWrap(int a)
+void CPUWrap(int a)
 {
   int x;
   if((IRQMode&3)==0) for(x=0;x<a;x++) ClockCounter();
@@ -358,7 +379,7 @@ static void SLWrap(void)
 }
 
 static uint32 lastread;
-static void FP_FASTAPASS(1) M90PPU(uint32 A)
+static void M90PPU(uint32 A)
 {
   if((IRQMode&3)==2)
   {
@@ -369,24 +390,38 @@ static void FP_FASTAPASS(1) M90PPU(uint32 A)
     }
     lastread=A;
   }
-//  else
-//  {
-//    if((!lastread)&&(A&0x1000))
-//      ClockCounter();
-//    lastread=A&0x1000;
-//  }
-
+  
+  if(is209)
+  {
+    uint8 l,h;
+    h=A>>8;
+    if(h<0x20&&((h&0x0F)==0xF))
+    {
+      l=A&0xF0;
+      if(l==0xD0)
+      {
+        chr[(h&0x10)>>4]=((h&0x10)>>2);
+        tekvrom();
+      }
+      else if(l==0xE0)
+      {
+        chr[(h&0x10)>>4]=((h&0x10)>>2)|2;
+        tekvrom();
+      }
+    }
+  }
+  else
+  {
+    chr[0]=0;
+    chr[1]=4;
+  }
 }
 
 static void togglie()
 {
-  tekker>>=6;
-  if(tekker>3)
-    tekker=0;
-  else
-    tekker++;
-  tekker<<=6;
-  FCEU_printf("tekker=%04x\n",tekker);
+  tekker+=0x40;
+  tekker&=0xC0;
+  FCEU_printf("tekker=%02x\n",tekker);
   memset(tkcom,0x00,sizeof(tkcom));
   memset(prgb,0xff,sizeof(prgb));
   tekprom();
@@ -403,12 +438,14 @@ static void M90Restore(int version)
 static void M90Power(void)
 {
   SetWriteHandler(0x5000,0x5fff,M90TekWrite);
-  SetWriteHandler(0x8000,0x8fff,M90PRGWrite);
+  SetWriteHandler(0x8000,0x8ff0,M90PRGWrite);
   SetWriteHandler(0x9000,0x9fff,M90CHRlowWrite);
   SetWriteHandler(0xA000,0xAfff,M90CHRhiWrite);
   SetWriteHandler(0xB000,0xBfff,M90NTWrite);
   SetWriteHandler(0xC000,0xCfff,M90IRQWrite);
-  SetWriteHandler(0xD000,0xDfff,M90ModeWrite);
+  SetWriteHandler(0xD000,0xD5ff,M90ModeWrite);
+  SetWriteHandler(0xE000,0xFfff,M90DummyWrite);
+
 
   SetReadHandler(0x5000,0x5fff,M90TekRead);
   SetReadHandler(0x6000,0xffff,CartBR);
@@ -438,8 +475,8 @@ void Mapper90_Init(CartInfo *info)
   info->Reset=togglie;
   info->Power=M90Power;
   PPU_hook=M90PPU;
-  GameHBIRQHook2=SLWrap;
   MapIRQHook=CPUWrap;
+  GameHBIRQHook2=SLWrap;
   GameStateRestore=M90Restore;
   AddExState(Tek_StateRegs, ~0, 0, 0);
 }
@@ -450,6 +487,8 @@ void Mapper209_Init(CartInfo *info)
   is209=1;
   info->Reset=togglie;
   info->Power=M90Power;
+  PPU_hook=M90PPU;
+  MapIRQHook=CPUWrap;
   GameHBIRQHook2=SLWrap;
   GameStateRestore=M90Restore;
   AddExState(Tek_StateRegs, ~0, 0, 0);
@@ -460,6 +499,8 @@ void Mapper211_Init(CartInfo *info)
   is211=1;
   info->Reset=togglie;
   info->Power=M90Power;
+  PPU_hook=M90PPU;
+  MapIRQHook=CPUWrap;
   GameHBIRQHook2=SLWrap;
   GameStateRestore=M90Restore;
   AddExState(Tek_StateRegs, ~0, 0, 0);

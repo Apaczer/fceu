@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -24,7 +24,7 @@ static uint32 lastA;
 static int isfu;
 static uint8 CCache[8];
 
-static void FP_FASTAPASS(1) Fudou_PPU(uint32 A)
+static void Fudou_PPU(uint32 A)
 {
  static int last=-1;
  static uint8 z;
@@ -87,7 +87,8 @@ static void booga(int version)
 
 void Mapper80_init(void)
 {
- SetWriteHandler(0x4020,0x7fff,Mapper80_write);
+ SetWriteHandler(0x4020,0x7eff,Mapper80_write);// 7f00-7fff battery backed ram inside mapper chip,
+                                               // controlled by 7ef8 register, A8 - enable, FF - disable (?)
  MapStateRestore=booga;
  isfu=0;
 }

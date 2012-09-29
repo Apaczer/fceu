@@ -12,6 +12,7 @@
 	
 typedef struct {
   uint8 *name;  /* Game name, UTF8 encoding */
+  int mappernum;
 
         int type;       /* GIT_* */
         int vidsys;     /* Current emulated video system; GIV_* */

@@ -15,15 +15,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 
 static void AYSound(int Count);
-//static void AYSoundHQ(void);
+static void AYSoundHQ(void);
 static void DoAYSQ(int x);
-//static void DoAYSQHQ(int x);
+static void DoAYSQHQ(int x);
 
 #define sunselect mapbyte1[0]
 #define sungah    mapbyte1[1]
@@ -39,7 +39,7 @@ static DECLFR(SUN5AWRAM)
 {
  if((sungah&0xC0)==0x40)
   return X.DB;
- return CartBR(A);
+ return CartBROB(A);
 }
 
 static DECLFW(Mapper69_SWL)
@@ -51,22 +51,22 @@ static DECLFW(Mapper69_SWH)
 {
              int x;
              GameExpSound.Fill=AYSound;
-             GameExpSound.HiFill=0;//AYSoundHQ;
-             if(FSettings.SndRate);
+             GameExpSound.HiFill=AYSoundHQ;
+             if(FSettings.SndRate)
              switch(sunindex)
              {
               case 0:
               case 1:
-              case 8:/*if(FSettings.soundq>=1) DoAYSQHQ(0); else*/ DoAYSQ(0);break;
+              case 8:if(FSettings.soundq>=1) DoAYSQHQ(0); else DoAYSQ(0);break;
               case 2:
               case 3:
-              case 9:/*if(FSettings.soundq>=1) DoAYSQHQ(1); else*/ DoAYSQ(1);break;
+              case 9:if(FSettings.soundq>=1) DoAYSQHQ(1); else DoAYSQ(1);break;
               case 4:
               case 5:
-              case 10:/*if(FSettings.soundq>=1) DoAYSQHQ(2); else*/ DoAYSQ(2);break;
+              case 10:if(FSettings.soundq>=1) DoAYSQHQ(2); else DoAYSQ(2);break;
               case 7:
                      for(x=0;x<2;x++)
-                        /*if(FSettings.soundq>=1) DoAYSQHQ(x); else*/ DoAYSQ(x);
+                        if(FSettings.soundq>=1) DoAYSQHQ(x); else DoAYSQ(x);
                      break;
              }
              MapperExRAM[sunindex]=V;
@@ -133,7 +133,6 @@ static void DoAYSQ(int x)
     CAYBC[x]=end;
 
     if(amp)
-	if(!(MapperExRAM[0x7]&(1<<x)))
     for(V=start;V<end;V++)
     {
      if(dcount[x])
@@ -147,10 +146,9 @@ static void DoAYSQ(int x)
     }
 }
 
-#if 0
 static void DoAYSQHQ(int x)
 {
- int32 V;
+ uint32 V; //mbg merge 7/17/06 made uitn32
  int32 freq=((MapperExRAM[x<<1]|((MapperExRAM[(x<<1)+1]&15)<<8))+1)<<4;
  int32 amp=(MapperExRAM[0x8+x]&15)<<6;
 
@@ -172,7 +170,6 @@ static void DoAYSQHQ(int x)
  }
  CAYBC[x]=SOUNDTS;
 }
-#endif
 
 static void AYSound(int Count)
 {
@@ -184,14 +181,12 @@ static void AYSound(int Count)
      CAYBC[x]=Count;
 }
 
-#if 0
 static void AYSoundHQ(void)
 {
     DoAYSQHQ(0);
     DoAYSQHQ(1);
     DoAYSQHQ(2);
 }
-#endif
 
 static void AYHiSync(int32 ts)
 {
@@ -201,7 +196,7 @@ static void AYHiSync(int32 ts)
   CAYBC[x]=ts;
 }
 
-static void FP_FASTAPASS(1) SunIRQHook(int a)
+static void SunIRQHook(int a)
 {
   if(IRQa)
   {

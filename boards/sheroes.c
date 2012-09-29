@@ -15,13 +15,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 #include "mmc3.h"
 
-//static uint8 *CHRRAM;
+static uint8 *CHRRAM;		 // there is no more extern CHRRAM in mmc3.h
+							 // I need chrram here and local   static == local
 static uint8 tekker;
 
 static void MSHCW(uint32 A, uint8 V)
@@ -55,7 +56,7 @@ static DECLFR(MSHRead)
 static void MSHReset(void)
 {
   MMC3RegReset();
-  tekker^=0xFF;
+  tekker^=0xFF; 
 }
 
 static void MSHPower(void)
@@ -83,4 +84,5 @@ void UNLSHeroes_Init(CartInfo *info)
   CHRRAM = (uint8*)FCEU_gmalloc(8192);
   SetupCartCHRMapping(0x10, CHRRAM, 8192, 1);
   AddExState(EXPREGS, 4, 0, "EXPR");
+  AddExState(&tekker, 1, 0, "DIPSW");
 }

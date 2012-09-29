@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -23,8 +23,8 @@
 static uint16 IRQCount;
 static uint8 IRQa;
 
-static uint8 WRAM[8192] __attribute__ ((aligned (4)));
-static uint8 IRAM[128] __attribute__ ((aligned (4)));
+static uint8 WRAM[8192];
+static uint8 IRAM[128];
 
 static DECLFR(AWRAM)
 {
@@ -47,7 +47,7 @@ static uint8 gorko;
 static void NamcoSound(int Count);
 static void NamcoSoundHack(void);
 static void DoNamcoSound(int32 *Wave, int Count);
-//static void DoNamcoSoundHQ(void);
+static void DoNamcoSoundHQ(void);
 static void SyncHQ(int32 ts);
 
 static int is210;        /* Lesser mapper. */
@@ -70,7 +70,7 @@ static void SyncPRG(void)
   setprg8(0xe000,0x3F);
 }
 
-static void FP_FASTAPASS(1) NamcoIRQHook(int a)
+static void NamcoIRQHook(int a)
 {
   if(IRQa)
   {
@@ -104,7 +104,7 @@ static DECLFR(Namco_Read5800)
   return(IRQCount>>8);
 }
 
-static void FASTAPASS(2) DoNTARAMROM(int w, uint8 V)
+static void DoNTARAMROM(int w, uint8 V)
 {
   NTAPage[w]=V;
   if(V>=0xE0)
@@ -123,7 +123,7 @@ static void FixNTAR(void)
      DoNTARAMROM(x,NTAPage[x]);
 }
 
-static void FASTAPASS(2) DoCHRRAMROM(int x, uint8 V)
+static void DoCHRRAMROM(int x, uint8 V)
 {
   CHR[x]=V;
   if(!is210 && !((gorfus>>((x>>2)+6))&1) && (V>=0xE0))
@@ -179,7 +179,7 @@ static DECLFW(Mapper19_write)
            {
              NamcoSoundHack();
              GameExpSound.Fill=NamcoSound;
-             GameExpSound.HiFill=0;//DoNamcoSoundHQ;
+             GameExpSound.HiFill=DoNamcoSoundHQ;
              GameExpSound.HiSync=SyncHQ;
            }
            FixCache(dopol,V);
@@ -220,16 +220,14 @@ static int dwave=0;
 static void NamcoSoundHack(void)
 {
   int32 z,a;
-#if 0
   if(FSettings.soundq>=1)
   {
     DoNamcoSoundHQ();
     return;
   }
-#endif
   z=((SOUNDTS<<16)/soundtsinc)>>4;
   a=z-dwave;
-  if(a) DoNamcoSound((int32 *)&Wave[dwave], a);
+  if(a) DoNamcoSound(&Wave[dwave], a);
   dwave+=a;
 }
 
@@ -238,7 +236,7 @@ static void NamcoSound(int Count)
   int32 z,a;
   z=((SOUNDTS<<16)/soundtsinc)>>4;
   a=z-dwave;
-  if(a) DoNamcoSound((int32 *)&Wave[dwave], a);
+  if(a) DoNamcoSound(&Wave[dwave], a);
   dwave=0;
 }
 
@@ -274,10 +272,10 @@ static INLINE uint32 FetchDuff(uint32 P, uint32 envelope)
   return(duff);
 }
 
-#if 0
 static void DoNamcoSoundHQ(void)
 {
-  int32 P,V;
+  uint32 V; //mbg merge 7/17/06 made uint32
+  int32 P; 
   int32 cyclesuck=(((IRAM[0x7F]>>4)&7)+1)*15;
 
   for(P=7;P>=(7-((IRAM[0x7F]>>4)&7));P--)
@@ -311,7 +309,7 @@ static void DoNamcoSoundHQ(void)
   }
   CVBC=SOUNDTS;
 }
-#endif
+
 
 static void DoNamcoSound(int32 *Wave, int Count)
 {
@@ -366,10 +364,10 @@ static void DoNamcoSound(int32 *Wave, int Count)
 
 static void Mapper19_StateRestore(int version)
 {
+  int x;
   SyncPRG();
   FixNTAR();
   FixCRR();
-  int x;
   for(x=0x40;x<0x80;x++)
      FixCache(x,IRAM[x]);
 }
@@ -445,7 +443,7 @@ void Mapper19_Init(CartInfo *info)
     Mapper19_ESI();
 
   AddExState(WRAM, 8192, 0, "WRAM");
-  AddExState(IRAM, 128, 0, "WRAM");
+  AddExState(IRAM, 128, 0, "IRAM");
   AddExState(N106_StateRegs, ~0, 0, 0);
 
   if(info->battery)
@@ -469,4 +467,5 @@ void Mapper210_Init(CartInfo *info)
   GameStateRestore=Mapper210_StateRestore;
   info->Power=N106_Power;
   AddExState(WRAM, 8192, 0, "WRAM");
+  AddExState(N106_StateRegs, ~0, 0, 0);
 }

@@ -35,6 +35,10 @@ typedef uint32_t uint32;
 //typedef unsigned short uint16;
 //typedef unsigned long  uint32;
 
+#ifndef __cplusplus
+#define bool int
+#endif
+
 #ifdef __GNUC__
  typedef unsigned long long uint64;
  typedef long long int64;

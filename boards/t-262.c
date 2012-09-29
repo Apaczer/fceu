@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2005 CaH4e3
+ *  Copyright (C) 2006 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -33,8 +33,9 @@ static SFORMAT StateRegs[]=
 
 static void Sync(void)
 {
-  setprg16(0x8000,(datareg&7)|((addrreg&0x60)>>2)|((addrreg&0x100)>>3));
-  setprg16(0xC000,7|((addrreg&0x60)>>2)|((addrreg&0x100)>>3));
+  uint16 base=((addrreg&0x60)>>2)|((addrreg&0x100)>>3);  
+  setprg16(0x8000,(datareg&7)|base);
+  setprg16(0xC000,7|base);
   setmirror(((addrreg&2)>>1)^1);
 }
 
@@ -57,7 +58,7 @@ static void BMCT262Power(void)
   SetReadHandler(0x8000,0xFFFF,CartBR);
   busy=0;
   addrreg=0;
-  datareg=0;
+  datareg=0xff;
   Sync();
 }
 

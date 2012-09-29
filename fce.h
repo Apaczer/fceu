@@ -15,6 +15,7 @@ void ResetGameLoaded(void);
 #define DECLFR(x) uint8 FP_FASTAPASS(1) x (uint32 A)
 #define DECLFW(x) void FP_FASTAPASS(2) x (uint32 A, uint8 V)
 
+void FCEU_MemoryRand(uint8 *ptr, uint32 size);
 void FASTAPASS(3) SetReadHandler(int32 start, int32 end, readfunc func);
 void FASTAPASS(3) SetWriteHandler(int32 start, int32 end, writefunc func);
 writefunc FASTAPASS(1) GetWriteHandler(int32 a);
@@ -43,7 +44,9 @@ extern uint8 MMC5HackSPMode;
 extern uint8 MMC5HackSPScroll;
 extern uint8 MMC5HackSPPage;
 
-extern uint8 GameMemBlock[131072];
+#define GAME_MEM_BLOCK_SIZE 131072
+
+extern uint8 GameMemBlock[GAME_MEM_BLOCK_SIZE];
 extern uint8 NTARAM[0x800],PALRAM[0x20];
 
 extern uint8 RAM[0x800];
@@ -85,10 +88,12 @@ extern void (*GameStateRestore)(int version);
 #define GI_RESETM2	1
 #define GI_POWER	2
 #define GI_CLOSE	3
+#define GI_RESETSAVE	4
 #define GI_INFOSTRING	11
 
 #include "git.h"
 extern FCEUGI FCEUGameInfo;
+extern FCEUGI *GameInfo; // FCEUX compatibility HACK
 extern int GameAttributes;
 
 extern uint8 pale;

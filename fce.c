@@ -98,6 +98,7 @@ static uint8 deemp=0;
 static int deempcnt[8];
 
 FCEUGI FCEUGameInfo;
+FCEUGI *GameInfo = &FCEUGameInfo;
 void (*GameInterface)(int h, void *param);
 
 void FP_FASTAPASS(1) (*PPU_hook)(uint32 A);
@@ -1114,7 +1115,7 @@ void ResetGameLoaded(void)
 char lastLoadedGameName [2048];
 int LoadGameLastError = 0;
 int UNIFLoad(const char *name, int fp);
-int iNESLoad(const char *name, int fp);
+int iNESLoad(const char *name, int fp, int OverwriteVidMode);
 int FDSLoad(const char *name, int fp);
 int NSFLoad(int fp);
 
@@ -1175,7 +1176,7 @@ FCEUGI *FCEUI_LoadGame(char *name)
 	}
 
         GetFileBase(name2);
-        if(iNESLoad(name2,fp))
+        if(iNESLoad(name2,fp,1))
          goto endlseq;
         if(NSFLoad(fp))
          goto endlseq;
@@ -1518,9 +1519,9 @@ void ResetNES081(void)
         X6502_Reset();
 }
 
-#ifndef DEBUG_ASM_6502
-static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
+void FCEU_MemoryRand(uint8 *ptr, uint32 size)
 {
+#ifndef DEBUG_ASM_6502
  int x=0;
  while(size)
  {
@@ -1529,8 +1530,8 @@ static void FCEU_MemoryRand(uint8 *ptr, uint32 size)
   size--;
   ptr++;
  }
-}
 #endif
+}
 
 void PowerNES(void)
 {
@@ -1541,9 +1542,8 @@ void PowerNES(void)
 
         GeniePower();
 
-#ifndef DEBUG_ASM_6502
         FCEU_MemoryRand(RAM,0x800);
-#else
+#ifdef DEBUG_ASM_6502
         memset(RAM,0x00,0x800);
 	memset(nes_internal_ram,0x00,0x800);
 #endif

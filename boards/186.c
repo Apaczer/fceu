@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Family Study Box by Fukutake Shoten
  */
@@ -97,8 +97,8 @@ void Mapper186_Init(CartInfo *info)
   info->Power=M186Power;
   info->Close=M186Close;
   GameStateRestore=M186Restore;
-  WRAM=(uint8*)FCEU_gmalloc(32384);
-  SetupCartPRGMapping(0x10,WRAM,32384,1);
-  AddExState(WRAM, 32384, 0, "WRAM");
+  WRAM=(uint8*)FCEU_gmalloc(32768);
+  SetupCartPRGMapping(0x10,WRAM,32768,1);
+  AddExState(WRAM, 32768, 0, "WRAM");
   AddExState(StateRegs, ~0, 0, 0);
 }

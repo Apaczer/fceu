@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -24,7 +24,7 @@ static uint8 FFEmode;
 
 #define FVRAM_BANK8(A,V) {VPage[0]=VPage[1]=VPage[2]=VPage[3]=VPage[4]=VPage[5]=VPage[6]=VPage[7]=V?&MapperExRAM[(V)<<13]-(A):&CHRRAM[(V)<<13]-(A);CHRBankList[0]=((V)<<3);CHRBankList[1]=((V)<<3)+1;CHRBankList[2]=((V)<<3)+2;CHRBankList[3]=((V)<<3)+3;CHRBankList[4]=((V)<<3)+4;CHRBankList[5]=((V)<<3)+5;CHRBankList[6]=((V)<<3)+6;CHRBankList[7]=((V)<<3)+7;PPUCHRRAM=0xFF;}
 
-static void FP_FASTAPASS(1) FFEIRQHook(int a)
+static void FFEIRQHook(int a)
 {
   if(IRQa)
   {

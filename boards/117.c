@@ -15,12 +15,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
 
-static uint8 prgreg[4], chrreg[8];
+static uint8 prgreg[4], chrreg[8], mirror;
 static uint8 IRQa, IRQCount, IRQLatch;
 
 static SFORMAT StateRegs[]=
@@ -30,18 +30,20 @@ static SFORMAT StateRegs[]=
   {&IRQLatch, 1, "IRQL"},
   {prgreg, 4, "PREGS"},
   {chrreg, 8, "CREGS"},
+  {&mirror, 1, "MREG"},
   {0}
 };
 
 static void Sync(void)
 {
+  int i;
   setprg8(0x8000,prgreg[0]);     
   setprg8(0xa000,prgreg[1]);     
   setprg8(0xc000,prgreg[2]);     
   setprg8(0xe000,prgreg[3]);
-  int i;
   for(i=0; i<8; i++)
      setchr1(i<<10,chrreg[i]);     
+  setmirror(mirror^1);   
 }
 
 static DECLFW(M117Write)
@@ -62,6 +64,7 @@ static DECLFW(M117Write)
          case 0xc003: IRQCount=IRQLatch; IRQa|=2; break;
          case 0xe000: IRQa&=~1; IRQa|=V&1; X6502_IRQEnd(FCEU_IQEXT); break;
          case 0xc002: X6502_IRQEnd(FCEU_IQEXT); break;
+         case 0xd000: mirror=V&1;
        }
 }
 

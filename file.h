@@ -6,6 +6,7 @@ int FASTAPASS(3) FCEU_fseek(int stream, long offset, int whence);
 long FASTAPASS(1) FCEU_ftell(int stream);
 void FASTAPASS(1) FCEU_rewind(int stream);
 int FASTAPASS(2) FCEU_read32(void *Bufo, int fp);
+#define FCEU_read32le FCEU_read32 // HACK
 int FASTAPASS(1) FCEU_fgetc(int stream);
 long FASTAPASS(1) FCEU_fgetsize(int stream);
 int FASTAPASS(1) FCEU_fisarchive(int stream);

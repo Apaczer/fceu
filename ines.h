@@ -16,9 +16,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef _INES_H_
+#define _INES_H_
+#include <stdlib.h>
+#include <string.h>
 #include "cart.h"
 #ifdef INESPRIV
 
@@ -65,25 +69,53 @@ extern uint8 iNESIRQa;
 #else
 #endif
 
-  typedef struct {
+#if 0
+struct TMasterRomInfo
+{
+	uint64 md5lower;
+	const char* params;
+};
+
+class TMasterRomInfoParams : public std::map<std::string,std::string> 
+{
+public:
+	bool ContainsKey(const std::string& key) { return find(key) != end(); }
+};
+#endif
+
+//mbg merge 6/29/06
+extern uint8 *ROM;
+extern uint8 *VROM;
+extern uint32 VROM_size;
+extern uint32 ROM_size;
+extern int iNesSave(); //bbit Edited: line added
+extern int iNesSaveAs(char* name);
+extern char LoadedRomFName[2048]; //bbit Edited: line added
+//extern const TMasterRomInfo* MasterRomInfo;
+//extern TMasterRomInfoParams MasterRomInfoParams;
+
+//mbg merge 7/19/06 changed to c++ decl format
+struct iNES_HEADER {
     char ID[4]; /*NES^Z*/
     uint8 ROM_size;
     uint8 VROM_size;
     uint8 ROM_type;
     uint8 ROM_type2;
     uint8 reserve[8];
-  } iNES_HEADER;
+};
 
-void FASTAPASS(2) VRAM_BANK1(uint32 A, uint8 V);
-void FASTAPASS(2) VRAM_BANK4(uint32 A,uint32 V);
+extern struct iNES_HEADER head; //for mappers usage
 
-void FASTAPASS(2) VROM_BANK1(uint32 A,uint32 V);
-void FASTAPASS(2) VROM_BANK2(uint32 A,uint32 V);
-void FASTAPASS(2) VROM_BANK4(uint32 A, uint32 V);
-void FASTAPASS(1) VROM_BANK8(uint32 V);
-void FASTAPASS(2) ROM_BANK8(uint32 A, uint32 V);
-void FASTAPASS(2) ROM_BANK16(uint32 A, uint32 V);
-void FASTAPASS(1) ROM_BANK32(uint32 V);
+void VRAM_BANK1(uint32 A, uint8 V);
+void VRAM_BANK4(uint32 A,uint32 V);
+
+void VROM_BANK1(uint32 A,uint32 V);
+void VROM_BANK2(uint32 A,uint32 V);
+void VROM_BANK4(uint32 A, uint32 V);
+void VROM_BANK8(uint32 V);
+void ROM_BANK8(uint32 A, uint32 V);
+void ROM_BANK16(uint32 A, uint32 V);
+void ROM_BANK32(uint32 V);
 
 extern uint8 vmask;
 extern uint32 vmask1;
@@ -93,9 +125,9 @@ extern uint32 pmask8;
 extern uint8 pmask16;
 extern uint8 pmask32;
 
-void FASTAPASS(1) onemir(uint8 V);
-void FASTAPASS(1) MIRROR_SET2(uint8 V);
-void FASTAPASS(1) MIRROR_SET(uint8 V);
+void onemir(uint8 V);
+void MIRROR_SET2(uint8 V);
+void MIRROR_SET(uint8 V);
 
 void Mapper0_init(void);
 void Mapper1_init(void);
@@ -110,15 +142,15 @@ void Mapper10_init(void);
 void Mapper12_init(void);
 //void Mapper13_init(void);
 void Mapper14_init(void);
-void Mapper15_init(void);
-void Mapper16_init(void);
+//void Mapper15_init(void);
+//void Mapper16_init(void);
 void Mapper17_init(void);
 void Mapper18_init(void);
 void Mapper19_init(void);
 void Mapper20_init(void);
 void Mapper21_init(void);
 void Mapper22_init(void);
-void Mapper23_init(void);
+//void Mapper23_init(void);
 void Mapper24_init(void);
 void Mapper25_init(void);
 void Mapper26_init(void);
@@ -133,12 +165,12 @@ void Mapper34_init(void);
 void Mapper35_init(void);
 void Mapper36_init(void);
 //void Mapper37_init(void);
-void Mapper38_init(void);
-void Mapper39_init(void);
+//void Mapper38_init(void);
+//void Mapper39_init(void);
 void Mapper40_init(void);
 void Mapper41_init(void);
 void Mapper42_init(void);
-void Mapper43_init(void);
+//void Mapper43_init(void);
 void Mapper44_init(void);
 void Mapper45_init(void);
 void Mapper46_init(void);
@@ -160,7 +192,7 @@ void Mapper64_init(void);
 void Mapper65_init(void);
 //void Mapper66_init(void);
 void Mapper67_init(void);
-void Mapper68_init(void);
+//void Mapper68_init(void);
 void Mapper69_init(void);
 //void Mapper70_init(void);
 void Mapper71_init(void);
@@ -191,21 +223,21 @@ void Mapper97_init(void);
 void Mapper98_init(void);
 void Mapper99_init(void);
 void Mapper100_init(void);
-void Mapper101_init(void);
-void Mapper103_init(void);
+//void Mapper101_init(void);
+//void Mapper103_init(void);
 void Mapper104_init(void);
-void Mapper106_init(void);
+//void Mapper106_init(void);
 //void Mapper107_init(void);
-void Mapper108_init(void);
+//void Mapper108_init(void);
 void Mapper109_init(void);
 void Mapper110_init(void);
 void Mapper111_init(void);
-void Mapper113_init(void);
+//void Mapper113_init(void);
 void Mapper115_init(void);
 void Mapper116_init(void);
 //void Mapper117_init(void);
-void Mapper120_init(void);
-void Mapper121_init(void);
+//void Mapper120_init(void);
+//void Mapper121_init(void);
 void Mapper122_init(void);
 void Mapper123_init(void);
 void Mapper124_init(void);
@@ -216,24 +248,23 @@ void Mapper129_init(void);
 void Mapper130_init(void);
 void Mapper131_init(void);
 void Mapper132_init(void);
-void Mapper134_init(void);
+//void Mapper134_init(void);
 void Mapper135_init(void);
 void Mapper136_init(void);
 void Mapper137_init(void);
 void Mapper139_init(void);
 //void Mapper140_init(void);
 void Mapper141_init(void);
-void Mapper142_init(void);
+//void Mapper142_init(void);
 void Mapper143_init(void);
 //void Mapper144_init(void);
 void Mapper150_init(void);
 void Mapper151_init(void);
 //void Mapper152_init(void);
-void Mapper153_init(void);
+//void Mapper153_init(void);
 void Mapper154_init(void);
-void Mapper156_init(void);
 void Mapper157_init(void);
-void Mapper158_init(void);
+//void Mapper158_init(void);
 void Mapper159_init(void);
 void Mapper160_init(void);
 void Mapper161_init(void);
@@ -241,31 +272,31 @@ void Mapper162_init(void);
 void Mapper166_init(void);
 void Mapper167_init(void);
 void Mapper168_init(void);
-void Mapper169_init(void);
+//void Mapper169_init(void);
 void Mapper170_init(void);
-void Mapper171_init(void);
-void Mapper172_init(void);
-void Mapper173_init(void);
+//void Mapper171_init(void);
+//void Mapper172_init(void);
+//void Mapper173_init(void);
 void Mapper174_init(void);
 void Mapper175_init(void);
 void Mapper176_init(void);
-void Mapper177_init(void);
-void Mapper178_init(void);
-void Mapper179_init(void);
-void Mapper180_init(void);
+//void Mapper177_init(void);
+//void Mapper178_init(void);
+//void Mapper179_init(void);
+//void Mapper180_init(void);
 //void Mapper181_init(void);
-void Mapper184_init(void);
+//void Mapper184_init(void);
 //void Mapper185_init(void);
 //void Mapper189_init(void);
 //void Mapper192_init(void);
 void Mapper193_init(void);
 //void Mapper194_init(void);
-void Mapper195_init(void);
-void Mapper196_init(void);
-void Mapper197_init(void);
+//void Mapper195_init(void);
+//void Mapper196_init(void);
+//void Mapper197_init(void);
 //void Mapper198_init(void);
 void Mapper199_init(void);
-void Mapper200_init(void);
+//void Mapper200_init(void);
 void Mapper201_init(void);
 void Mapper202_init(void);
 void Mapper203_init(void);
@@ -283,7 +314,7 @@ void Mapper221_init(void);
 void Mapper223_init(void);
 void Mapper224_init(void);
 void Mapper225_init(void);
-void Mapper226_init(void);
+//void Mapper226_init(void);
 void Mapper227_init(void);
 void Mapper228_init(void);
 void Mapper229_init(void);
@@ -307,7 +338,7 @@ void Mapper247_init(void);
 void Mapper249_init(void);
 void Mapper251_init(void);
 void Mapper252_init(void);
-void Mapper253_init(void);
+//void Mapper253_init(void);
 void Mapper255_init(void);
 
 void NSFVRC6_Init(void);
@@ -322,15 +353,22 @@ void Mapper4_Init(CartInfo *);
 void Mapper5_Init(CartInfo *);
 void Mapper11_Init(CartInfo *);
 void Mapper12_Init(CartInfo *);
+void Mapper15_Init(CartInfo *);
+void Mapper16_Init(CartInfo *);
 void Mapper19_Init(CartInfo *);
+void Mapper23_Init(CartInfo *);
+void Mapper36_Init(CartInfo *);
 void Mapper37_Init(CartInfo *);
+void Mapper38_Init(CartInfo *);
+void Mapper43_Init(CartInfo *);
 void Mapper44_Init(CartInfo *);
 void Mapper45_Init(CartInfo *);
 void Mapper47_Init(CartInfo *);
 void Mapper49_Init(CartInfo *);
 void Mapper52_Init(CartInfo *);
 void Mapper57_Init(CartInfo *);
-void Mapper58_Init(CartInfo *);
+//void Mapper58_Init(CartInfo *);
+void Mapper68_Init(CartInfo *);
 void Mapper70_Init(CartInfo *);
 void Mapper74_Init(CartInfo *);
 void Mapper78_Init(CartInfo *);
@@ -340,27 +378,48 @@ void Mapper90_Init(CartInfo *);
 void Mapper93_Init(CartInfo *);
 void Mapper94_Init(CartInfo *);
 void Mapper95_Init(CartInfo *);
+void Mapper101_Init(CartInfo *);
+void Mapper103_Init(CartInfo *);
 void Mapper105_Init(CartInfo *);
+void Mapper106_Init(CartInfo *);
 void Mapper107_Init(CartInfo *);
+void Mapper108_Init(CartInfo *);
 void Mapper112_Init(CartInfo *);
+void Mapper113_Init(CartInfo *);
 void Mapper114_Init(CartInfo *);
 void Mapper115_Init(CartInfo *);
 void Mapper116_Init(CartInfo *);
 void Mapper117_Init(CartInfo *);
 void Mapper118_Init(CartInfo *);
 void Mapper119_Init(CartInfo *);
+void Mapper120_Init(CartInfo *);
+void Mapper121_Init(CartInfo *);
 void Mapper125_Init(CartInfo *);
+void Mapper134_Init(CartInfo *);
 void Mapper140_Init(CartInfo *);
 void Mapper144_Init(CartInfo *);
 void Mapper152_Init(CartInfo *);
+void Mapper153_Init(CartInfo *);
 void Mapper154_Init(CartInfo *);
 void Mapper155_Init(CartInfo *);
+void Mapper156_Init(CartInfo *);
+void Mapper159_Init(CartInfo *);
 void Mapper163_Init(CartInfo *);
 void Mapper164_Init(CartInfo *);
 void Mapper165_Init(CartInfo *);
+//void Mapper169_Init(CartInfo *);
+void Mapper171_Init(CartInfo *);
+void Mapper172_Init(CartInfo *);
+void Mapper173_Init(CartInfo *);
+void Mapper175_Init(CartInfo *);
+void Mapper176_Init(CartInfo *);
+void Mapper177_Init(CartInfo *);
+void Mapper178_Init(CartInfo *);
+void Mapper180_Init(CartInfo *);
 void Mapper181_Init(CartInfo *);
-void Mapper182_Init(CartInfo *);
+//void Mapper182_Init(CartInfo *);
 void Mapper183_Init(CartInfo *);
+void Mapper184_Init(CartInfo *);
 void Mapper185_Init(CartInfo *);
 void Mapper186_Init(CartInfo *);
 void Mapper187_Init(CartInfo *);
@@ -369,22 +428,31 @@ void Mapper189_Init(CartInfo *);
 void Mapper191_Init(CartInfo *);
 void Mapper192_Init(CartInfo *);
 void Mapper194_Init(CartInfo *);
+void Mapper195_Init(CartInfo *);
+void Mapper196_Init(CartInfo *);
+void Mapper197_Init(CartInfo *);
 void Mapper198_Init(CartInfo *);
 void Mapper199_Init(CartInfo *);
+void Mapper200_Init(CartInfo *);
 void Mapper205_Init(CartInfo *);
 void Mapper208_Init(CartInfo *);
 void Mapper209_Init(CartInfo *);
 void Mapper210_Init(CartInfo *);
 void Mapper211_Init(CartInfo *);
-void Mapper215_Init(CartInfo *);
+//void Mapper215_Init(CartInfo *);
 void Mapper216_Init(CartInfo *);
-void Mapper217_Init(CartInfo *);
+//void Mapper217_Init(CartInfo *);
 void Mapper220_Init(CartInfo *);
 void Mapper222_Init(CartInfo *);
+void Mapper226_Init(CartInfo *);
 void Mapper235_Init(CartInfo *);
 void Mapper236_Init(CartInfo *);
 void Mapper237_Init(CartInfo *);
+void Mapper240_Init(CartInfo *);
 void Mapper245_Init(CartInfo *);
 void Mapper249_Init(CartInfo *);
 void Mapper250_Init(CartInfo *);
+void Mapper253_Init(CartInfo *);
 void Mapper254_Init(CartInfo *);
+
+#endif

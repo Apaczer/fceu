@@ -2,6 +2,7 @@
  *
  * Copyright notice for this file:
  *  Copyright (C) 2005 CaH4e3
+ *  Copyright (C) 2009 qeed
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,59 +16,49 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * BMC 42-in-1 reset switch
+ * BMC 42-in-1
+ * it seems now, mapper not reset-based,
+ * tested on real hardware and it does menus switch by pressing just Select, not Reset
+ * new registers behaviour proven this too
+ *
  */
 
 #include "mapinc.h"
 
-static uint8 hrd_sw;
-static uint8 latche;
+static uint8 latche[2];
 static SFORMAT StateRegs[]=
 {
-  {&latche, 1, "LATCHE"},
-  {&hrd_sw, 1, "HRDSW"},
+  {&latche, sizeof(latche), "LATCHE"},
   {0}
 };
 
 static void Sync(void)
 {
-  if(!(latche&0x20))
-    setprg32r(hrd_sw,0x8000,(latche>>1)&0x0f);
+  uint8 bank = (latche[0]&0x1f)|((latche[0]&0x80)>>2)|((latche[1]&1))<<6;
+  if(!(latche[0] & 0x20))
+      setprg32(0x8000,bank >> 1);
   else
   {
-    setprg16r(hrd_sw,0x8000,latche&0x1f);
-    setprg16r(hrd_sw,0xC000,latche&0x1f);
+      setprg16(0x8000,bank);
+      setprg16(0xC000,bank);
   }
-  switch((latche>>6)&3)
-  {
-    case 0: setmirrorw(0,0,0,1); break;
-    case 1: setmirror(MI_V); break;
-    case 2: setmirror(MI_H); break;
-    case 3: setmirror(MI_1); break;
-  }
-}
-
-static DECLFW(BMC42in1rWrite)
-{
-  latche=V;
-  Sync();
-}
-
-static void BMC42in1rReset(void)
-{
-  hrd_sw^=1;
-  Sync();
-}
-
-static void BMC42in1rPower(void)
-{
-  latche=0x00;
-  hrd_sw=0;
+  setmirror((latche[0]>>6)&1);
   setchr8(0);
+}
+
+static DECLFW(M226Write)
+{
+    latche[A & 1] = V;
+    Sync();
+}
+
+static void M226Power(void)
+{
+  latche[0] = latche[1] = 0;
   Sync();
-  SetWriteHandler(0x8000,0xFFFF,BMC42in1rWrite);
+  SetWriteHandler(0x8000,0xFFFF,M226Write);
   SetReadHandler(0x8000,0xFFFF,CartBR);
 }
 
@@ -76,12 +67,10 @@ static void StateRestore(int version)
   Sync();
 }
 
-void BMC42in1r_Init(CartInfo *info)
+void Mapper226_Init(CartInfo *info)
 {
-  info->Power=BMC42in1rPower;
-  info->Reset=BMC42in1rReset;
+  info->Power=M226Power;
   AddExState(&StateRegs, ~0, 0, 0);
   GameStateRestore=StateRestore;
 }
-
 

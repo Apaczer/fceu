@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
 
@@ -27,6 +27,7 @@ static uint8 hrd_flag;
 
 static SFORMAT StateRegs[]=
 {
+  {&hrd_flag, 1, "DIPSW"},
   {&prg_reg, 1, "PRG"},
   {&chr_reg, 1, "CHR"},
   {0}
@@ -72,10 +73,8 @@ static void M57Power(void)
 
 static void M57Reset()
 {
-  if(hrd_flag==3)
-    hrd_flag=0;
-  else
-    hrd_flag++;
+  hrd_flag++;
+  hrd_flag&=3;
   FCEU_printf("Select Register = %02x\n",hrd_flag);
 }
 

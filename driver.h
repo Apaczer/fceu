@@ -62,13 +62,16 @@ void FCEUI_SetNTSCTH(int n, int tint, int hue);
 
 #include "version.h"
 
+#define SI_UNSET    -1
 #define SI_NONE      0
 #define SI_GAMEPAD   1
 #define SI_ZAPPER    2
 #define SI_POWERPADA  3
 #define SI_POWERPADB  4
 #define SI_ARKANOID   5
+#define SI_MOUSE      6
 
+#define SIFC_UNSET    -1
 #define SIFC_NONE      0
 #define SIFC_ARKANOID  1
 #define SIFC_SHADOW      2

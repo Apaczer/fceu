@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -55,7 +55,7 @@ static DECLFW(Mapper96_write)
  setchr4r(0x10,0x1000,(latche&4)|3);
 }
 
-static void FP_FASTAPASS(1) M96Hook(uint32 A)
+static void M96Hook(uint32 A)
 {
  if((A&0x3000)!=0x2000) return;
  //if((A&0x3ff)>=0x3c0) return;
@@ -83,18 +83,6 @@ void Mapper96_init(void)
  GameStateRestore=M96Sync;
 }
 
-static DECLFW(M156Write)
-{
- if(A>=0xc000 && A<=0xC003)
-  VROM_BANK1((A&3)*1024,V);
- else if(A>=0xc008 &&  A<=0xc00b)
-  VROM_BANK1(0x1000+(A&3)*1024,V);
- if(A==0xc010) ROM_BANK16(0x8000,V);
-// printf("$%04x:$%02x\n",A,V);
-}
-
-void Mapper156_init(void)
-{
- onemir(0);
- SetWriteHandler(0xc000,0xc010,M156Write);
-}
+// DIS23C01 Open Soft, Korea
+// Metal Force (K)
+// Buzz and Waldog (K)

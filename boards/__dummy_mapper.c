@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2006 CaH4e3
+ *  Copyright (C) 2009 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "mapinc.h"
@@ -44,6 +44,8 @@ static DECLFW(MNNNWrite)
 
 static void MNNNPower(void)
 {
+//  SetReadHandler(0x6000,0x7fff,CartBR);
+// SetWriteHandler(0x6000,0x7fff,CartBW);
   SetReadHandler(0x8000,0xFFFF,CartBR);
   SetWriteHandler(0x8000,0xFFFF,MNNNWrite);
 }
@@ -83,15 +85,19 @@ void MapperNNN_Init(CartInfo *info)
 /*
   CHRRAMSIZE=8192;
   CHRRAM=(uint8*)FCEU_gmalloc(CHRRAMSIZE);
-  SetupCartPRGMapping(0x10,CHRRAM,CHRRAMSIZE,1);
-  AddExState(CHRRAM, CHRRAMSIZE, 0, "WRAM");
+  SetupCartCHRMapping(0x10,CHRRAM,CHRRAMSIZE,1);
+  AddExState(CHRRAM, CHRRAMSIZE, 0, "CRAM");
 */
 /*
   WRAMSIZE=8192;
   WRAM=(uint8*)FCEU_gmalloc(WRAMSIZE);
   SetupCartPRGMapping(0x10,WRAM,WRAMSIZE,1);
   AddExState(WRAM, WRAMSIZE, 0, "WRAM");
+  if(info->battery)
+  {
+    info->SaveGame[0]=WRAM;
+    info->SaveGameLen[0]=WRAMSIZE;
+  }
 */
   AddExState(&StateRegs, ~0, 0, 0);
 }
-
