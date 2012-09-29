@@ -289,9 +289,9 @@ void SaveState(void)
 
 	 if(st!=NULL)
 	 {
-	  static uint32 totalsize;
-	  static uint8 header[16]="FCS";
-	  memset(header+4,0,13);
+	  uint32 totalsize;
+	  uint8 header[16]="FCS";
+	  memset(header+4,0,sizeof(header)-4);
 	  header[3]=VERSION_NUMERIC;
 	  fwrite(header,1,16,st);
 
