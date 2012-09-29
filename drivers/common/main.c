@@ -185,23 +185,13 @@ int SaveConfig(const char *llgn_path)
 	return ret;
 }
 
-static int LoadConfig(const char *llgn_path)
+static void LoadKeys(const char *llgn_path)
 {
 	const char *name = skip_path(llgn_path);
 	char tdir[2048];
 	FILE *f;
-	int ret, l;
+	int l;
 
-	if (name)
-	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
-	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
-	printf("loading cfg from %s ... ", tdir); fflush(stdout);
-	FCEUI_GetNTSCTH(&ntsctint, &ntschue); /* Get default settings for if no config file exists. */
-        ret=LoadFCEUConfig(tdir,fceuconfig);
-	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
-	printf(ret == 0 ? "done\n" : "failed\n");
-
-	// keys
 	if (name)
 	     sprintf(tdir,"%s"PSS"cfg"PSS"%s_keys.cfg",BaseDirectory,name);
 	else sprintf(tdir,"%s"PSS"fceu_keys.cfg",BaseDirectory);
@@ -212,6 +202,24 @@ static int LoadConfig(const char *llgn_path)
 	 config_read_keys(tdir);
 	 fclose(f);
 	}
+}
+
+static int LoadConfig(const char *llgn_path)
+{
+	const char *name = skip_path(llgn_path);
+	char tdir[2048];
+	int ret;
+
+	if (name)
+	     sprintf(tdir,"%s"PSS"cfg"PSS"%s.cfg",BaseDirectory,name);
+	else sprintf(tdir,"%s"PSS"fceu2.cfg",BaseDirectory);
+	printf("loading cfg from %s ... ", tdir); fflush(stdout);
+	FCEUI_GetNTSCTH(&ntsctint, &ntschue); /* Get default settings for if no config file exists. */
+	ret=LoadFCEUConfig(tdir,fceuconfig);
+	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
+	printf(ret == 0 ? "done\n" : "failed\n");
+
+	LoadKeys(llgn_path);
 
 	return ret;
 }
@@ -445,9 +453,10 @@ int main(int argc, char *argv[])
 	in_init();
 
 	CreateDirs();
-        LoadConfig(NULL);
-        last_arg_parsed=DoArgs(argc-1,&argv[1]);
+	LoadConfig(NULL);
+	last_arg_parsed=DoArgs(argc-1,&argv[1]);
 	platform_late_init();
+	LoadKeys(NULL);
 
 	LoadLLGN();
 	FCEUI_SetNTSCTH(ntsccol, ntsctint, ntschue);
