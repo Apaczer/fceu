@@ -52,6 +52,7 @@ static int SFEXINDEX;
 static int stateversion;
 
 extern SFORMAT FCEUPPU_STATEINFO[];  // 3
+extern SFORMAT FCEUSND_STATEINFO[];
 extern SFORMAT FCEUCTRL_STATEINFO[]; // 4
 
 SFORMAT SFCPU[]={ // 1
@@ -80,30 +81,6 @@ SFORMAT SFCPUC[]={ // 2
 };
 
 extern uint16 TempAddrT,RefreshAddrT;
-
-
-SFORMAT SFSND[]={
- { &fhcnt, 4|RLSB,"FHCN"},
- { &fcnt, 1, "FCNT"},
- { PSG, 14, "PSG"},
- { &PSG[0x15], 1, "P15"},
- { &PSG[0x17], 1, "P17"},
- { decvolume, 3, "DECV"},
- { &sqnon, 1, "SQNO"},
- { &nreg, 2|RLSB, "NREG"},
- { &trimode, 1, "TRIM"},
- { &tricoop, 1, "TRIC"},
- { sweepon, 2, "SWEE"},
- { &curfreq[0], 4|RLSB,"CRF1"},
- { &curfreq[1], 4|RLSB,"CRF2"},
- { SweepCount, 2,"SWCT"},
- { DecCountTo1, 3,"DCT1"},
- { &PCMBitIndex, 1,"PBIN"},
- { &PCMAddressIndex, 4|RLSB, "PAIN"},
- { &PCMSizeIndex, 4|RLSB, "PSIN"},
- { 0, }
-};
-
 
 
 static int SubWrite(FILE *st, SFORMAT *sf)
@@ -256,13 +233,15 @@ for(;;)
 	  break;
    case 3:if(!ReadStateChunk(st,FCEUPPU_STATEINFO,size)) ret=0;break;
    case 4:if(!ReadStateChunk(st,FCEUCTRL_STATEINFO,size)) ret=0;break;
-   case 5:if(!ReadStateChunk(st,SFSND,size)) ret=0;break;
+   case 5:if(!ReadStateChunk(st,FCEUSND_STATEINFO,size)) ret=0;break;
    case 0x10:if(!ReadStateChunk(st,SFMDATA,size)) ret=0;break;
    default:printf("ReadStateChunks: unknown chunk: %i\n", t);
            if(fseek(st,size,SEEK_CUR)<0) goto endo;break;
   }
  }
  endo:
+ if(ret)
+  FCEUSND_LoadState(stateversion);
  return ret;
 }
 
@@ -298,11 +277,12 @@ void SaveState(void)
 #ifdef ASM_6502
           asmcpu_pack();
 #endif
+	  FCEUSND_SaveState();
 	  totalsize=WriteStateChunk(st,1,SFCPU);
 	  totalsize+=WriteStateChunk(st,2,SFCPUC);
 	  totalsize+=WriteStateChunk(st,3,FCEUPPU_STATEINFO);
 	  totalsize+=WriteStateChunk(st,4,FCEUCTRL_STATEINFO);
-	  totalsize+=WriteStateChunk(st,5,SFSND);
+	  totalsize+=WriteStateChunk(st,5,FCEUSND_STATEINFO);
 
 
 	  if(SPreSave) SPreSave();

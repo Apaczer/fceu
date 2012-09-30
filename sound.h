@@ -40,11 +40,8 @@ extern EXPSOUND GameExpSound;
 extern int32 nesincsize;
 extern uint8 PSG[0x18];
 extern uint32 PSG_base;
-extern int32 PCMIRQCount;
 
 void SetSoundVariables(void);
-void PowerSound(void);
-void ResetSound(void);
 extern uint8 decvolume[];
 
 extern int vdis;
@@ -53,10 +50,6 @@ extern uint16 nreg;
 
 extern uint8 trimode;
 extern uint8 tricoop;
-extern uint8 PCMBitIndex;
-extern uint32 PCMAddressIndex;
-extern int32 PCMSizeIndex;
-extern uint8 PCMBuffer;
 
 extern uint8 sweepon[2];
 extern int32 curfreq[2];
@@ -83,6 +76,11 @@ extern uint32 soundtsoffs;
 void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
+
+void FCEUSND_Power(void);
+void FCEUSND_Reset(void);
+void FCEUSND_SaveState(void);
+void FCEUSND_LoadState(int version);
 
 void FCEU_SoundCPUHook(int cycles48);
 DECLFW(Write_IRQFM);

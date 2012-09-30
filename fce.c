@@ -1377,10 +1377,10 @@ static void EmLoop(void)
   {
    if(ScreenON || SpriteON)
    {
-    if(GameHBIRQHook)
+    if(GameHBIRQHook && (PPU[0]&0x38)!=0x18)
      GameHBIRQHook();
-     if(PPU_hook)
-      for(x=0;x<42;x++) {PPU_hook(0x2000); PPU_hook(0);} // ugh
+    if(PPU_hook)
+     for(x=0;x<42;x++) {PPU_hook(0x2000); PPU_hook(0);} // ugh
     if(GameHBIRQHook2)
      GameHBIRQHook2();
    }
@@ -1490,7 +1490,7 @@ void ResetNES081(void)
 {
         if(!GameLoaded) return;
         GameInterface(GI_RESETM2, 0);
-        ResetSound();
+        FCEUSND_Reset();
         ResetPPU();
         X6502_Reset();
 }
@@ -1524,7 +1524,7 @@ void PowerNES(void)
 	memset(nes_internal_ram,0x00,0x800);
 #endif
         ResetMapping();
-        PowerSound();
+        FCEUSND_Power();
 	PowerPPU();
 
 	if (use098code)
