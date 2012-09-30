@@ -84,4 +84,5 @@ void SetNESSoundMap(void);
 void FrameSoundUpdate(void);
 void FixOldSaveStateSFreq(void);
 
+void FCEU_SoundCPUHook(int cycles48);
 DECLFW(Write_IRQFM);

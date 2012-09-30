@@ -555,6 +555,31 @@ static void FASTAPASS(1) CalcRectAmp(int P)
    *b=V;
 }
 
+void FCEU_SoundCPUHook(int cycles48)
+{
+ fhcnt-=cycles48;
+ if(fhcnt<=0)
+ {
+  FrameSoundUpdate();
+  fhcnt+=fhinc;
+ }
+
+ if(PCMIRQCount>0)
+ {
+  PCMIRQCount-=cycles48;
+  if(PCMIRQCount<=0)
+  {
+   vdis=1;
+   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
+   {
+    extern uint8 SIRQStat;
+    SIRQStat|=0x80;
+    X6502_IRQBegin(FCEU_IQDPCM);
+   }
+  }
+ }
+}
+
 static void RDoPCM(int32 end)
 {
    int32 V;

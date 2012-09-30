@@ -2649,7 +2649,7 @@ op9F:	@ SHA/AXA $nnnn, Y
 
 opAB:	@ LXA/ATX/OAL #$nn
 	IMM_VALUE
-	orr	REG_A, REG_A, #0xee000000
+	orr	REG_A, REG_A, #0xff000000
 	OP_AND
 	mov	REG_X, REG_A, lsr #24
 	CYCLE_NEXT	2
@@ -2756,8 +2756,8 @@ op00:	@ BRK
 	ldr	r0, [REG_OP_TABLE, #OTOFFS_PC_BASE]
 	sub	r0, REG_PC, r0
 	PUSH_WORD
-	orr	REG_P_REST, REG_P_REST, #P_REST_B_FLAG
 	SAVE_P
+	orr	r0, r0, #P_B_FLAG
 	PUSH_BYTE
 	orr	REG_P_REST, REG_P_REST, #P_REST_I_FLAG
 	mov	REG_ADDR, #0x10000
@@ -2809,12 +2809,13 @@ do_int:
 	sub	REG_PC, REG_PC, #1
 	sub	r0, REG_PC, r0
 	PUSH_WORD
-	bic	REG_P_REST, REG_P_REST, #P_REST_B_FLAG
 	SAVE_P
+	bic	r0, r0, #P_B_FLAG
 	PUSH_BYTE
 	tst	REG_P_REST, #FCEU_IQNMI<<8
-	orreq	REG_P_REST, REG_P_REST, #P_REST_I_FLAG
-	bic     REG_P_REST, REG_P_REST, #((FCEU_IQNMI|FCEU_IQTEMP)<<8)
+	orr  	REG_P_REST, REG_P_REST, #P_REST_I_FLAG
+	biceq   REG_P_REST, REG_P_REST, #FCEU_IQTEMP<<8
+	bicne   REG_P_REST, REG_P_REST, #FCEU_IQNMI<<8
 	mov	REG_ADDR, #0x10000
 	subeq	REG_ADDR, REG_ADDR, #IRQ_VECTOR
 	subne	REG_ADDR, REG_ADDR, #NMI_VECTOR
@@ -2825,12 +2826,7 @@ do_int:
 	subs	REG_CYCLE, REG_CYCLE, #7*48<<16
 	ble	cpu_exec_end
 	ldrb	r0, [REG_PC], #1
-	tst	REG_P_REST, #0xff<<8
-	ldreq	pc, [REG_OP_TABLE, r0, lsl #2]
-
-	tst	REG_P_REST, #P_REST_I_FLAG
-	ldrne	pc, [REG_OP_TABLE, r0, lsl #2]
-	b	do_int
+	ldr  	pc, [REG_OP_TABLE, r0, lsl #2]
 
 
 @@@

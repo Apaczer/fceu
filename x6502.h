@@ -58,6 +58,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #if defined(DEBUG_ASM_6502)
 #define TriggerIRQ TriggerIRQ_d
 #define TriggerNMI TriggerNMI_d
+#define X6502_Init X6502_Init_c
 #define X6502_Run X6502_Run_d
 #define X6502_Reset X6502_Reset_d
 #define X6502_Power X6502_Power_d
@@ -73,6 +74,7 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 #elif defined(ASM_6502)
 #define TriggerIRQ TriggerIRQ_a
 #define TriggerNMI TriggerNMI_a
+#define X6502_Init()
 #define X6502_Reset X6502_Reset_a
 #define X6502_Power X6502_Power_a
 #define X6502_AddCycles X6502_AddCycles_a
@@ -93,13 +95,14 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
  if (cycles > 0) { \
    X6502_Run_a(); \
    cycles -= (int32)nes_registers[7]>>16; \
-   asmcpu_update(cycles); \
+   FCEU_SoundCPUHook(cycles); \
  } \
 }
 
 #else
 #define TriggerIRQ TriggerIRQ_c
 #define TriggerNMI TriggerNMI_c
+#define X6502_Init X6502_Init_c
 #define X6502_Reset X6502_Reset_c
 #define X6502_Power X6502_Power_c
 #define X6502_AddCycles X6502_AddCycles_c
@@ -121,9 +124,9 @@ extern void FP_FASTAPASS(1) (*MapIRQHook)(int a);
 
 // c
 #ifdef X6502_C
-extern int32 g_cnt;
 void TriggerIRQ_c(void);
 void TriggerNMI_c(void);
+void X6502_Init_c(void);
 void X6502_Run_c(void);
 void X6502_Reset_c(void);
 void X6502_Power_c(void);
@@ -149,6 +152,7 @@ void X6502_Rebase_a(void);
 
 // debug
 #ifdef X6502_D
+extern int32 g_cnt;
 void TriggerIRQ_d(void);
 void TriggerNMI_d(void);
 void X6502_Run_d(int32 c);

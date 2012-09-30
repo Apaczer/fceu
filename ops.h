@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2002 Ben Parnell
+ *  Copyright (C) 2002 Xodnizel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,20 +22,21 @@ case 0x00:  /* BRK */
             _PC++;
             PUSH(_PC>>8);
             PUSH(_PC);
-	    _P|=B_FLAG;
-            PUSH(_P|U_FLAG);
+            PUSH(_P|U_FLAG|B_FLAG);
 	    _P|=I_FLAG;
+	    _PI|=I_FLAG;
             _PC=RdMem(0xFFFE);
             _PC|=RdMem(0xFFFF)<<8;
             break;
 
 case 0x40:  /* RTI */
             _P=POP();
-	    _PI=_P;
+	    /* _PI=_P; This is probably incorrect, so it's commented out. */
+	    _PI = _P;
             _PC=POP();
             _PC|=POP()<<8;
             break;
-
+            
 case 0x60:  /* RTS */
             _PC=POP();
             _PC|=POP()<<8;
@@ -57,19 +58,16 @@ case 0x28: /* PLP */
            break;
 case 0x4C:
 	  {
-	   unsigned int npc;
-/*
 	   uint16 ptmp=_PC;
+	   unsigned int npc;
+
 	   npc=RdMem(ptmp);
 	   ptmp++;
 	   npc|=RdMem(ptmp)<<8;
-*/
-	   npc=RdMem(_PC++);
-	   npc|=RdMem(_PC++)<<8;
 	   _PC=npc;
 	  }
 	  break; /* JMP ABSOLUTE */
-case 0x6C:
+case 0x6C: 
 	   {
 	    uint32 tmp;
 	    GetAB(tmp);
@@ -79,12 +77,13 @@ case 0x6C:
 	   break;
 case 0x20: /* JSR */
 	   {
-	    uint32 npc;
-	    npc=RdMem(_PC++);
+	    uint8 npc;
+	    npc=RdMem(_PC);
+	    _PC++;
             PUSH(_PC>>8);
             PUSH(_PC);
-            npc|=RdMem(_PC++)<<8;
-	    _PC=npc;
+            _PC=RdMem(_PC)<<8;
+	    _PC|=npc;
 	   }
            break;
 
@@ -270,7 +269,7 @@ case 0x19: LD_ABY(ORA);
 case 0x01: LD_IX(ORA);
 case 0x11: LD_IY(ORA);
 
-case 0xEB:	/* (undocumented) */
+case 0xEB:  /* (undocumented) */
 case 0xE9: LD_IM(SBC);
 case 0xE5: LD_ZP(SBC);
 case 0xF5: LD_ZPX(SBC);
@@ -297,30 +296,32 @@ case 0x94: ST_ZPX(_Y);
 case 0x8C: ST_AB(_Y);
 
 /* BCC */
-case 0x90: if(_P&C_FLAG) _PC++; else {JR();} break;
+case 0x90: JR(!(_P&C_FLAG)); break;
 
 /* BCS */
-case 0xB0: if(_P&C_FLAG) {JR();} else _PC++; break;
+case 0xB0: JR(_P&C_FLAG); break;
 
 /* BEQ */
-case 0xF0: if(_P&Z_FLAG) {JR();} else _PC++; break;
+case 0xF0: JR(_P&Z_FLAG); break;
 
 /* BNE */
-case 0xD0: if(_P&Z_FLAG) _PC++; else {JR();} break;
+case 0xD0: JR(!(_P&Z_FLAG)); break;
 
 /* BMI */
-case 0x30: if(_P&N_FLAG) {JR();} else _PC++; break;
+case 0x30: JR(_P&N_FLAG); break;
 
 /* BPL */
-case 0x10: if(_P&N_FLAG) _PC++; else {JR();} break;
+case 0x10: JR(!(_P&N_FLAG)); break;
 
 /* BVC */
-case 0x50: if(_P&V_FLAG) _PC++; else {JR();} break;
+case 0x50: JR(!(_P&V_FLAG)); break;
 
 /* BVS */
-case 0x70: if(_P&V_FLAG) {JR();} else _PC++; break;
+case 0x70: JR(_P&V_FLAG); break;
 
-/* Here comes the undocumented instructions.  Note that this implementation
+//default: printf("Bad %02x at $%04x\n",b1,X.PC);break;
+//ifdef moo
+/* Here comes the undocumented instructions block.  Note that this implementation
    may be "wrong".  If so, please tell me.
 */
 
@@ -335,17 +336,18 @@ case 0x8F: ST_AB(_A&_X);
 case 0x83: ST_IX(_A&_X);
 
 /* ARR - ARGH, MATEY! */
-case 0x6B: {
-	     uint8 arrtmp;
+case 0x6B: { 
+	     uint8 arrtmp; 
 	     LD_IM(AND;_P&=~V_FLAG;_P|=(_A^(_A>>1))&0x40;arrtmp=_A>>7;_A>>=1;_A|=(_P&C_FLAG)<<7;_P&=~C_FLAG;_P|=arrtmp;X_ZN(_A));
 	   }
 /* ASR */
 case 0x4B: LD_IM(AND;LSRA);
 
-/* ATX(OAL) Is this(OR with $EE) correct? */
-case 0xAB: LD_IM(_A|=0xEE;AND;_X=_A);
+/* ATX(OAL) Is this(OR with $EE) correct? Blargg did some test
+   and found the constant to be OR with is $FF for NES */
+case 0xAB: LD_IM(_A|=0xFF;AND;_X=_A);
 
-/* AXS */
+/* AXS */ 
 case 0xCB: LD_IM(AXS);
 
 /* DCP */
@@ -357,7 +359,7 @@ case 0xDB: RMW_ABY(DEC;CMP);
 case 0xC3: RMW_IX(DEC;CMP);
 case 0xD3: RMW_IY(DEC;CMP);
 
-/* ISC */
+/* ISB */
 case 0xE7: RMW_ZP(INC;SBC);
 case 0xF7: RMW_ZPX(INC;SBC);
 case 0xEF: RMW_AB(INC;SBC);
@@ -472,12 +474,13 @@ case 0x9B: _S=_A&_X;ST_ABY(_S& (((A-_Y)>>8)+1) );
 
 /* TOP */
 case 0x0C: LD_AB(;);
-case 0x1C:
-case 0x3C:
-case 0x5C:
-case 0x7C:
-case 0xDC:
+case 0x1C: 
+case 0x3C: 
+case 0x5C: 
+case 0x7C: 
+case 0xDC: 
 case 0xFC: LD_ABX(;);
 
 /* XAA - BIG QUESTION MARK HERE */
 case 0x8B: _A|=0xEE; _A&=_X; LD_IM(AND);
+//endif

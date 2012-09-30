@@ -86,34 +86,6 @@ static void makeppulut(void)
  }
 }
 
-#if defined(ASM_6502) && !defined(DEBUG_ASM_6502)
-static void asmcpu_update(int32 cycles)
-{
- // some code from x6502.c
- fhcnt-=cycles;
- if(fhcnt<=0)
- {
-  FrameSoundUpdate();
-  fhcnt+=fhinc;
- }
-
- if(PCMIRQCount>0)
- {
-  PCMIRQCount-=cycles;
-  if(PCMIRQCount<=0)
-  {
-   vdis=1;
-   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
-   {
-    extern uint8 SIRQStat;
-    SIRQStat|=0x80;
-    X6502_IRQBegin(FCEU_IQDPCM);
-   }
-  }
- }
-}
-#endif
-
 extern int ppudead;
 extern int kook;
 

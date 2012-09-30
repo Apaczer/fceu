@@ -115,32 +115,6 @@ static int RWWrap=0;
 #ifdef ASM_6502
 #ifdef DEBUG_ASM_6502
 extern uint8  nes_internal_ram[0x800];
-#else
-static void asmcpu_update(int32 cycles)
-{
- // some code from x6502.c
- fhcnt-=cycles;
- if(fhcnt<=0)
- {
-  FrameSoundUpdate();
-  fhcnt+=fhinc;
- }
-
- if(PCMIRQCount>0)
- {
-  PCMIRQCount-=cycles;
-  if(PCMIRQCount<=0)
-  {
-   vdis=1;
-   if((PSG[0x10]&0x80) && !(PSG[0x10]&0x40))
-   {
-    extern uint8 SIRQStat;
-    SIRQStat|=0x80;
-    X6502_IRQBegin(FCEU_IQDPCM);
-   }
-  }
- }
-}
 #endif
 
 void asmcpu_unpack(void)
@@ -1262,6 +1236,8 @@ int FCEUI_Initialize(void)
 
 	FCEUI_Initialize098();
 	FCEUI_SetEmuMode(0);
+
+	X6502_Init();
 
         return 1;
 }
