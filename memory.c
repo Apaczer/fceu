@@ -63,12 +63,12 @@ void FCEU_gfree(void *ptr)
 void FASTAPASS(3) FCEU_memmove(void *d, void *s, uint32 l)
 {
  uint32 x;
- int t;
+ long t;
 
  /* Type really doesn't matter. */
- t=(int)d;
- t|=(int)s;
- t|=(int)l;
+ t=(long)d;
+ t|=(long)s;
+ t|=(long)l;
 
  if(t&3)    // Not 4-byte aligned and/or length is not a multiple of 4.
  {

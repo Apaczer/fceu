@@ -210,7 +210,7 @@ void DriverInterface(int w, void *d)
   case DES_RESET:if(netplay!=2) CommandQueue=30;break;
   case DES_POWER:if(netplay!=2) CommandQueue=31;break;
 
-  case DES_VSUNIDIPSET:CommandQueue=10+(int)d;break;
+  case DES_VSUNIDIPSET:CommandQueue=10+(long)d;break;
   case DES_VSUNITOGGLEDIPVIEW:CommandQueue=10;break;
   case DES_VSUNICOIN:CommandQueue=19;break;
 #if 0

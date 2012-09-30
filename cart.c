@@ -307,7 +307,7 @@ void FASTAPASS(2) setchr8r(int r, unsigned int V)
   if(CHRram[r])
    PPUCHRRAM|=(255);
   else
-   PPUCHRRAM&=~(255);
+   PPUCHRRAM&=0;
 }
 
 void FASTAPASS(2) setchr1(unsigned int A, unsigned int V)
