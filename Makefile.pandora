@@ -70,7 +70,7 @@ PND_MAKE ?= $(HOME)/dev/pnd/src/pandora-libraries/testdata/scripts/pnd_make.sh
 VER ?= $(shell git describe master)
 
 rel: fceu drivers/pandora/fceu.sh drivers/pandora/readme.txt drivers/pandora/skin \
-	drivers/pandora/fceu.png drivers/pandora/fceu.pxml.templ COPYING
+	drivers/pandora/fceu.png drivers/pandora/fceu.pxml.templ COPYING Authors.md
 	rm -rf out
 	mkdir out
 	cp -r $^ out/

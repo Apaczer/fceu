@@ -110,6 +110,11 @@ extension instead of .ips.
 --------------------------------------------------------------------
 
 
+r2
+          - Fixed memory corruption during savestate save
+          - Merged latest mapper (and some other) code from FCEUX/FCEU-mm
+          - Some minor tweaks/bugfixes
+
 r1 (for pandora)
           - Ported to pandora, unified the code.
           - Added M-HT's filters and some pandora specific options/tweaks.
@@ -231,34 +236,13 @@ ver 0.1   5/23/2006  MD5SUM: 13681f25713ad04c535c23f8c61f1e0b *gpfce
 ------------------------------------------------------------------
 
 - Original base code of FCE Ultra by Xodnizel, Bero.
+- Various improvements by FCEUX/FCEU-mm authors (see Authors.md)
 - Porting/optimization/integration/frontend for 0.3 and 0.4 by notaz.
 - Versions 0.1 and 0.2 by zzhu8192 (http://www.unicorn-jockey.com).
 - asm CPU core from FCA and Little John GP32.
-- Minimal library by rlyeh.
-- Additional low-level GP2X libs by Hermes/PS2Reality, theoddbot,
-  god_at_hell, Puck2099.
 
 additional thanks:
-- Cruel and DaveC from gp32x boards for beta testing.
-- All FCE Ultra contributors listed in
-  http://fceultra.sourceforge.net/docs.php
+- All FCE Ultra/FCEUX contributors listed in Authors.md
 
 ...and everyone whose name my mind has misplaced.
-
-zzhu8192's thanks:
-- To lots of talented developers on the http://www.gp32x.com/board/
-  Reesy, Squidge, etc.  for responding to my technical questions.
-- Thanks to 
-- Lil-kun - for the neat GPFCE logo and the Web Site (under construction) :D
-- Referenced source code from MameGP2X (Franxis) and FCEU-0.3 gp2x (Noname)
-- Awesome wiki: http://wiki.gp2x.org/wiki/Main_Page
-- Awesome gp2x site: http://www.gp32x.com/
-- ryleh's minimal lib - w/o which this wouldn't have worked
-- FCE Ultra developers (http://fceultra.sourceforge.net/) 
-  for the wonderful and feature rich NES emulator.
-- kounch for Selector frontend - works great for lazy developers like me.  :-D
-  I have sent my changes to kounch, so hopefully the changes will make it into
-  version 1.2 or later.
-- gp2x community - just plain rocks
-
 

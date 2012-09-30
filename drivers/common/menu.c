@@ -27,6 +27,7 @@
 #include "../../general.h"
 #include "../../input.h"
 #include "../../palette.h"
+#include "../../fce.h"
 #include "revision.h"
 
 #define array_size(x) (sizeof(x) / sizeof(x[0]))
@@ -507,14 +508,47 @@ static int menu_loop_options(int id, int keys)
 
 // -------------- root menu --------------
 
+static void draw_frame_main(void)
+{
+	struct tm *tmp;
+	time_t ltime;
+	int capacity = -1;
+	char ltime_s[16];
+	char buff[128];
+	char *out;
+
+	if (!fceugi || !GameInterface)
+		return;
+
+	buff[0] = 0;
+	GameInterface(GI_INFOSTRING, buff);
+
+	smalltext_out16(4, 1, buff, 0xf7de);
+
+	if (plat_target.get_bat_capacity)
+		capacity = plat_target.get_bat_capacity();
+	ltime = time(NULL);
+	tmp = localtime(&ltime);
+	strftime(ltime_s, sizeof(ltime_s), "%H:%M", tmp);
+	if (capacity >= 0) {
+		snprintf(buff, sizeof(buff), "%s %3d%%", ltime_s, capacity);
+		out = buff;
+	}
+	else
+		out = ltime_s;
+	smalltext_out16(4, 1 + me_sfont_h, out, 0xf7de);
+}
+
 static const char credits_text[] = 
 	"GPFCE " REV "\n"
 	"(c) notaz, 2007,2012\n\n"
-	"Based on FCE Ultra versions\n"
-	"0.81 and 0.98.1x\n\n"
+	"Based on various FCE Ultra\n"
+	" / FCEUX versions\n\n"
 	"         - Credits -\n"
 	"Bero: FCE\n"
 	"Xodnizel: FCE Ultra\n"
+	"FCEUX team: FCEUX\n"
+	"CaH4e3: mappers\n"
 	"FCA author: 6502 core\n"
 	"M-HT: NEON scalers\n";
 
@@ -619,7 +653,7 @@ int menu_loop(void)
 	in_set_config_int(0, IN_CFG_BLOCKING, 1);
 
 	do {
-		me_loop_d(e_menu_main, &sel, NULL, NULL);
+		me_loop_d(e_menu_main, &sel, NULL, draw_frame_main);
 	} while (!fceugi && menu_loop_ret == 0);
 
 	/* wait until menu, ok, back is released */
