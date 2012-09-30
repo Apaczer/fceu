@@ -15,13 +15,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * TODO: cram disable cases! (Shen Hua Jian Yun III cannot boot with CRAM enabled)
  */
 
 #include "mapinc.h"
 
-static uint8 chrlo[8], chrhi[8], prg[2], mirr, vlock;
-static int32 IRQa, IRQCount, IRQLatch, IRQClock; 
+static uint8 chrlo[8], chrhi[8], prg[2], mirr;
+static int32 IRQa, IRQCount, IRQLatch, IRQClock;
 static uint8 *WRAM=NULL;
 static uint32 WRAMSIZE;
 static uint8 *CHRRAM=NULL;
@@ -29,11 +31,10 @@ static uint32 CHRRAMSIZE;
 
 static SFORMAT StateRegs[]=
 {
-  {chrlo, 8, "CHRLO"},
-  {chrhi, 8, "CHRHI"},
+  {chrlo, 8, "CHRL"},
+  {chrhi, 8, "CHRH"},
   {prg, 2, "PRGR"},
   {&mirr, 1, "MIRR"},
-  {&vlock, 1, "VLOCK"},
   {&IRQa, 4, "IRQA"},
   {&IRQCount, 4, "IRQC"},
   {&IRQLatch, 4, "IRQL"},
@@ -52,17 +53,7 @@ static void Sync(void)
   for(i=0; i<8; i++)
   {
     uint32 chr = chrlo[i]|(chrhi[i]<<8);
-    if(chrlo[i]==0xc8)
-    {
-      vlock = 0;
-      continue;
-    }
-    else if(chrlo[i]==0x88)
-    {
-      vlock = 1;
-      continue;
-    }
-    if(((chrlo[i]==4)||(chrlo[i]==5))&&!vlock)
+    if((chr==4)||(chr==5))
       setchr1r(0x10,i<<10,chr&1);
     else
       setchr1(i<<10,chr);
@@ -127,18 +118,18 @@ static void M253Close(void)
 
 static void M253IRQ(int cycles)
 {
-  if(IRQa&2) 
+  if(IRQa&2)
   {
-    if((IRQClock+=cycles)>=0x72) 
+    if((IRQClock+=cycles)>=0x71)
     {
-      IRQClock -= 0x72;
-      if(IRQCount==0xFF)  
+      IRQClock -= 0x71;
+      if(IRQCount==0xFF)
       {
         IRQCount = IRQLatch;
         IRQa = IRQa|((IRQa&1)<<1);
         X6502_IRQBegin(FCEU_IQEXT);
       }
-      else 
+      else
         IRQCount++;
     }
   }

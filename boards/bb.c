@@ -15,58 +15,49 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * FDS Conversion
+ *
+ * Bubble Bobble CHR-ROM version
+ *
  */
 
 #include "mapinc.h"
 
-static uint8 reg[2];
-
-static uint8 *WRAM=NULL;
-static uint32 WRAMSIZE;
+static uint8 reg, chr;
 
 static SFORMAT StateRegs[]=
 {
-  {reg, 2, "REG"},
+  {&reg, 1, "REG"},
+  {&chr, 1, "CHR"},
   {0}
 };
 
 static void Sync(void)
 {
-  setchr8(0);
-  setprg8r(0x10,0x6000,0);
-  setprg32(0x8000,reg[1]>>1);
-  setmirror((reg[0]&1)^1);
+  setprg8(0x6000,reg&3);
+  setprg32(0x8000,~0);
+  setchr8(chr&3);
 }
 
-static DECLFW(M179Write)
+static DECLFW(UNLBBWrite)
 {
-  if(A==0xa000) reg[0]=V;
+  if((A & 0x9000) == 0x8000)
+    reg=chr=V;
+  else
+    chr=V&1;      // hacky hacky, ProWres simplified FDS conversion 2-in-1 mapper
   Sync();
 }
 
-static DECLFW(M179WriteLo)
+static void UNLBBPower(void)
 {
-  if(A==0x5ff1) reg[1]=V;
+  chr = 0;
+  reg = ~0;
   Sync();
-}
-
-static void M179Power(void)
-{
-  reg[0]=reg[1]=0;
-  Sync();     
-  SetWriteHandler(0x4020,0x5fff,M179WriteLo);
-  SetReadHandler(0x6000,0x7fff,CartBR);
-  SetWriteHandler(0x6000,0x7fff,CartBW);
+  SetReadHandler(0x6000,0x7FFF,CartBR);
   SetReadHandler(0x8000,0xFFFF,CartBR);
-  SetWriteHandler(0x8000,0xFFFF,M179Write);
-}
-
-static void M179Close(void)
-{
-  if(WRAM)
-    FCEU_gfree(WRAM);
-  WRAM=NULL;
+  SetWriteHandler(0x8000,0xFFFF,UNLBBWrite);
 }
 
 static void StateRestore(int version)
@@ -74,21 +65,9 @@ static void StateRestore(int version)
   Sync();
 }
 
-void Mapper179_Init(CartInfo *info)
+void UNLBB_Init(CartInfo *info)
 {
-  info->Power=M179Power;
-  info->Close=M179Close;
+  info->Power=UNLBBPower;
   GameStateRestore=StateRestore;
-
-  WRAMSIZE=8192;
-  WRAM=(uint8*)FCEU_gmalloc(WRAMSIZE);
-  SetupCartPRGMapping(0x10,WRAM,WRAMSIZE,1);
-  AddExState(WRAM, WRAMSIZE, 0, "WRAM");
-  if(info->battery)
-  {
-    info->SaveGame[0]=WRAM;
-    info->SaveGameLen[0]=WRAMSIZE;
-  }
-
   AddExState(&StateRegs, ~0, 0, 0);
 }

@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -32,6 +32,12 @@ static SFORMAT StateRegs[]=
 };
 
 /*
+
+cmd[0] = response on/off
+         0x00 - on
+         0x80 - off
+cmd[1] = cmd
+
 
 _GET_CHALLENGE:      .BYTE   0,$B4,  0,  0,$62
 
@@ -81,7 +87,7 @@ byte_8CC6:           .BYTE   0,$78,  0,  0,$12
 static uint8 sim0reset[0x1F] = { 0x3B, 0xE9, 0x00, 0xFF, 0xC1, 0x10, 0x31, 0xFE,
                                  0x55, 0xC8, 0x10, 0x20, 0x55, 0x47, 0x4F, 0x53,
                                  0x56, 0x53, 0x43, 0xAD, 0x10, 0x10, 0x10, 0x10,
-                                 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10 }; 
+                                 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10 };
 
 static void Sync(void)
 {

@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 void ANROM_Init(CartInfo *info);
@@ -39,6 +39,7 @@ void SNROM_Init(CartInfo *info);
 void SOROM_Init(CartInfo *info);
 
 void NROM_Init(CartInfo *info);
+void SSSNROM_Init(CartInfo *info);
 void MHROM_Init(CartInfo *info);
 void UNROM_Init(CartInfo *info);
 void SUNSOFT_UNROM_Init(CartInfo *info); // "Shanghi" original version mapper
@@ -78,6 +79,7 @@ void SA72008_Init(CartInfo *info);
 void SA009_Init(CartInfo *info);
 void SA0036_Init(CartInfo *info);
 void SA0037_Init(CartInfo *info);
+void SA9602B_Init(CartInfo *info);
 
 void Supervision16_Init(CartInfo *info);
 void Super24_Init(CartInfo *info);
@@ -102,8 +104,11 @@ void BMCBS5_Init(CartInfo *info);
 void DreamTech01_Init(CartInfo *info);
 void Mapper190_Init(CartInfo *info);
 void UNLCC21_Init(CartInfo *info);
-void UNLCN22M_Init(CartInfo *info);
+void UNLYOKO_Init(CartInfo *info);
+void UNLFS304_Init(CartInfo *info);
+void UNL43272_Init(CartInfo *info);
 void UNLSL1632_Init(CartInfo *info);
+void UNLSL12_Init(CartInfo *info);
 void UNLKOF97_Init(CartInfo *info);
 void UNLA9746_Init(CartInfo *info);
 void UNLSHeroes_Init(CartInfo *info);
@@ -113,12 +118,25 @@ void UNL8237A_Init(CartInfo *info);
 void UNL8157_Init(CartInfo *info);
 void UNL22211_Init(CartInfo *info);
 void UNLTF1201_Init(CartInfo *info);
+void UNLKS7057_Init(CartInfo *info);
+void UNLKS7037_Init(CartInfo *info);
 void UNLKS7032_Init(CartInfo *info);
+void UNLKS7031_Init(CartInfo *info);
+void UNLKS7030_Init(CartInfo *info);
+void UNLKS7017_Init(CartInfo *info);
+void UNLKS7012_Init(CartInfo *info);
+void UNLKS7013B_Init(CartInfo *info);
 void UNLT230_Init(CartInfo *info);
+void UNLCITYFIGHT_Init(CartInfo *info);
 void UNLAX5705_Init(CartInfo *info);
 void UNLDANCE_Init(CartInfo *info);
 void UNLOneBus_Init(CartInfo *info);
 void UNLSC127_Init(CartInfo *info);
+void UNLPEC586Init(CartInfo *info);
+void UNLVRC7_Init(CartInfo *info);
+void UNLD2000_Init(CartInfo *info);
+void BMC810544CA1_Init(CartInfo *info);
+void BMCNTD03_Init(CartInfo *info);
 
 void UNLEDU2000_Init(CartInfo *info);
 void UNL6035052_Init(CartInfo *info);
@@ -128,6 +146,20 @@ void UNLSMB2J_Init(CartInfo *info);
 void BMC411120C_Init(CartInfo *info);
 void BMC830118C_Init(CartInfo *info);
 void BMCT2271_Init(CartInfo *info);
+void BMC12IN1_Init(CartInfo *info);
+void BMC42in1r_Init(CartInfo *info);
+void Transformer_Init(CartInfo *info);
+void LE05_Init(CartInfo *info);
+void AC08_Init(CartInfo *info);
+void LH10_Init(CartInfo *info);
+void LH32_Init(CartInfo *info);
+void LH53_Init(CartInfo *info);
+void UNLBB_Init(CartInfo *info);
+
+#ifdef COPYFAMI
+void MapperCopyFamiMMC3_Init(CartInfo *info);
+void MapperCopyFami_Init(CartInfo *info);
+#endif
 
 extern uint8 *UNIFchrrama;  // Meh.  So I can stop CHR RAM
          // bank switcherooing with certain boards...

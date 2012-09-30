@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2009 CaH4e3
+ *  Copyright (C) 2012 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
 
 static uint8 reg[8];
+static uint8 IRQa;
+static int16 IRQCount, IRQLatch;
 /*
 static uint8 *WRAM=NULL;
 static uint32 WRAMSIZE;
@@ -31,6 +33,9 @@ static uint32 CHRRAMSIZE;
 static SFORMAT StateRegs[]=
 {
   {reg, 8, "REGS"},
+  {&IRQa, 1, "IRQA"},
+  {&IRQCount, 2, "IRQC"},
+  {&IRQLatch, 2, "IRQL"},
   {0}
 };
 
@@ -65,7 +70,7 @@ static void MNNNClose(void)
 }
 */
 
-static void MNNNIRQHook(void)
+static void MNNNIRQHook()
 {
   X6502_IRQBegin(FCEU_IQEXT);
 }

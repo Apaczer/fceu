@@ -15,17 +15,20 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * SL1632 2-in-1 protected board, similar to SL12
+ * Samurai Spirits Rex (Full)
+ *
  */
 
 #include "mapinc.h"
 #include "mmc3.h"
 
-// brk is a system call in *nix, and is an illegal variable name - soules
 static uint8 chrcmd[8], prg0, prg1, bbrk, mirr, swap;
 static SFORMAT StateRegs[]=
 {
-  {chrcmd, 8, "CHRCMD"},
+  {chrcmd, 8, "CHRC"},
   {&prg0, 1, "PRG0"},
   {&prg1, 1, "PRG1"},
   {&bbrk, 1, "BRK"},
@@ -110,7 +113,6 @@ static void StateRestore(int version)
 static void UNLSL1632Power(void)
 {
   GenMMC3Power();
-  SetReadHandler(0x8000,0xFFFF,CartBR);
   SetWriteHandler(0x4100,0xFFFF,UNLSL1632CMDWrite);
 }
 

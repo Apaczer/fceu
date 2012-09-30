@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -24,12 +24,6 @@
 //only use bottom 4 bits as ram though
 static uint8 mapper228_ram[4];
 
-static SFORMAT StateRegs[]=
-{
-  { mapper228_ram, 4, "MAPPER_RAM" },
-  { 0 }
-};
-
 static DECLFR(Mapper228_read)
 {
     return mapper228_ram[A & 3] & 0xF;
@@ -37,7 +31,7 @@ static DECLFR(Mapper228_read)
 
 static DECLFW(Mapper228_write)
 {
-    uint32 page, pagel, pageh;
+ uint32 page,pagel,pageh;
 
     //write to ram
     if (A < 0x6000)
@@ -45,18 +39,18 @@ static DECLFW(Mapper228_write)
         mapper228_ram[A & 3] = V;
         return;
     }
-    MIRROR_SET((A >> 13) & 1);
-    page = (A >> 7) & 0x3F;
+ MIRROR_SET((A>>13)&1);
+ page=(A>>7)&0x3F;
 
-    if( (page & 0x30) == 0x30)
-        page -= 0x10;
+ if((page&0x30)==0x30)
+  page-=0x10;
+ 
+ pagel=pageh=(page<<1) + (((A>>6)&1)&((A>>5)&1));
+ pageh+=((A>>5)&1)^1;
 
-    pagel = pageh = (page << 1) + (((A >> 6) & 1) & ((A >> 5) & 1));
-    pageh += ((A >> 5) & 1) ^ 1;
-  
-    ROM_BANK16(0x8000,pagel);
-    ROM_BANK16(0xC000,pageh);
-    VROM_BANK8( (V&0x3) | ((A&0xF)<<2) );
+ ROM_BANK16(0x8000,pagel);
+ ROM_BANK16(0xC000,pageh);
+ VROM_BANK8( (V&0x3) | ((A&0xF)<<2) );
 }
 
 static void A52Reset(void)
@@ -66,11 +60,11 @@ static void A52Reset(void)
 
 void Mapper228_init(void)
 {
-    MapperReset=A52Reset;
-    A52Reset();
+  MapperReset=A52Reset;
+  A52Reset();
     SetWriteHandler(0x8000, 0xFFFF, Mapper228_write);
     SetWriteHandler(0x4020, 0x5FFF, Mapper228_write);
     SetReadHandler (0x4020, 0x5FFF, Mapper228_read);
-    AddExState(StateRegs, ~0, 0, 0);
+    AddExState(mapper228_ram, 4, 0, "MRAM");
 }
 

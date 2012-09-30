@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2005-2008 CaH4e3
+ *  Copyright (C) 2005 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * CAI Shogakko no Sansu
+ * VRC-5 (CAI Shogakko no Sansu)
+ *
  */
 
 #include "mapinc.h"
@@ -27,7 +28,7 @@ static writefunc old2007wrap;
 
 static uint16 CHRSIZE = 8192;
 static uint16 WRAMSIZE = 8192 + 4096;
-static uint8 *CHRRAM=NULL;
+static uint8 *CHRRAM = NULL;
 static uint8 *WRAM = NULL;
 
 static uint8 IRQa, K4IRQ;
@@ -40,7 +41,7 @@ static SFORMAT StateRegs[]=
   {&IRQCount, 1, "IRQC"},
   {&IRQLatch, 1, "IRQL"},
   {&IRQa, 1, "IRQA"},
-  {&K4IRQ, 1, "K4IRQ"},
+  {&K4IRQ, 1, "KIRQ"},
   {regs, 16, "REGS"},
   {0}
 };
@@ -136,10 +137,10 @@ static DECLFW(M190Write)
 
 static DECLFR(M190Read)
 {
-// FCEU_printf("read %04x:%04x %d, %d\n",A,regs[(A&0x0F00)>>8],scanline,timestamp);
+//  FCEU_printf("read  %04x:%04x %d, %d\n",A,regs[(A&0x0F00)>>8],scanline,timestamp);
   return regs[(A&0x0F00)>>8]+regs[0x0B];
 }
-static void VRC5IRQ(int a)
+static void FP_FASTAPASS(1) VRC5IRQ(int a)
 {
   if(IRQa)
   {
@@ -147,21 +148,18 @@ static void VRC5IRQ(int a)
     if(IRQCount&0x10000)
     {
       X6502_IRQBegin(FCEU_IQEXT);
-//      IRQCount=IRQLatch;
+      IRQCount=IRQLatch;
     }
   }
 }
 
-static void Mapper190_PPU(uint32 A)
-{
-  if(A>=0x2000)
-  {
-     setchr4r(0x10,0x0000,QTAINTRAM[A&0x1FFF]&1);
-     setchr4r(0x10,0x1000,QTAINTRAM[A&0x1FFF]&1);
-  }
+//static void FP_FASTAPASS(1) Mapper190_PPU(uint32 A)
+//{
+//  if(A<0x2000)
+//     setchr4r(0x10,0x1000,QTAINTRAM[A&0x1FFF]&1);
 //  else
 //     chrSync();
-}
+//}
 
 static DECLFW(M1902007Wrap)
 {
@@ -222,11 +220,11 @@ void Mapper190_Init(CartInfo *info)
   GameStateRestore=StateRestore;
 
   MapIRQHook=VRC5IRQ;
-  //PPU_hook=Mapper190_PPU;
+//  PPU_hook=Mapper190_PPU;
 
   CHRRAM=(uint8*)FCEU_gmalloc(CHRSIZE);
   SetupCartCHRMapping(0x10,CHRRAM,CHRSIZE,1);
-  AddExState(CHRRAM, CHRSIZE, 0, "CHRRAM");
+  AddExState(CHRRAM, CHRSIZE, 0, "CRAM");
 
   WRAM=(uint8*)FCEU_gmalloc(WRAMSIZE);
   SetupCartPRGMapping(0x10,WRAM,WRAMSIZE,1);

@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -52,15 +52,15 @@ static uint8 tekker;
 static SFORMAT Tek_StateRegs[]={
   {&IRQMode, 1, "IRQM"},
   {&IRQPre, 1, "IRQP"},
-  {&IRQPreSize, 1, "IRQS"},
+  {&IRQPreSize, 1, "IRQR"},
   {&IRQCount, 1, "IRQC"},
   {&IRQXOR, 1, "IRQX"},
-  {&IRQa, 1, "IRQa"},
+  {&IRQa, 1, "IRQA"},
   {mul, 2, "MUL"},
   {&regie, 1, "REGI"},
   {tkcom, 4, "TKCO"},
   {prgb, 4, "PRGB"},
-  {chr, 2, "CHRA"},
+  {chr, 2, "CLTC"},
   {chrlow, 4, "CHRL"},
   {chrhigh, 8, "CHRH"},
   {&names[0], 2|FCEUSTATE_RLSB, "NMS0"},
@@ -104,27 +104,30 @@ static void mira(void)
   }
 }
 
-static void tekprom(void)
+static void tekprom(void) // TODO: verify for single, small multi and large multi
 {
   uint32 bankmode=((tkcom[3]&6)<<5);
   switch(tkcom[0]&7)
   {
     case 00: if(tkcom[0]&0x80)
                setprg8(0x6000,(((prgb[3]<<2)+3)&0x3F)|bankmode);
-             setprg32(0x8000,0x0F|((tkcom[3]&6)<<3));
+             setprg32(0x8000,(prgb[3]&7)|((tkcom[3]&7)<<3));
              break;
     case 01: if(tkcom[0]&0x80)
                setprg8(0x6000,(((prgb[3]<<1)+1)&0x3F)|bankmode);
-             setprg16(0x8000,(prgb[1]&0x1F)|((tkcom[3]&6)<<4));
-             setprg16(0xC000,0x1F|((tkcom[3]&6)<<4));
+             setprg16(0x8000,(prgb[1]&0x0F)|((tkcom[3]&7)<<4));
+             setprg16(0xC000,0x0F|((tkcom[3]&7)<<4));
              break;
     case 03: // bit reversion
-    case 02: if(tkcom[0]&0x80)
-               setprg8(0x6000,(prgb[3]&0x3F)|bankmode);
-             setprg8(0x8000,(prgb[0]&0x3F)|bankmode);
-             setprg8(0xa000,(prgb[1]&0x3F)|bankmode);
-             setprg8(0xc000,(prgb[2]&0x3F)|bankmode);
-             setprg8(0xe000,0x3F|bankmode);
+    case 02: 
+             if(tkcom[0]&0x80)
+               setprg8(0x6000,(prgb[3]&0x1F)|((tkcom[3]&7)<<5)); // 45in1 multy has different bits, seems board was hacked to support big data banks
+             setprg8(0x8000,(prgb[0]&0x1F)|((tkcom[3]&7)<<5));
+             setprg8(0xa000,(prgb[1]&0x1F)|((tkcom[3]&7)<<5));
+             setprg8(0xc000,(prgb[2]&0x1F)|((tkcom[3]&7)<<5));
+             setprg8(0xe000,0x1F|((tkcom[3]&7)<<5));
+//             setprg8(0xe000,(prgb[3]&0x0F)|((tkcom[3]&6)<<3));
+//             setprg32(0x8000,((prgb[0]&0x0F)>>2)|((tkcom[3]&6)<<3));
              break;
     case 04: if(tkcom[0]&0x80)
                setprg8(0x6000,(((prgb[3]<<2)+3)&0x3F)|bankmode);
@@ -253,19 +256,19 @@ static DECLFW(M90IRQWrite)
     case 03: //FCEU_printf("Enable IRQ (C003) scanline=%d\n", scanline);
              IRQa=1;break;
     case 01: IRQMode=V;
-             //  FCEU_printf("IRQ Count method: ");
-             //  switch (IRQMode&3)
-             //  {
-             //    case 00: FCEU_printf("M2 cycles\n");break;
-             //    case 01: FCEU_printf("PPU A12 toggles\n");break;
-             //    case 02: FCEU_printf("PPU reads\n");break;
-             //    case 03: FCEU_printf("Writes to CPU space\n");break;
-             //  }
-             //  FCEU_printf("Counter prescaler size: %s\n",(IRQMode&4)?"3 bits":"8 bits");
-             //  FCEU_printf("Counter prescaler size adjust: %s\n",(IRQMode&8)?"Used C007":"Normal Operation");
-             //  if((IRQMode>>6)==2) FCEU_printf("Counter Down\n");
-             //   else if((IRQMode>>6)==1) FCEU_printf("Counter Up\n");
-             //   else FCEU_printf("Counter Stopped\n");
+               /*FCEU_printf("IRQ Count method: ");
+               switch (IRQMode&3)
+               {
+                 case 00: FCEU_printf("M2 cycles\n");break;
+                 case 01: FCEU_printf("PPU A12 toggles\n");break;
+                 case 02: FCEU_printf("PPU reads\n");break;
+                 case 03: FCEU_printf("Writes to CPU space\n");break;
+               }
+               FCEU_printf("Counter prescaler size: %s\n",(IRQMode&4)?"3 bits":"8 bits");
+               FCEU_printf("Counter prescaler size adjust: %s\n",(IRQMode&8)?"Used C007":"Normal Operation");
+               if((IRQMode>>6)==2) FCEU_printf("Counter Down\n");
+                else if((IRQMode>>6)==1) FCEU_printf("Counter Up\n");
+                else FCEU_printf("Counter Stopped\n");*/
               break;
     case 04: //FCEU_printf("Pre Counter Loaded and Xored wiht C006: %d\n",V^IRQXOR);
              IRQPre=V^IRQXOR;break;
@@ -366,7 +369,7 @@ static void ClockCounter(void)
   }
 }
 
-void CPUWrap(int a)
+void FP_FASTAPASS(1) CPUWrap(int a)
 {
   int x;
   if((IRQMode&3)==0) for(x=0;x<a;x++) ClockCounter();
@@ -379,7 +382,7 @@ static void SLWrap(void)
 }
 
 static uint32 lastread;
-static void M90PPU(uint32 A)
+static void FP_FASTAPASS(1) M90PPU(uint32 A)
 {
   if((IRQMode&3)==2)
   {
@@ -445,7 +448,6 @@ static void M90Power(void)
   SetWriteHandler(0xC000,0xCfff,M90IRQWrite);
   SetWriteHandler(0xD000,0xD5ff,M90ModeWrite);
   SetWriteHandler(0xE000,0xFfff,M90DummyWrite);
-
 
   SetReadHandler(0x5000,0x5fff,M90TekRead);
   SetReadHandler(0x6000,0xffff,CartBR);

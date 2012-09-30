@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -52,7 +52,7 @@ static DECLFW(Mapper69_SWH)
              int x;
              GameExpSound.Fill=AYSound;
              GameExpSound.HiFill=AYSoundHQ;
-             if(FSettings.SndRate)
+             if(FSettings.SndRate);
              switch(sunindex)
              {
               case 0:
@@ -148,7 +148,7 @@ static void DoAYSQ(int x)
 
 static void DoAYSQHQ(int x)
 {
- uint32 V; //mbg merge 7/17/06 made uitn32
+ int32 V;
  int32 freq=((MapperExRAM[x<<1]|((MapperExRAM[(x<<1)+1]&15)<<8))+1)<<4;
  int32 amp=(MapperExRAM[0x8+x]&15)<<6;
 
@@ -196,7 +196,7 @@ static void AYHiSync(int32 ts)
   CAYBC[x]=ts;
 }
 
-static void SunIRQHook(int a)
+static void FP_FASTAPASS(1) SunIRQHook(int a)
 {
   if(IRQa)
   {

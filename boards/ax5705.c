@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Super Bros. Pocker Mali (VRC4 mapper)
  */
@@ -54,11 +54,11 @@ static void UNLAX5705IRQ(void)
 
 static void Sync(void)
 {
-  int i;
   setprg8(0x8000,prg_reg[0]);
   setprg8(0xA000,prg_reg[1]);
   setprg8(0xC000,~1);
   setprg8(0xE000,~0);
+  int i;
   for(i=0; i<8; i++)
      setchr1(i<<10,chr_reg[i]);     
   setmirror(mirr^1);   

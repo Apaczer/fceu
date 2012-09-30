@@ -15,7 +15,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * VRC-6
+ *
  */
 
 #include "mapinc.h"
@@ -34,7 +37,7 @@ static int swaparoo;
 
 static int acount=0;
 
-static void KonamiIRQHook(int a)
+static void FP_FASTAPASS(1) KonamiIRQHook(int a)
 {
   #define LCYCS 341
 //  #define LCYCS ((227*2)+1)
@@ -224,7 +227,7 @@ static void DoSawV(void)
 
 static INLINE void DoSQVHQ(int x)
 {
- uint32 V; //mbg merge 7/17/06 made uint
+ int32 V;
  int32 amp=((VPSG[x<<2]&15)<<8)*6/8;
 
  if(VPSG[(x<<2)|0x2]&0x80)
@@ -267,7 +270,7 @@ static void DoSawVHQ(void)
 {
  static uint8 b3=0;
  static int32 phaseacc=0;
- uint32 V; //mbg merge 7/17/06 made uint32
+ int32 V;
 
  if(VPSG2[2]&0x80)
  {

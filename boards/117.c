@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -28,19 +28,19 @@ static SFORMAT StateRegs[]=
   {&IRQa, 1, "IRQA"},
   {&IRQCount, 1, "IRQC"},
   {&IRQLatch, 1, "IRQL"},
-  {prgreg, 4, "PREGS"},
-  {chrreg, 8, "CREGS"},
+  {prgreg, 4, "PREG"},
+  {chrreg, 8, "CREG"},
   {&mirror, 1, "MREG"},
   {0}
 };
 
 static void Sync(void)
 {
-  int i;
   setprg8(0x8000,prgreg[0]);     
   setprg8(0xa000,prgreg[1]);     
   setprg8(0xc000,prgreg[2]);     
   setprg8(0xe000,prgreg[3]);
+  int i;
   for(i=0; i<8; i++)
      setchr1(i<<10,chrreg[i]);     
   setmirror(mirror^1);   

@@ -15,8 +15,21 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * TXC mappers
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * TXC mappers, originally much complex banksitching
+ *
+ * 01-22111-000 (05-00002-010) (132, 22211) - MGC-001 Qi Wang
+ * 01-22110-000 (52S         )              - MGC-002 2-in-1 Gun
+ * 01-22111-100 (02-00002-010) (173       ) - MGC-008 Mahjong Block
+ *                             (079       ) - MGC-012 Poke Block
+ * 01-22110-200 (05-00002-010) (036       ) - MGC-014 Strike Wolf
+ * 01-22000-400 (05-00002-010) (036       ) - MGC-015 Policeman
+ * 01-22017-000 (05-PT017-080) (189       ) - MGC-017 Thunder Warrior
+ * 01-22270-000 (05-00002-010) (132, 22211) - MGC-xxx Creatom
+ * 01-22200-400 (------------) (079       ) - ET.03   F-15 City War
+ *                             (172       ) -         1991 Du Ma Racing
+ *
  */
 
 #include "mapinc.h"

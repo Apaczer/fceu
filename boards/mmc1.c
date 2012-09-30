@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -24,8 +24,8 @@
 static void GenMMC1Power(void);
 static void GenMMC1Init(CartInfo *info, int prg, int chr, int wram, int battery);
 
-static uint8 DRegs[4];
-static uint8 Buffer,BufferShift;
+static uint8 BufferShift,DRegs[4];
+static uint8 Buffer;
 
 static int mmc1opts;
 
@@ -107,39 +107,39 @@ static void MMC1PRG(void)
   else
   {
     switch(DRegs[0]&0xC)
-  {
-    case 0xC: setprg16(0x8000,(DRegs[3]+offs));
-              setprg16(0xC000,0xF+offs);
-              break;
-    case 0x8: setprg16(0xC000,(DRegs[3]+offs));
-              setprg16(0x8000,offs);
-              break;
-    case 0x0:
-    case 0x4:
-              setprg16(0x8000,((DRegs[3]&~1)+offs));
-              setprg16(0xc000,((DRegs[3]&~1)+offs+1));
-              break;
+    {
+      case 0xC: setprg16(0x8000,(DRegs[3]+offs));
+                setprg16(0xC000,0xF+offs);
+                break;
+      case 0x8: setprg16(0xC000,(DRegs[3]+offs));
+                setprg16(0x8000,offs);
+                break;
+      case 0x0:
+      case 0x4:
+                setprg16(0x8000,((DRegs[3]&~1)+offs));
+                setprg16(0xc000,((DRegs[3]&~1)+offs+1));
+                break;
+    }
   }
-}
 }
 
 static void MMC1MIRROR(void)
 {
   if(!is171) 
-  switch(DRegs[0]&3)
-  {
-    case 2: setmirror(MI_V); break;
-    case 3: setmirror(MI_H); break;
-    case 0: setmirror(MI_0); break;
-    case 1: setmirror(MI_1); break;
-  }
+    switch(DRegs[0]&3)
+    {
+      case 2: setmirror(MI_V); break;
+      case 3: setmirror(MI_H); break;
+      case 0: setmirror(MI_0); break;
+      case 1: setmirror(MI_1); break;
+    }
 }
 
 static uint64 lreset;
 static DECLFW(MMC1_write)
 {
   int n=(A>>13)-4;
-  //FCEU_DispMessage("%016x",0,timestampbase+timestamp);
+  //FCEU_DispMessage("%016x",timestampbase+timestamp);
 //  FCEU_printf("$%04x:$%02x, $%04x\n",A,V,X.PC);
   //DumpMem("out",0xe000,0xffff);
 
@@ -165,6 +165,7 @@ static DECLFW(MMC1_write)
 
   if(BufferShift==5)
   {
+//    FCEU_printf("REG[%d]=%02x\n",n,Buffer);
     DRegs[n] = Buffer;
     BufferShift = Buffer = 0;
     switch(n)
@@ -323,11 +324,6 @@ static void GenMMC1Init(CartInfo *info, int prg, int chr, int wram, int battery)
   if(wram)
   {
     WRAM=(uint8*)FCEU_gmalloc(wram*1024);
-	//mbg 17-jun-08 - this shouldve been cleared to re-initialize save ram
-	//ch4 10-dec-08 - nope, this souldn't
-	//mbg 29-mar-09 - no time to debate this, we need to keep from breaking some old stuff.
-	//we really need to make up a policy for how compatibility and accuracy can be resolved.
-	memset(WRAM,0,wram*1024);
     mmc1opts|=1;
     if(wram>8) mmc1opts|=4;
     SetupCartPRGMapping(0x10,WRAM,wram*1024,1);
@@ -350,8 +346,6 @@ static void GenMMC1Init(CartInfo *info, int prg, int chr, int wram, int battery)
   info->Power=GenMMC1Power;
   GameStateRestore=MMC1_Restore;
   AddExState(&lreset, 8, 1, "LRST");
-  AddExState(&Buffer, 1, 1, "BFFR");
-  AddExState(&BufferShift, 1, 1, "BFRS");
 }
 
 void Mapper1_Init(CartInfo *info)

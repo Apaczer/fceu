@@ -1,7 +1,7 @@
 /* FCE Ultra - NES/Famicom Emulator
  *
  * Copyright notice for this file:
- *  Copyright (C) 2005-2011 CaH4e3
+ *  Copyright (C) 2011 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Super Game (Sugar Softec) protected mapper
  * Pocahontas 2 (Unl) [U][!], etc.
@@ -112,32 +112,42 @@ static void UNL8237APW(uint32 A, uint8 V)
     if(EXPREGS[0]&0x80)
     {
       uint8 bank = ((EXPREGS[1]&3)<<4)|((EXPREGS[1]&8)<<3)|(EXPREGS[0]&0x7)|(sbank>>1);
-      if(EXPREGS[0]&0x20)
+      if(EXPREGS[0]&0x20) {
+//        FCEU_printf("8000:%02X\n",bank>>1);
         setprg32(0x8000,bank>>1);
+      }
       else
       {
+//        FCEU_printf("8000-C000:%02X\n",bank);
         setprg16(0x8000,bank);
         setprg16(0xC000,bank);
       }
     }
-    else
+    else {
+//      FCEU_printf("%04x:%02X\n",A,((EXPREGS[1]&3)<<5)|((EXPREGS[1]&8)<<4)|(V&0x0F)|sbank);
       setprg8(A,((EXPREGS[1]&3)<<5)|((EXPREGS[1]&8)<<4)|(V&0x0F)|sbank);
+    }
   }
   else
   {
     if(EXPREGS[0]&0x80)
     {
       uint8 bank = ((EXPREGS[1]&3)<<4)|((EXPREGS[1]&8)<<3)|(EXPREGS[0]&0xF);
-      if(EXPREGS[0]&0x20)
+      if(EXPREGS[0]&0x20) {
+//        FCEU_printf("8000:%02X\n",(bank>>1)&0x07);
         setprg32(0x8000,bank>>1);
+      }
       else
       {
+//        FCEU_printf("8000-C000:%02X\n",bank&0x0F);
         setprg16(0x8000,bank);
         setprg16(0xC000,bank);
       }
     }
-    else
+    else {
+//      FCEU_printf("%04X:%02X\n",A,(((EXPREGS[1]&3)<<5)|((EXPREGS[1]&8)<<4)|(V&0x1F))&0x1F);
       setprg8(A,((EXPREGS[1]&3)<<5)|((EXPREGS[1]&8)<<4)|(V&0x1F));
+    }
   }
 }
 static DECLFW(UNL8237Write)
@@ -181,7 +191,7 @@ void UNL8237_Init(CartInfo *info)
   pwrap=UNL8237PW;
   info->Power=UNL8237Power;
   AddExState(EXPREGS, 3, 0, "EXPR");
-  AddExState(&cmdin, 1, 0, "CMDIN");
+  AddExState(&cmdin, 1, 0, "CMDI");
 }
 
 void UNL8237A_Init(CartInfo *info)
@@ -191,5 +201,5 @@ void UNL8237A_Init(CartInfo *info)
   pwrap=UNL8237APW;
   info->Power=UNL8237Power;
   AddExState(EXPREGS, 3, 0, "EXPR");
-  AddExState(&cmdin, 1, 0, "CMDIN");
+  AddExState(&cmdin, 1, 0, "CMDI");
 }

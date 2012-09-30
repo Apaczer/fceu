@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -70,7 +70,7 @@ static void SyncPRG(void)
   setprg8(0xe000,0x3F);
 }
 
-static void NamcoIRQHook(int a)
+static void FP_FASTAPASS(1) NamcoIRQHook(int a)
 {
   if(IRQa)
   {
@@ -88,7 +88,9 @@ static DECLFR(Namco_Read4800)
 {
   uint8 ret=IRAM[dopol&0x7f];
   /* Maybe I should call NamcoSoundHack() here? */
+  #ifdef FCEUDEF_DEBUGGER
   if(!fceuindbg)
+  #endif
     if(dopol&0x80)
       dopol=(dopol&0x80)|((dopol+1)&0x7f);
   return ret;
@@ -104,7 +106,7 @@ static DECLFR(Namco_Read5800)
   return(IRQCount>>8);
 }
 
-static void DoNTARAMROM(int w, uint8 V)
+static void FASTAPASS(2) DoNTARAMROM(int w, uint8 V)
 {
   NTAPage[w]=V;
   if(V>=0xE0)
@@ -123,7 +125,7 @@ static void FixNTAR(void)
      DoNTARAMROM(x,NTAPage[x]);
 }
 
-static void DoCHRRAMROM(int x, uint8 V)
+static void FASTAPASS(2) DoCHRRAMROM(int x, uint8 V)
 {
   CHR[x]=V;
   if(!is210 && !((gorfus>>((x>>2)+6))&1) && (V>=0xE0))
@@ -274,8 +276,7 @@ static INLINE uint32 FetchDuff(uint32 P, uint32 envelope)
 
 static void DoNamcoSoundHQ(void)
 {
-  uint32 V; //mbg merge 7/17/06 made uint32
-  int32 P; 
+  int32 P,V;
   int32 cyclesuck=(((IRAM[0x7F]>>4)&7)+1)*15;
 
   for(P=7;P>=(7-((IRAM[0x7F]>>4)&7));P--)
@@ -364,10 +365,10 @@ static void DoNamcoSound(int32 *Wave, int Count)
 
 static void Mapper19_StateRestore(int version)
 {
-  int x;
   SyncPRG();
   FixNTAR();
   FixCRR();
+  int x;
   for(x=0x40;x<0x80;x++)
      FixCache(x,IRAM[x]);
 }

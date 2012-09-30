@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * (VRCII mapper)
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * (VRC4 mapper)
  */
 
 #include "mapinc.h"
@@ -37,10 +37,9 @@ static DECLFW(Mapper25_write)
 			VROM_BANK1(0x0000,0xFC);
 			VROM_BANK1(0x0400,0xFD);
 			VROM_BANK1(0x0800,0xFF);
-			VROM_BANK1(0x0c00,0xCF);
 		}
 
-		A=(A&0xF003)|((A&0xC)>>2);
+        A=(A&0xF003)|((A&0xC)>>2);
 
         if((A&0xF000)==0xA000)
           ROM_BANK8(0xA000,V);
@@ -51,9 +50,9 @@ static DECLFW(Mapper25_write)
          K4buf[x]&=(0xF0)>>((A&2)<<1);
          K4buf[x]|=(V&0xF)<<((A&2)<<1);
 		 if(weirdo)
-			weirdo--;
+    	  weirdo--;
 		 else
-			VROM_BANK1(x<<10,K4buf[x]);
+           VROM_BANK1(x<<10,K4buf[x]);
         }
         else if((A&0xF000)==0x8000)
         {
@@ -88,7 +87,7 @@ static DECLFW(Mapper25_write)
  }
 }
 
-static void KonamiIRQHook(int a)
+static void FP_FASTAPASS(1) KonamiIRQHook(int a)
 {
 //  #define LCYCS ((227*2))
   #define LCYCS 341

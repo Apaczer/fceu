@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Lethal Weapon (VRC4 mapper)
  */
@@ -35,8 +35,8 @@ static SFORMAT StateRegs[]=
   {&mirr, 1, "MIRR"},
   {&swap, 1, "SWAP"},
   {chr, 8, "CHR"},
-  {&IRQCount, 1, "IRQCOUNT"},
-  {&IRQPre, 1, "IRQPRE"},
+  {&IRQCount, 1, "IRQC"},
+  {&IRQPre, 1, "IRQP"},
   {&IRQa, 1, "IRQA"},
   {0}
 };

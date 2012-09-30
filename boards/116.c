@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  * SL12 Protected 3-in-1 mapper hardware (VRC2, MMC3, MMC1)
  * the same as 603-5052 board (TODO: add reading registers, merge)
  * SL1632 2-in-1 protected board, similar to SL12 (TODO: find difference)
@@ -27,38 +27,37 @@
  * Kart Fighter (008, Huang-1, GAL dip: W conf.)
  * Somari (008, C5052-13, GAL dip: P conf., GK2-P/GK2-V maskroms)
  * Somari (008, Huang-1, GAL dip: W conf., GK1-P/GK1-V maskroms)
- * AV Mei Shao Nv Zhan Shi ()
+ * AV Mei Shao Nv Zhan Shi (aka AV Pretty Girl Fighting) (SL-12 PCB, Hunag-1, GAL dip: unk conf. SL-11A/SL-11B maskroms)
  * Samurai Spirits (Full version) (Huang-1, GAL dip: unk conf. GS-2A/GS-4A maskroms)
- * Contra Fighter (603-5052 board, C5052-3, GAL dip: unk conf. SC603-A/SCB603-B maskroms)
+ * Contra Fighter (603-5052 PCB, C5052-3, GAL dip: unk conf. SC603-A/SCB603-B maskroms)
  *
  */
 
 #include "mapinc.h"
-#include "mmc3.h"
 
 static uint8 mode;
 static uint8 vrc2_chr[8], vrc2_prg[2], vrc2_mirr;
 static uint8 mmc3_regs[10], mmc3_ctrl, mmc3_mirr;
-extern uint8 IRQCount,IRQLatch,IRQa;
-extern uint8 IRQReload;
+static uint8 IRQCount,IRQLatch,IRQa;
+static uint8 IRQReload;
 static uint8 mmc1_regs[4], mmc1_buffer, mmc1_shift;
 
 static SFORMAT StateRegs[]=
 {
   {&mode, 1, "MODE"},
-  {vrc2_chr, 8, "vrch"},
-  {vrc2_prg, 2, "vrpr"},
-  {&vrc2_mirr, 1, "vrmi"},
-  {mmc3_regs, 10, "m3re"},
-  {&mmc3_ctrl, 1, "m3ct"},
-  {&mmc3_mirr, 1, "m3mi"},
+  {vrc2_chr, 8, "VRCC"},
+  {vrc2_prg, 2, "VRCP"},
+  {&vrc2_mirr, 1, "VRCM"},
+  {mmc3_regs, 10, "M3RG"},
+  {&mmc3_ctrl, 1, "M3CT"},
+  {&mmc3_mirr, 1, "M3MR"},
   {&IRQReload, 1, "IRQR"},
   {&IRQCount, 1, "IRQC"},
   {&IRQLatch, 1, "IRQL"},
   {&IRQa, 1, "IRQA"},
-  {mmc1_regs, 4, "m1r"},
-  {&mmc1_buffer, 1, "m1bf"},
-  {&mmc1_shift, 1, "m1mi"},
+  {mmc1_regs, 4, "M1RG"},
+  {&mmc1_buffer, 1, "M1BF"},
+  {&mmc1_shift, 1, "M1MR"},
   {0}
 };
 
@@ -174,7 +173,7 @@ static void Sync(void)
 
 static DECLFW(UNLSL12ModeWrite)
 {
-  printf("%04X:%02X\n",A,V);
+//  FCEU_printf("%04X:%02X\n",A,V);
   if((A & 0x4100) == 0x4100) {
     mode = V;
     if(A&1) { // hacky hacky, there are two configuration modes on SOMARI HUANG-1 PCBs
@@ -194,11 +193,7 @@ static DECLFW(UNLSL12ModeWrite)
 
 static DECLFW(UNLSL12Write)
 {
-  printf("%04X:%02X\n",A,V);
-	if(A==0xA123)
-	{
-		int zzz=9;
-	}
+//  FCEU_printf("%04X:%02X\n",A,V);
   switch(mode & 3) {
    case 0: {
      if((A>=0xB000)&&(A<=0xE003))
@@ -272,7 +267,7 @@ static DECLFW(UNLSL12Write)
          mmc1_buffer = mmc1_shift = 0;
          switch(n) {
           case 0: SyncMIR();
-          case 2: SyncCHR(); 
+          case 2: SyncCHR();
           case 3:
           case 1: SyncPRG();
          }
@@ -351,9 +346,4 @@ void UNLSL12_Init(CartInfo *info)
   GameHBIRQHook = UNLSL12HBIRQ;
   GameStateRestore = StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);
-}
-
-void Mapper116_Init(CartInfo *info)
-{
-	UNLSL12_Init(info);
 }

@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mapinc.h"
@@ -82,7 +82,7 @@ DECLFW(Mapper21_write)
          case 0xf006:IRQa=K4IRQ;X6502_IRQEnd(FCEU_IQEXT);break;
  }
 }
-static void KonamiIRQHook(int a)
+static void FP_FASTAPASS(1) KonamiIRQHook(int a)
 {
   #define LCYCS ((227*2)+1)
   //#define LCYCS 341
