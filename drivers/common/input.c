@@ -380,3 +380,9 @@ static void PrepareOtherInput(void)
 	// printf("generated combo_acts: %08x, combo_keys: %08x\n", combo_acts, combo_keys);
 }
 
+// TODO?
+char *GetKeyboard(void)
+{
+	static char dummy[256];
+	return dummy;
+}

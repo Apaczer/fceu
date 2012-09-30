@@ -74,6 +74,7 @@ int GetSoundBuffer(int16 **W);
 int FlushEmulateSound(void);
 extern uint32 Wave[2048+512];
 extern int16 WaveFinalMono[2048+512];
+extern int32 WaveHi[];
 extern uint32 soundtsinc;
 
 extern uint32 soundtsoffs;

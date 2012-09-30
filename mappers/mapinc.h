@@ -8,4 +8,5 @@
 #include "../memory.h"
 #include "../sound.h"
 #include "../state.h"
+#include "../svga.h"
 #include <string.h>

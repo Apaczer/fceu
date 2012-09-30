@@ -276,6 +276,11 @@ void GenMMC3Power(void)
    FCEU_CheatAddRAM(1,0x7000,WRAM);
    SetReadHandler(0x7000,0x7FFF,MAWRAMMMC6);
    SetWriteHandler(0x7000,0x7FFF,MBWRAMMMC6);
+#ifdef ASM_6502
+   // asm code needs pages to be set again..
+   Page[14]=WRAM-0x7000;
+   Page[15]=WRAM-0x7800;
+#endif
   }
   else
   {
@@ -1374,6 +1379,10 @@ static void M254_Power(void)
  GenMMC3Power();
  SetWriteHandler(0x8000,0xBFFF,M254Write);
  SetReadHandler(0x6000,0x7FFF,MR254WRAM);
+#ifdef ASM_6502
+ // hrrr.. can't handle those evil xors here..
+ Page[12]=Page[13]=Page[14]=Page[15]=WRAM-0x6000;
+#endif
 }
 
 void Mapper254_Init(CartInfo *info)

@@ -40,6 +40,7 @@
 #include "sound.h"
 
 uint32 Wave[2048+512];
+int32 WaveHi[40000]; // unused
 int16 WaveFinalMono[2048+512];
 
 EXPSOUND GameExpSound={0,0,0,0,0,0};

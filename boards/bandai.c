@@ -349,7 +349,7 @@ void Mapper157_Init(CartInfo *info)
   info->Power=M157Power;
   MapIRQHook=BarcodeIRQHook;
 
-  FCEUGameInfo->cspecial = SIS_DATACH;
+  GameInfo->cspecial = SIS_DATACH;
 
   GameStateRestore=StateRestore;
   AddExState(&StateRegs, ~0, 0, 0);

@@ -102,7 +102,6 @@ B_C += boards/KS7032.c
 B_C += boards/KS7037.c
 B_C += boards/KS7057.c
 B_C += boards/SA-9602B.c
-B_C += boards/__serial.c
 B_C += boards/ac-08.c
 B_C += boards/bb.c
 B_C += boards/cityfighter.c
