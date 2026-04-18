@@ -1,3 +1,3 @@
 [submodule "drivers/libpicofe"]
 	path = drivers/libpicofe
-	url = git://notaz.gp2x.de/~notaz/libpicofe.git
+	url = https://notaz.gp2x.de/git/libpicofe.git
