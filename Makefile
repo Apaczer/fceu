@@ -19,9 +19,13 @@ TFLAGS	+= -ggdb
 LDRIVER	+= -ggdb
 NOSTRIP = 1
 else
-TFLAGS	+= -ftracer -fstrength-reduce -funroll-loops -fomit-frame-pointer -fstrict-aliasing -ffast-math
-TFLAGS	+= -O3 #-pg -fno-omit-frame-pointer
+ifdef MIYOO
+TFLAGS	+= -Ofast -fdata-sections -ffunction-sections -fsingle-precision-constant -fno-PIC -flto
+LDRIVER	+= -Ofast #-pg -fno-omit-frame-pointer
+else
+TFLAGS	+= -O3 -ftracer -fstrength-reduce -funroll-loops -fomit-frame-pointer -fstrict-aliasing -ffast-math
 LDRIVER	+= -O3 #-pg -fno-omit-frame-pointer
+endif
 endif
 
 #NOSTRIP = 1
