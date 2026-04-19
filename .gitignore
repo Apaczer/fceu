@@ -4,3 +4,4 @@ tags
 *.swp
 drivers/common/revision.h
 fceu
+fceultra/*
